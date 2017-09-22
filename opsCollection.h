@@ -3,5 +3,13 @@
 
 #include "opsBase.h"
 
+class opsCollection
+{
+public:
+	opsCollection();
+	~opsCollection();
+	
+};
+
 
 #endif

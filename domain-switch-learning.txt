@@ -12,3 +12,7 @@
 5. Qt JSON generation & parse --->
 	Solved. http://blog.csdn.net/newyoung518/article/details/46047781
 
+6. ops class rigistry with id code --->
+	
+
+7. Shell auto-completion howto --->
