@@ -9,8 +9,12 @@
 namespace opsUtility
 {
 	uint8_t hashName(const std::string& appName);
+	
 	void createJSON(QString* str, const QJsonObject& obj);
 	void parseJSON(const QString& str, QJsonObject *obj);
+
+	int execShell(char* param);
+	int execShellSync(char* param);
 }
 
 /*Begin: Compiling Parameter Section*/
