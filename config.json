@@ -1,6 +1,5 @@
 {
-	"repo_location":"~/domain-repo",
-	"ws_localtion":"~/domain-workspace",
-
-	
+	"install-dir":"/usr/bin/domain-manager",
+	"workspace-dir":"~/domain-workspace",
+	"repo-dir":"~/domain-repo",
 }
