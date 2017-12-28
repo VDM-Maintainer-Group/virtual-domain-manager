@@ -19,18 +19,30 @@ if __name__ == '__main__':
 		dest="new_name", 
 		default="", 
 		help="create a new workspace")
-	parser.add_option("-s", "--save",
-		dest="save_dest", 
-		default="", 
-		help="save the current workspace")
 	parser.add_option("-o", "--open",
 		dest="open_name", 
 		default="", 
 		help="open an existing workspace")
 	parser.add_option("-r", "--rename",
-		dest="rename", 
+		dest="re_name", 
 		default="", 
 		help="rename an existing workspace")
+	parser.add_option("-s", "--save",
+		action="store_false",
+		dest="save_flag", 
+		default=True, 
+		help="save the current workspace")
+	parser.add_option("-q", "--quiet",
+		action="store_false",
+		dest="verbose", 
+		default=True, 
+		help="silient without debug information")
+	parser.add_option("-g", "--gui",
+		action="store_false",
+		dest="open_gui", 
+		default=True, 
+		help="open the gui for setup")
+	
 	(options, args) = parser.parse_args()
 
 	try: #cope with Interrupt Signal
