@@ -1,0 +1,10 @@
+build
+install.sh
+Makefile
+*.rsync
+*.py
+*.c
+*.cpp
+*.h
+*.hpp
+*.pro
