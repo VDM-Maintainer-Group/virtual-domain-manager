@@ -1,2 +1,3 @@
+domain-manager
 *.pyc
 build/*

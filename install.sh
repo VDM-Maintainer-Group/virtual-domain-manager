@@ -50,7 +50,8 @@ cd bin && make && cd ..
 printf "\r[Compiled] \tBinary Source\n"
 # run python compile
 printf "[Compiling]\tPython Source "
-python -m compileall -qf manager plugin Utility wrapper
+python -m compileall -qf Utility wrapper manager plugin domain-manager.py
+mv domain-manager.pyc domain-manager && chmod 755 domain-manager
 printf "\r[Compiled] \tPython Source\n"
 # copy to build
 rm -rf $PWD/build && mkdir $PWD/build
@@ -63,11 +64,8 @@ read -p "Press Enter to continue..."
 item=`grep_json_item "install-dir"`
 # install to config.install_dir
 sudo mkdir -p $item && sudo cp -rf $PWD/build/* $item
-# add install_dir to path
-if [[ ! $PATH =~ $item ]]; then
-	echo "export PATH=\$PATH:$item" >> ~/.bashrc
-	source ~/.bashrc
-fi
+# create soft link to path
+sudo ln -s $item/domain-manager /usr/bin/
 echo
 
 printf "\t========     Complete!    ========\n"

@@ -1,5 +1,5 @@
 {
-	"install-dir":"/usr/bin/domain-manager",
+	"install-dir":"/opt/domain-manager",
 	"workspace-dir":"~/domain-workspace",
 	"repo-dir":"~/domain-repo",
 }
