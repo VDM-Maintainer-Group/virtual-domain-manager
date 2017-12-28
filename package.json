@@ -1,0 +1,23 @@
+{
+  "name": "virtual-domain-manager",
+  "version": "1.0.0",
+  "description": "Domain manager for super workspace.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iamhyc/virtual-domain-manager.git"
+  },
+  "keywords": [
+    "virtual-domain"
+  ],
+  "author": "Mark Hong",
+  "author_email": "sudofree@163.com",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/iamhyc/virtual-domain-manager/issues"
+  },
+  "homepage": "https://github.com/iamhyc/virtual-domain-manager#readme"
+}
