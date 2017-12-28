@@ -52,7 +52,7 @@ printf "\r[Compiled] \tBinary Source\n"
 printf "[Compiling]\tPython Source "
 python -m compileall -qf Utility wrapper manager plugin domain-manager.py
 mv domain-manager.pyc domain-manager && chmod 755 domain-manager
-printf "\r[Compiled] \tPython Source\n"
+printf "\r[COMPILED] \tPython Source\n"
 # copy to build
 rm -rf $PWD/build && mkdir $PWD/build
 rsync -rq --exclude-from $PWD'/exclude.rsync' $PWD/* $PWD/build
@@ -64,8 +64,10 @@ read -p "Press Enter to continue..."
 item=`grep_json_item "install-dir"`
 # install to config.install_dir
 sudo mkdir -p $item && sudo cp -rf $PWD/build/* $item
+printf "[Install]\tInstalled in: %s\n" $item
 # create soft link to path
-sudo ln -s $item/domain-manager /usr/bin/
+sudo ln -sf $item/domain-manager /usr/bin/
+printf "[Install]\tEntrance soft link created\n"
 echo
 
 printf "\t========     Complete!    ========\n"
