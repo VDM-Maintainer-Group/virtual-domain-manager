@@ -1,6 +1,7 @@
 #!/bin/bash
 PWD=${0%/*}
 printf "\t      [Virtual Domain Manager]      \n"
+cd $PWD
 sudo echo
 
 # dependency check
@@ -44,7 +45,14 @@ echo
 
 printf "\t======== Compile & Build ========\n"
 # make in bin/
+printf "[Compiling]\tBinary Source "
+cd bin && make && cd ..
+printf "\r[Compiled] \tBinary Source\n"
 # run python compile
+printf "[Compiling]\tPython Source "
+python -m compileall -qf manager plugin Utility wrapper
+printf "\r[Compiled] \tPython Source\n"
+# copy to build
 rm -rf $PWD/build && mkdir $PWD/build
 rsync -rq --exclude-from $PWD'/exclude.rsync' $PWD/* $PWD/build
 echo
