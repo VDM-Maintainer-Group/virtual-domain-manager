@@ -1,18 +1,6 @@
-1. qt json parse
-
-2. chrome tab url acquire ---> 
+1. chrome tab url acquire ---> 
 	Chromagnon, https://github.com/JRBANCEL/Chromagnon
 
-3. firefox tab url acquire --->
+2. firefox tab url acquire --->
 	https://askubuntu.com/questions/887234/how-to-get-the-url-from-a-firefox-tab-from-the-terminal
 
-4. CRC8 utility ---> 
-	Solved.
-
-5. Qt JSON generation & parse --->
-	Solved. http://blog.csdn.net/newyoung518/article/details/46047781
-
-6. ops class rigistry with id code --->
-	
-
-7. Shell auto-completion howto --->
