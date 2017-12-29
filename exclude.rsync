@@ -1,4 +1,5 @@
 build
+script
 install.sh
 Makefile
 *.rsync

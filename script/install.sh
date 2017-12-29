@@ -1,7 +1,7 @@
 #!/bin/bash
 PWD=${0%/*}
-printf "\t      [Virtual Domain Manager]      \n"
-cd $PWD
+printf "\t[Virtual Domain Manager Installer]\n"
+cd $PWD && cd ..
 sudo echo
 
 # dependency check
@@ -45,9 +45,9 @@ echo
 
 printf "\t======== Compile & Build ========\n"
 # make in bin/
-printf "[Compiling]\tBinary Source "
+printf "[Compiling]\tBinary Source\n"
 cd bin && make && cd ..
-printf "\r[Compiled] \tBinary Source\n"
+printf "\r[COMPILED] \tBinary Source\n"
 # run python compile
 printf "[Compiling]\tPython Source "
 python -m compileall -qf Utility wrapper manager plugin domain-manager.py
