@@ -44,8 +44,8 @@ cd bin && make && cd ..
 printf "\r[COMPILED] \tBinary Source\n"
 # run python compile
 printf "[Compiling]\tPython Source "
-python -m compileall -qf Utility wrapper manager plugin domain-manager.py
-mv domain-manager.pyc domain-manager && chmod 755 domain-manager
+python -m compileall -qf utility wrapper manager plugins domain-manager.py
+mv domain-manager.pyc domain-manager && sudo chmod 755 domain-manager
 printf "\r[COMPILED] \tPython Source\n"
 # copy to build
 rm -rf $PWD/build && mkdir $PWD/build

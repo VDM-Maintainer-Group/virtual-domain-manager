@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from os import path, _exit
 from optparse import OptionParser
-from Utility.Utility import printh, load_json
+from utility.Utility import printh, load_json
 from manager import *
 
 def m_exit():

@@ -1,6 +1,6 @@
-./build
-./script
-./plugin-template
+build
+script
+plugin-template
 install.sh
 Makefile
 *.rsync

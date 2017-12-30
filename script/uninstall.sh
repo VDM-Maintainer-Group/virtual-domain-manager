@@ -1,5 +1,7 @@
 #!/bin/bash
-printf "\t      [Virtual Domain Manager]      \n"
+PWD=${0%/*}
+printf "\t[Virtual Domain Manager Uninstaller]\n"
+cd $PWD && cd ..
 sudo echo
 
 function grep_json_item(){
@@ -7,7 +9,7 @@ function grep_json_item(){
 	data=${data%\",*}
 	echo ${data#\"*}
 }
-
+printf "\t========  Uninstallation  ========\n"
 read -p "Press Enter to continue..."
 item=`grep_json_item "install-dir"`
 sudo rm -rf $item

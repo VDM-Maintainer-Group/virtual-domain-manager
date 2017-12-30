@@ -10,7 +10,7 @@ Python 2.x (remains checked in installation script).
 
 * (optional) configure default `config.json`
 * `mkdir build`
-* `sudo make install`
+* `make install`
 * `domain-manager -h` for more help
 
 ## Usage
