@@ -1,8 +1,9 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 """
 Domain Manager
 @author: Mark Hong
 """
+import plugins
 from os import path, _exit
 from optparse import OptionParser
 from utility.Utility import printh

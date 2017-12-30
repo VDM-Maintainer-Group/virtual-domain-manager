@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 import runpy
 from os import path, getcwd
 from sys import argv

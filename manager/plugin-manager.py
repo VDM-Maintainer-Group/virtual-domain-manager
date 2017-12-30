@@ -1,10 +1,11 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 """
 Plugin Manager
 @author: Mark Hong
 #call: temporarily register
 #install: cp plugin files to install dir
 """
+import plugins, wrapper
 from optparse import OptionParser
 from utility.Utility import printh, load_json
 

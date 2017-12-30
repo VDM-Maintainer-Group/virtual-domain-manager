@@ -1,4 +1,4 @@
-from gi.repository import Wnck
+import wnck
 
 class wnck(object):
 	"""docstring for wnck"""
