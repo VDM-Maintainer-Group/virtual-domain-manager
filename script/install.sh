@@ -20,5 +20,9 @@ printf "[Install]\tInstalled in: %s\n" $item
 # create soft link to path
 sudo ln -sf $item/domain-manager /usr/bin/
 printf "[Install]\tEntrance soft link created\n"
+# install bash completion
+sudo cp $PWD/script/domain-manager-completion.bash /etc/bash_completion.d/
+source /etc/bash_completion.d/domain-manager-completion.bash
+printf "[Install]\tBash auto-completion installed\n"
 
 printf "\t========     Complete!    ========\n\n"

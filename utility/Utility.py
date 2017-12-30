@@ -1,4 +1,3 @@
-#! /usr/bin/python
 '''
 Utility: useful general function utilities
 @author: Mark Hong

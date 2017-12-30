@@ -9,6 +9,7 @@ function grep_json_item(){
 	data=${data%\",*}
 	echo ${data#\"*}
 }
+
 printf "\t========  Uninstallation  ========\n"
 read -p "Press Enter to continue..."
 item=`grep_json_item "install-dir"`

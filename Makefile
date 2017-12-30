@@ -1,6 +1,8 @@
 
-all:clean compile
+all:clean check compile
 
+check:
+	@script/dependency.sh
 compile:
 	@script/compile.sh
 install:compile
@@ -9,3 +11,5 @@ uninstall:
 	@script/uninstall.sh
 clean:
 	@script/clean.sh
+cleandist:clean
+	@rm -r ./build

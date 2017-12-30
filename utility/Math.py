@@ -1,4 +1,3 @@
-#! /usr/bin/python
 '''
 Math: useful math function utilities
 @author: Mark Hong

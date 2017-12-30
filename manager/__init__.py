@@ -1,2 +1,2 @@
 
-__all__ = ['manager', 'plugin-register']
+__all__ = ['manager', 'plugin-manager']

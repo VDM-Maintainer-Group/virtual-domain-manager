@@ -4,13 +4,13 @@ Virtual Domain Manager is for fast virtual workspace setup, archieve and restore
 
 ## Dependencies
 
-Python 2.x (remains checked in installation script).
+Python 3.x (remains checked in installation script).
 
 ## Installation
 
 * (optional) configure default `config.json`
 * `mkdir build`
-* `make install`
+* `make check && make install`
 * `domain-manager -h` for more help
 
 ## Usage

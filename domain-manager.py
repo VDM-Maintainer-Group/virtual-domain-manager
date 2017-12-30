@@ -1,54 +1,34 @@
-#!/usr/bin/python
-from os import path, _exit
-from optparse import OptionParser
-from utility.Utility import printh, load_json
-from manager import *
+#!/usr/bin/python3
+import runpy
+from os import path, getcwd
+from sys import argv
 
-def m_exit():
-	_exit(-1)
+def m_init():
+	global global_var, work_dir
+	global_var = {}
+	global_var['__user_dir__'] = getcwd()
+	work_dir = path.dirname(path.realpath(__file__))
+	global_var['__work_dir__'] = path.dirname(path.realpath(__file__))
 	pass
 
 def main():
-	print(path.dirname(path.realpath(__file__)))
+	if len(argv)>1 and argv[1]=='plugin':
+		global_var['argv'] = argv[2:]
+		runpy.run_path(path.join(work_dir, 'manager/plugin-manager.pyc'), 
+						global_var, '__main__')
+		pass
+	else:
+		global_var['argv'] = argv
+		runpy.run_path(path.join(work_dir, 'manager/manager.pyc'), 
+						global_var, '__main__')
+		pass
 	pass
 
 if __name__ == '__main__':
-	global options
-	parser = OptionParser()
-	parser.add_option("-q", "--quiet",
-		action="store_false",
-		dest="verbose", 
-		default=True, 
-		help="silient without debug information")
-	parser.add_option("-g", "--gui",
-		action="store_false",
-		dest="open_gui", 
-		default=True, 
-		help="open the gui for setup")
-	parser.add_option("-s", "--save",
-		action="store_false",
-		dest="save_flag", 
-		default=True, 
-		help="save the current workspace")
-	parser.add_option("-a", "--new",
-		dest="new_name", 
-		default="", 
-		help="create a new workspace")
-	parser.add_option("-o", "--open",
-		dest="open_name", 
-		default="", 
-		help="open an existing workspace")
-	parser.add_option("-r", "--rename",
-		dest="re_name", 
-		default="", 
-		help="rename an existing workspace")
-
-	(options, args) = parser.parse_args()
-
+	m_init()
 	try: #cope with Interrupt Signal
 		main()
 	except Exception as e:
-		printh('Terminal', e, 'red') #for debug
-		pass
+		print(e) #fro debug
 	finally:
-		m_exit()
+		exit()

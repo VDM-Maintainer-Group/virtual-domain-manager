@@ -1,7 +1,6 @@
 build
 script
 plugin-template
-install.sh
 Makefile
 *.rsync
 *.py
