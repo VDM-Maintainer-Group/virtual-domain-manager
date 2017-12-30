@@ -17,8 +17,9 @@ Python 3.x (remains checked in installation script).
 
 Todo list:
 
-- setup/restore/rename/delete; daemon
-- unit test scripts
+- plugin API norm AND ctypes.cdll wrapper AND plugin proxy
+- plugin manager (register/test/install/remove)
+- manager daemon; setup/restore/rename/delete
 - simple Tkinter GUI
 - cross-platform degradation
 
