@@ -1,0 +1,14 @@
+{
+  "name": "plugin-template",
+  "main": "plugin-entry.py",
+  "category": "system",
+  "version": "1.0.0",
+
+  "author": "Mark Hong",
+  "license": "LGPL-3.0",
+  "description": "This is a plugin norm tutorial.",
+  "keywords": ["template", "tutorial"],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

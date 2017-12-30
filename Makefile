@@ -1,7 +1,9 @@
 
-all:clean
-	@script/install.sh
-install:
+all:clean compile
+
+compile:
+	@script/compile.sh
+install:compile
 	@script/install.sh
 uninstall:
 	@script/uninstall.sh

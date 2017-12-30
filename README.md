@@ -1,20 +1,31 @@
-## Domain Switch
+# Vritual Domain Manager
 
-cross-platform Domain Manager for fast virtual workspace setup and restore.
+Virtual Domain Manager is for fast virtual workspace setup, archieve and restore.
 
-### Structure
+## Dependencies
 
-P.S. PCS, Platform\*Category\*Software
+Python 2.x (remains checked in installation script).
 
-### Functions
+## Installation
 
-1. **Setup** a new *domamin*,  **Restore**/**Rename**/**Delete** an existing *domain*
-2. daemon design
+* (optional) configure default `config.json`
+* `mkdir build`
+* `sudo make install`
+* `domain-manager -h` for more help
 
+## Usage
 
-### TODO
+Todo list:
 
-- Registry implementation, with ID indexed
-- Test scripts
-- GUI for convinient operation
-- Cross-platform degration
+- setup/restore/rename/delete; daemon
+- unit test scripts
+- simple Tkinter GUI
+- cross-platform degradation
+
+## Plugin Development
+
+Please refer to the tutorial [here](plugin-template/README.md).
+
+## License
+
+Virtual Domain Manager is licensed under GPLv3.

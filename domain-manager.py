@@ -15,6 +15,21 @@ def main():
 if __name__ == '__main__':
 	global options
 	parser = OptionParser()
+	parser.add_option("-q", "--quiet",
+		action="store_false",
+		dest="verbose", 
+		default=True, 
+		help="silient without debug information")
+	parser.add_option("-g", "--gui",
+		action="store_false",
+		dest="open_gui", 
+		default=True, 
+		help="open the gui for setup")
+	parser.add_option("-s", "--save",
+		action="store_false",
+		dest="save_flag", 
+		default=True, 
+		help="save the current workspace")
 	parser.add_option("-a", "--new",
 		dest="new_name", 
 		default="", 
@@ -27,22 +42,7 @@ if __name__ == '__main__':
 		dest="re_name", 
 		default="", 
 		help="rename an existing workspace")
-	parser.add_option("-s", "--save",
-		action="store_false",
-		dest="save_flag", 
-		default=True, 
-		help="save the current workspace")
-	parser.add_option("-q", "--quiet",
-		action="store_false",
-		dest="verbose", 
-		default=True, 
-		help="silient without debug information")
-	parser.add_option("-g", "--gui",
-		action="store_false",
-		dest="open_gui", 
-		default=True, 
-		help="open the gui for setup")
-	
+
 	(options, args) = parser.parse_args()
 
 	try: #cope with Interrupt Signal
