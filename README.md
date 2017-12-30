@@ -28,4 +28,4 @@ Please refer to the tutorial [here](plugin-template/README.md).
 
 ## License
 
-Virtual Domain Manager is licensed under GPLv3.
+Virtual Domain Manager is licensed under [GPLv3](LICENSE).
