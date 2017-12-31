@@ -12,9 +12,12 @@ def m_init():
 	pass
 
 def main():
-	if len(argv)>1 and argv[1]=='plugin':
+	func_map = {
+		'plugin': 'manager/plugin-manager.pyc'
+	}
+	if len(argv)>1 and func_map.has_key(argv[1]):
 		global_var['argv'] = argv[2:]
-		runpy.run_path(path.join(work_dir, 'manager/plugin-manager.pyc'), 
+		runpy.run_path(path.join(work_dir, func_map[argv[1]]), 
 						global_var, '__main__')
 		pass
 	else:
@@ -29,6 +32,6 @@ if __name__ == '__main__':
 	try: #cope with Interrupt Signal
 		main()
 	except Exception as e:
-		print(e) #fro debug
+		print(e) #for debug
 	finally:
 		exit()
