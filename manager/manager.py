@@ -4,13 +4,13 @@ Domain Manager
 @author: Mark Hong
 """
 import plugins
-from os import path, _exit
+from os import chdir, getcwd, path, _exit
 from optparse import OptionParser
 from utility.Utility import printh
 
 def main():
 	printh('Domain Manager', 'main')
-	print([__user_dir__, __work_dir__])
+	print([__user_dir__, __work_dir__, getcwd()])
 	pass
 
 if __name__ == '__main__':
