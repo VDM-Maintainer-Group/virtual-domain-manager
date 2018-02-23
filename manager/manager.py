@@ -25,18 +25,18 @@ if __name__ == '__main__':
 		action="store_true",
 		dest="open_gui", 
 		default=False, 
-		help="open the gui for setup")
+		help="open setup GUI")
 	parser.add_option("-s", "--save",
 		action="store_true",
 		dest="save_flag", 
 		default=False, 
 		help="save the current workspace")
 	parser.add_option("-a", "--new",
-		dest="new_name", 
+		dest="new_ws", 
 		default="", 
 		help="create a new workspace")
 	parser.add_option("-o", "--open",
-		dest="open_name", 
+		dest="open_ws", 
 		default="", 
 		help="open an existing workspace")
 	parser.add_option("-r", "--rename",

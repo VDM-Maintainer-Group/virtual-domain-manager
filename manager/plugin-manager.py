@@ -39,7 +39,7 @@ if __name__ == '__main__':
 	parser.add_option("-d", "--debug",
 		dest="plugin_name", 
 		default="", 
-		help="debug an developing plugin")
+		help="test environment for developing plugin")
 
 	(options, args) = parser.parse_args()
 	main()
