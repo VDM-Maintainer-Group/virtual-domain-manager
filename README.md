@@ -4,7 +4,7 @@ Virtual Domain Manager is for fast virtual workspace setup, archieve and restore
 
 ## Dependencies
 
-Python 3.x (remains checked in installation script).
+Python 2.7.x (remains checked in installation script).
 
 ## Installation
 
@@ -19,9 +19,10 @@ Todo list:
 
 - plugin API norm AND ctypes.cdll wrapper AND plugin proxy
 - plugin manager (register/test/install/remove)
-- manager daemon; setup/restore/rename/delete
+- domain manager (setup/restore/rename/delete)
+- cross-platform compatability
 - simple Tkinter GUI
-- cross-platform degradation
+- daemon for realtime plugin response
 
 ## Plugin Development
 
