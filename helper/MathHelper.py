@@ -1,5 +1,5 @@
 '''
-Math: useful math function utilities
+MathHelper: useful math function utilities
 @author: Mark Hong
 @level: release
 '''

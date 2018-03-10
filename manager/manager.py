@@ -6,7 +6,7 @@ Domain Manager
 import plugins
 from os import chdir, getcwd, path, _exit
 from optparse import OptionParser
-from utility.Utility import printh
+from utility import PrintHelper, PathHelper
 
 def main():
 	printh('Domain Manager', 'main')

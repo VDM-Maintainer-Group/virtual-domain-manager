@@ -8,7 +8,7 @@ Plugin Manager
 import plugins
 from optparse import OptionParser
 from PluginProxy import PluginProxy
-from utility.Utility import printh, load_json
+from utility import PrintHelper, ConfigHelper
 
 def main():
 	printh('Plugin Manager', 'main')
