@@ -1,23 +1,23 @@
 #!/usr/bin/python
 import runpy
-from utility import PathHelper
-from os import path, getcwd
+from helper.PathHelper import *
+from helper.ImportHelper import *
 from sys import argv
 
 def m_init():
 	global global_var, work_dir
 	global_var = {}
 	global_var['__user_dir__'] = currentPath()
-	work_dir = filePath(__file__)
-	global_var['__work_dir__'] = filePath(__file__)
+	work_dir = fileDirPath(__file__)
+	global_var['__work_dir__'] = fileDirPath(__file__)
 	pass
 
 def main():
 	func_map = {
-		'plugin': 'manager/plugin-manager.pyc'
+		'plugin': 'plugin-manager.pyc'
 	}
 
-	with workSpace(BaseShift('manager')) as wrk:
+	with workSpace(pathShift(work_dir, 'manager')) as wrk:
 		if len(argv)>1 and func_map.has_key(argv[1]):
 			global_var['argv'] = argv[2:]
 			runpy.run_path(func_map[argv[1]],

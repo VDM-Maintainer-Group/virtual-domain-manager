@@ -11,10 +11,7 @@ class PluginProxy(object):
 	"""docstring for PluginProxy"""
 	def __init__(self, fpath):
 		super(PluginProxy, self).__init__()
-		self.global_vars = {
-			"wrapper": __import__("wrapper", globals()),
-			"utility": __import__("utility", globals()),
-		}
+		self.global_vars = {}
 		# fpath = path.realpath(fpath)
 		# self.fpath = 
 		# (

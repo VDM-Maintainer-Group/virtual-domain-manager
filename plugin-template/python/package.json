@@ -10,7 +10,7 @@
 
 	"main": "plugin-entry.py",
 	"dependency":{
-		"python":["xml","wrapper","utility"],
+		"python":["xml","wrapper","helper"],
 		"apt":["gedit",]
 	},
 	"scripts": {

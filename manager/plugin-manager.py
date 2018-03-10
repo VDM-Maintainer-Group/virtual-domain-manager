@@ -7,8 +7,13 @@ Plugin Manager
 """
 import plugins
 from optparse import OptionParser
-from PluginProxy import PluginProxy
-from utility import PrintHelper, ConfigHelper
+from helper.ImportHelper import *
+from helper.PathHelper import *
+from helper.PrintHelper import *
+from helper.ConfigHelper import *
+
+ret = require("PluginProxy")
+print(ret)
 
 def main():
 	printh('Plugin Manager', 'main')
