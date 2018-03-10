@@ -24,10 +24,13 @@ class workSpace:
 		self.wrk = wrk
 		self.pwd = getcwd()
 	
-	def __enter__():
+	def __enter__(self):
 		chdir(wrk)
-		pass
+		return self
 
-	def __exit__():
+	def __exit__(self, exc_type, exc_value, exc_tb):
 		chdir(pwd)
+		if exc_tb:
+            # cope with exception
+            pass
 		pass
