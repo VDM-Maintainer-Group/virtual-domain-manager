@@ -3,18 +3,49 @@ ImportHelper: import helper function utilities
 @author: Mark Hong
 @level: debug
 '''
-from runpy import run_path
-from os.path import isdir, relpath
+import sys
+from os.path import realpath
 
-def require(file_path, globalVars=None):
-	if not isdir(file_path):
-		file_path += '.pyc'
-	run_path(file_path, globalVars, None)
+IMPORT_ENV=['./']
+
+class ModuleClass(dict):
+	"""docstring for ModuleClass"""
+	def __init__(self, items):
+		super(ModuleClass, self).__init__(items)
+		pass
+
+	def __getattr__(self, key):
+		if self.has_key(key):
+			return self[key]
+		else:
+			return None
+
+def require(file_path, *args):
+	global IMPORT_ENV
+	tmp_path = sys.path
+	try:
+		IMPORT_ENV = [realpath(x) for x in IMPORT_ENV]
+		sys.path += IMPORT_ENV
+		tmp_module = __import__(file_path, None, None)
+		
+		if len(args)==0:
+			return tmp_module
+		elif len(args)>1:
+			tmp_dict = dict()
+			for x in args:
+				if hasattr(tmp_module, x):
+					tmp_dict[x] = getattr(tmp_module, x)
+				else:
+					tmp_dict[x] = None
+			return ModuleClass(tmp_dict)
+		else:
+			if hasattr(tmp_module, args[0]):
+				return getattr(tmp_module, args[0])
+			else:
+				return None
+		pass
+	except Exception as e:
+		print(e)
+	finally:
+		sys.path = tmp_path
 	pass
-
-def requireLib():
-	pass
-
-# __os_none__.path.isdir(__os_none__.path.join(__system_dir__, __system_file__))
-# __system_dir__ = __os_none__.path.dirname(__file__)
-# __import__(__system_file__, globals(), locals())

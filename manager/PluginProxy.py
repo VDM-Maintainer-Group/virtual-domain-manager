@@ -4,8 +4,6 @@ Plugin Proxy Class
 @author: Mark Hong
 #Use runpy to change work-dir
 """
-import runpy
-from os import path
 
 class PluginProxy(object):
 	"""docstring for PluginProxy"""
