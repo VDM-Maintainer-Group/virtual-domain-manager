@@ -5,12 +5,19 @@ Domain Manager
 """
 import plugins
 from optparse import OptionParser
+from helper.ConfigHelper import *
 from helper.PrintHelper import *
 from helper.PathHelper import *
 
 def main():
+	global config
 	printh('Domain Manager', 'main')
 	print([__user_dir__, __work_dir__, currentPath()])
+	config = load_json(pathShift(__work_dir__, 'config.json'))
+
+	checkPath(config['config-dir'])
+	checkPath(config['workspace-dir'])
+	checkPath(config['repo-dir'])
 	pass
 
 if __name__ == '__main__':

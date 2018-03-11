@@ -2,5 +2,5 @@
 	"config-dir":"~/.vdm",
 	"install-dir":"/opt/domain-manager",
 	"workspace-dir":"~/VDM/domain-workspace",
-	"repo-dir":"~/VDM/domain-repo",
+	"repo-dir":"~/VDM/domain-repo"
 }

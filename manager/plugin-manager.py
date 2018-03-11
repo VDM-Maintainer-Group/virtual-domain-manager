@@ -17,7 +17,7 @@ def main():
 	printh('Plugin Manager', 'main')
 	print([__user_dir__, __work_dir__, currentPath()])
 
-	IMPORT_ENV.append('../helper')
+	IMPORT_ENV.append(pathShift(__work_dir__, 'helper'))
 	require('PrintHelper', 'printh')("test", "require test")
 	imp = require('ImportHelper').require
 	PluginProxy = requireInject("PluginProxy", {'require':imp})

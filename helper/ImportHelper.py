@@ -5,6 +5,7 @@ ImportHelper: import helper function utilities
 '''
 import sys
 from os.path import realpath
+from runpy import run_path
 
 IMPORT_ENV=['./']
 IMPORT_BLACK=['os', 'sys']
@@ -68,3 +69,8 @@ def require(file_path, *args):
 	finally:
 		sys.path = tmp_path
 	pass
+
+def run_file(file_name, globalVars=None, callback=None):
+	# use runpy with: 
+	# 	*injection* and *callback* and *status code*
+	return True
