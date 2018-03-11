@@ -20,13 +20,28 @@ class ModuleClass(dict):
 		else:
 			return None
 
+def requireInject(file_path, globalVars=None):
+	global IMPORT_ENV
+	tmp_path = sys.path
+	try:
+		IMPORT_ENV = [realpath(x) for x in IMPORT_ENV]
+		sys.path += IMPORT_ENV
+		tmp_module = __import__(file_path)
+		tmp_module.__dict__.update(globalVars)
+		return tmp_module
+	except Exception as e:
+		print(e)
+	finally:
+		sys.path = tmp_path
+	pass
+
 def require(file_path, *args):
 	global IMPORT_ENV
 	tmp_path = sys.path
 	try:
 		IMPORT_ENV = [realpath(x) for x in IMPORT_ENV]
 		sys.path += IMPORT_ENV
-		tmp_module = __import__(file_path, None, None)
+		tmp_module = __import__(file_path)
 		
 		if len(args)==0:
 			return tmp_module

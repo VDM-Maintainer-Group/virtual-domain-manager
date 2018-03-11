@@ -9,7 +9,7 @@ import plugins
 from optparse import OptionParser
 from helper.ImportHelper import *
 from helper.PathHelper import *
-from helper.PrintHelper import printh
+from helper.PrintHelper import *
 from helper.ConfigHelper import *
 
 def main():
@@ -18,8 +18,10 @@ def main():
 	print([__user_dir__, __work_dir__, currentPath()])
 
 	IMPORT_ENV.append('../helper')
-	PluginProxy = require("PluginProxy")
-	require('PrintHelper').printh("test", "require test")
+	require('PrintHelper', 'printh')("test", "require test")
+	imp = require('ImportHelper').require
+	PluginProxy = requireInject("PluginProxy", {'require':imp})
+	PluginProxy.PluginProxy()
 	pass
 
 if __name__ == '__main__':
