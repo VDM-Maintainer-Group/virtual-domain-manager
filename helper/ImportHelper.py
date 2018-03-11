@@ -7,6 +7,7 @@ import sys
 from os.path import realpath
 
 IMPORT_ENV=['./']
+IMPORT_BLACK=['os', 'sys']
 
 class ModuleClass(dict):
 	"""docstring for ModuleClass"""
@@ -37,6 +38,9 @@ def requireInject(file_path, globalVars=None):
 
 def require(file_path, *args):
 	global IMPORT_ENV
+
+	if file_path in IMPORT_BLACK: return None
+
 	tmp_path = sys.path
 	try:
 		IMPORT_ENV = [realpath(x) for x in IMPORT_ENV]
