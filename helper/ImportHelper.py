@@ -39,14 +39,20 @@ def requireInject(file_path, globalVars=None):
 
 def require(file_path, *args):
 	global IMPORT_ENV
-	if file_path in IMPORT_BLACK: return None
+	file_path = file_path.split('.')
+	if file_path[0] in IMPORT_BLACK: return None
 
 	# support *A.B* import next time
 	tmp_path = sys.path
 	try:
 		IMPORT_ENV = [realpath(x) for x in IMPORT_ENV]
-		sys.path += IMPORT_ENV
-		tmp_module = __import__(file_path)
+		sys.path = IMPORT_ENV + sys.path #check customs first
+		tmp_module = __import__(file_path[0])
+		for x in file_path[1:]:
+			if hasattr(tmp_module, x):
+				tmp_module = getattr(tmp_module, x)
+			else:
+				return None
 		
 		if len(args)==0:
 			return tmp_module
@@ -69,6 +75,12 @@ def require(file_path, *args):
 	finally:
 		sys.path = tmp_path
 	pass
+
+def require_cur(file_path, this, *args):
+	mod = require(file_path, *args)
+	file_path = file_path.split('.')[-1]
+	this.__dict__.update({file_path: mod})
+	return mod
 
 def run_file(file_name, globalVars=None, callback=None):
 	# use runpy with: 
