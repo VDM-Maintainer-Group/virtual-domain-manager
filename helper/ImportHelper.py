@@ -39,9 +39,9 @@ def requireInject(file_path, globalVars=None):
 
 def require(file_path, *args):
 	global IMPORT_ENV
-
 	if file_path in IMPORT_BLACK: return None
 
+	# support *A.B* import next time
 	tmp_path = sys.path
 	try:
 		IMPORT_ENV = [realpath(x) for x in IMPORT_ENV]

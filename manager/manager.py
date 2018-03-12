@@ -13,7 +13,7 @@ def main():
 	global config
 	printh('Domain Manager', 'main')
 	print([__user_dir__, __work_dir__, currentPath()])
-	config = load_json(pathShift(__work_dir__, 'config.json'))
+	config = load_json(workShift('config.json'))
 
 	checkPath(config['config-dir'])
 	checkPath(config['workspace-dir'])

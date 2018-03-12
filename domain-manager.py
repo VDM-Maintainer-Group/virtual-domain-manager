@@ -3,13 +3,18 @@ import runpy
 from helper.PathHelper import *
 from helper.ImportHelper import *
 from sys import argv
+from functools import partial
 
 def m_init():
 	global global_var, work_dir
 	global_var = {}
+	
 	global_var['__user_dir__'] = currentPath()
+	global_var['userShift'] = partial(pathShift, currentPath())
+
 	work_dir = fileDirPath(__file__)
 	global_var['__work_dir__'] = fileDirPath(__file__)
+	global_var['workShift'] = partial(pathShift, work_dir)
 	pass
 
 def main():
