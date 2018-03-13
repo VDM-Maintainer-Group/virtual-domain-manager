@@ -8,16 +8,16 @@ def init(): # one-time@startup
 	pass
 
 def onSave():
-	pass
+	return 0
 
 def onResume():
-	pass
+	return 0
 
 def onExit():
-	pass
+	return 0
 
 def onTrigger(*args): # manually by user
-	pass
+	return 0
 
 def onDaemon(): # not implement yet
-	pass
+	return 0

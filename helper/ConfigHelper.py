@@ -5,6 +5,16 @@ ConfigHelper: useful configuration function utilities
 '''
 import json
 
+def putStat(uri, stat):
+	with open(uri, 'w') as f:
+		f.write(stat)
+	pass
+
+def getStat(uri):
+	with open(uri, 'r') as f:
+		return f.read()
+	return ""
+
 def load_json(uri):
 	try:
 		with open(uri) as cf:

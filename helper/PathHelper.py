@@ -6,21 +6,19 @@ PathHelper: useful path helper function utilities
 from os import path, getcwd, mknod, makedirs, chdir, remove, removedirs
 from tempfile import mkdtemp
 
-def checkPath(path_name, isFile=False):
+def fixPath(path_name, isFile=False):
 	path_name = fileFullPath(path_name)
 	if path.exists(path_name):
 		if path.isfile(path_name)==isFile:
-			return
+			return False
 		else:
 			removedirs(path_name) if isFile else remove(path_name)
 			pass
-		pass
-	# create at last
-	mknod(path_name) if isFile else makedirs(path_name)
-	pass
+	mknod(path_name) if isFile else makedirs(path_name) # create at last
+	return True
 
 def validPath(path_name):
-	return path.exists(path_name)
+	return path.exists(fileFullPath(path_name))
 
 def currentPath():
 	return getcwd()
