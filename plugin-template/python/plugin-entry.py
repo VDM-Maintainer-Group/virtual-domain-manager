@@ -1,10 +1,15 @@
 
-def init(): # one-time@startup
-	required('helper.HookHelper')
-	required('helper.PathHelper')
-	required('helper.ImportHelper')
-	required('sys', 'argv')
+def init():
+	addPythonEnv(['./', '~/'])
+	addCDllEnv(['./bin', '/usr/bin'])
 	PLUGIN_ORDER = -1
+	required('helper', 'PathHelper')
+	required('helper', 'HookHelper')
+	required('helper', 'IpcHelper')
+	required('helper', 'WindowHelper')
+	required('helper', 'ThreadHelper')
+	required('libc.so.6', 'printf')
+	required('sys', 'argv')
 	pass
 
 def onSave():

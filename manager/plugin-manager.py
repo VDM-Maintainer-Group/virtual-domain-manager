@@ -18,7 +18,7 @@ def main():
 	printh('Plugin Manager', 'main')
 	print([__user_dir__, __work_dir__, currentPath()])
 
-	IMPORT_PYENV.append(workShift('helper'))
+	addPythonEnv(workShift('helper'))
 	require('PrintHelper', 'printh')("test", "require test")
 	
 	PluginProxy = require("PluginProxy")

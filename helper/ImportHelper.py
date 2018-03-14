@@ -12,6 +12,20 @@ IMPORT_PYENV=['./']
 IMPORT_DLENV=['./']
 IMPORT_BLACK=['os', 'sys']
 
+def addPythonEnv(param):
+	global IMPORT_PYENV
+	if isinstance(param, str):
+		param = [param]
+	IMPORT_PYENV.extend([fileFullPath(p) for p in param])
+	pass
+
+def addCDllEnv(param):
+	global IMPORT_DLENV
+	if isinstance(param, str):
+		param = [param]
+	IMPORT_DLENV.extend([fileFullPath(p) for p in param])
+	pass
+
 class ModuleClass(dict):
 	"""docstring for ModuleClass"""
 	def __init__(self, items):
@@ -28,7 +42,6 @@ def requireInject(mod_path, globalVars=None):
 	global IMPORT_PYENV
 	try:
 		tmp_path = sys.path
-		__ENV = [fileFullPath(x) for x in IMPORT_PYENV]
 		sys.path = IMPORT_PYENV + sys.path #check customs first
 		tmp_module = __import__(mod_path)
 		tmp_module.__dict__.update(globalVars)
@@ -47,14 +60,13 @@ def require(file_path, *args):
 	__module = None
 	try: # try python module
 		tmp_path = sys.path
-		__ENV = [fileFullPath(x) for x in IMPORT_PYENV]
 		sys.path = IMPORT_PYENV + sys.path #check customs first
 		__module = __import__(file_path)
 		pass
 	except ImportError as e:
 		try: # try dynamic library
 			__ENV = existPath(
-				[pathShift(fileFullPath(x), file_path) for x in IMPORT_DLENV])
+				[pathShift(env, file_path) for env in IMPORT_DLENV])
 			file_path = __ENV if __ENV else file_path
 			__module = cdll.LoadLibrary(file_path)
 			pass
