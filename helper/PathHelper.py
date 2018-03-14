@@ -17,6 +17,13 @@ def fixPath(path_name, isFile=False):
 	mknod(path_name) if isFile else makedirs(path_name) # create at last
 	return True
 
+def existPath(path_name, isFile=False):
+	if not isinstance(path_name, list):
+		path_name = [path_name]
+	for p in path_name:
+		if validPath(p, isFile): return p
+	return None
+
 def validPath(path_name, isFile=False):
 	tmp=fileFullPath(path_name) 
 	return (path.exists(tmp) and (path.isfile(tmp)==isFile))

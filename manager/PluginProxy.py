@@ -10,6 +10,9 @@ class PluginProxy:
 		os = require('os')
 		print('os: ', os)
 
-		required('Queue.Queue')
+		required('Queue', 'Queue')
 		print('Queue.Queue: ', Queue)
+
+		required('libc.so.6', 'printf')
+		printf("%s\n", "Hello World!")
 		pass

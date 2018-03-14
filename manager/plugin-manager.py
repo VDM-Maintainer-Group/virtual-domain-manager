@@ -14,11 +14,11 @@ from helper.ConfigHelper import *
 from functools import partial
 
 def main():
-	global IMPORT_ENV
+	global IMPORT_PYENV
 	printh('Plugin Manager', 'main')
 	print([__user_dir__, __work_dir__, currentPath()])
 
-	IMPORT_ENV.append(workShift('helper'))
+	IMPORT_PYENV.append(workShift('helper'))
 	require('PrintHelper', 'printh')("test", "require test")
 	
 	PluginProxy = require("PluginProxy")
