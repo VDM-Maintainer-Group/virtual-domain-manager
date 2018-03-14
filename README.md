@@ -17,7 +17,7 @@ Python 2.7.x (remains checked in installation script).
 
 Todo list:
 
-- plugin API norm AND ctypes.cdll wrapper AND plugin proxy
+- ~~plugin API norm AND ctypes.cdll wrapper AND plugin proxy~~
 - plugin manager (register/test/install/remove)
 - domain manager (setup/restore/rename/delete)
 - cross-platform compatability
