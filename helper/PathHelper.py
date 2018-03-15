@@ -29,6 +29,13 @@ def validPath(path_name, isFile=False):
 	tmp=fileFullPath(path_name) 
 	return (path.exists(tmp) and (path.isfile(tmp)==isFile))
 
+def listPathDir(path_name, isFile=False):
+	tmp=listdir(fileFullPath(path_name))
+	tmp=[fileFullPath(t) for t in tmp]
+	for t in tmp:
+		if path.isfile(t)!=isFile: tmp.remove(t)
+	return tmp
+
 def currentPath():
 	return getcwd()
 

@@ -11,6 +11,52 @@ from helper.PathHelper import *
 
 global options
 
+config_template={
+	"plugins":{
+		"plugin":-1
+	}
+}
+
+def list_domain():
+	tmp = listPathDir(VDM_WRKS())
+	printh('manager', str(tmp))
+	if options.verbose:
+		for t in tmp:
+			print('%s: '%t)
+			#print out details
+			pass
+	pass
+
+def create_domain(ws_name):
+	try:
+		fixPath(VDM_REPS(ws_name))
+		fixPath(VDM_WRKS(ws_name))
+		__config=pathShift(VDM_WRKS(ws_name),'config.json')
+		fixPath(__config, True)
+
+	except Exception as e:
+		if options.verbose: printh('manager', 'error create domain')
+	pass
+
+def rename_domain(ws_name):
+	try:
+		__name = getStat(VDM_CFG('domain-name'))
+		fileDirRename(VDM_WRKS(__name), ws_name)
+		fileDirRename(VDM_REPS(__name), ws_name)
+		putStat(VDM_CFG('domain-name'), ws_name)
+	except Exception as e:
+		if options.verbose: printh('manager', 'error rename domain')
+	pass
+
+def save_domain():
+	pass
+
+def open_domain(ws_name):
+	pass
+
+def close_domain():
+	pass
+
 def main():
 	init_config()
 
@@ -19,37 +65,23 @@ def main():
 		return
 
 	if options.list_flag:
-		# iterate all the domains
-		# for x in <domains>:
-		# 	if options.verbose: pass #print out details
+		list_domain()
+		pass
+	elif options.new_ws:
+		create_domain(options.new_ws)
+		return
+	elif options.re_name:
+		rename_domain(options.re_name)
 		return
 
 	if options.save_flag: #save current domain
-		if options.verbose: pass #print out details
+		save_domain()
+		pass
+	elif options.open_ws:
+		open_domain(options.open_ws)
 		return
-
-	if options.new_ws:
-		#create new domain, avoid name collision
-		try:
-			fixPath(VDM_REPS(options.new_ws))
-			fixPath(VDM_WRKS(options.new_ws))
-			fixPath(VDM_WRKS(options.new_ws+'\\config.json'), True)
-		except Exception as e:
-			if options.verbose: printh('manager', 'error create domain')
-		return
-
-	if options.open_ws:
-		# (erect save_flag) open another workspace
-		return
-
-	if options.re_name:
-		try:
-			__name = getStat(VDM_CFG('domain-name'))
-			fileDirRename(VDM_WRKS(__name), options.re_name)
-			fileDirRename(VDM_REPS(__name), options.re_name)
-			putStat(VDM_CFG('domain-name'), options.re_name)
-		except Exception as e:
-			if options.verbose: printh('manager', 'error rename domain')
+	elif options.exit_ws: #close current domain
+		close_domain()
 		return
 	
 	printh('manager', 'main')
@@ -99,6 +131,10 @@ if __name__ == '__main__':
 		dest="open_ws", 
 		default="", 
 		help="open an existing workspace")
+	parser.add_option("-x", "--exit",
+		dest="exit_ws", 
+		default="", 
+		help="close current workspace")
 	parser.add_option("-r", "--rename",
 		dest="re_name", 
 		default="", 
