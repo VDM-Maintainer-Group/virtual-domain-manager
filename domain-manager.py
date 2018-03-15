@@ -17,6 +17,10 @@ def m_init():
 	global_var.update({'__work_dir__':	fileDirPath(__file__)})
 	global_var.update({'userShift':		partial(pathShift, currentPath())})
 	global_var.update({'workShift':		partial(pathShift, work_dir)})
+	global_var.update({'VDM_WRKS':	partial(pathShift, 
+				fileFullPath(config['workspace-dir']))})
+	global_var.update({'VDM_REPS':	partial(pathShift, 
+				fileFullPath(config['repo-dir']))})
 	pass
 
 def main():
@@ -32,7 +36,7 @@ def main():
 			pass
 		else:
 			global_var.update({'argv':	argv})
-			global_var.update({'CFG':	partial(pathShift, 
+			global_var.update({'VDM_CFG':	partial(pathShift, 
 				fileFullPath(config['config-dir']))})
 			runpy.run_path('manager.pyc',
 							global_var, '__main__')

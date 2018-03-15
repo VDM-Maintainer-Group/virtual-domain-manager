@@ -23,6 +23,13 @@ def load_json(uri):
 		raise e
 	pass
 
+def save_json(config, uri):
+	try:
+		json.dump(config, uri)
+	except Exception as e:
+		raise e
+	pass
+
 def cmd_parse(str):
 	op, cmd = '', []
 	op_tuple = str.lower().strip().split(' ')

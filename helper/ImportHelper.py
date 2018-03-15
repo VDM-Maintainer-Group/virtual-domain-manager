@@ -6,6 +6,7 @@ ImportHelper: import helper function utilities
 import sys
 from runpy import run_path
 from ctypes import cdll
+from functools import partial
 from PathHelper import *
 
 IMPORT_PYENV=['./']
@@ -38,13 +39,16 @@ class ModuleClass(dict):
 		else:
 			return None
 
-def requireInject(mod_path, globalVars=None):
+def requireInject(mod_path, globalVars=dict()):
 	global IMPORT_PYENV
 	try:
 		tmp_path = sys.path
 		sys.path = IMPORT_PYENV + sys.path #check customs first
 		tmp_module = __import__(mod_path)
 		tmp_module.__dict__.update(globalVars)
+		tmp_module.__dict__.update({'require': require})
+		tmp_module.__dict__.update({'required': 
+			partial(require_cur, this=tmp_module)})
 		return tmp_module
 	except ImportError as e:
 		print(e)

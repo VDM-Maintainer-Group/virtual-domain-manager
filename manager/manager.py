@@ -30,6 +30,12 @@ def main():
 
 	if options.new_ws:
 		#create new domain, avoid name collision
+		try:
+			fixPath(VDM_REPS(options.new_ws))
+			fixPath(VDM_WRKS(options.new_ws))
+			fixPath(VDM_WRKS(options.new_ws+'\\config.json'), True)
+		except Exception as e:
+			if options.verbose: printh('manager', 'error create domain')
 		return
 
 	if options.open_ws:
@@ -37,25 +43,30 @@ def main():
 		return
 
 	if options.re_name:
-		#rename current domain
+		try:
+			__name = getStat(VDM_CFG('domain-name'))
+			fileDirRename(VDM_WRKS(__name), options.re_name)
+			fileDirRename(VDM_REPS(__name), options.re_name)
+			putStat(VDM_CFG('domain-name'), options.re_name)
+		except Exception as e:
+			if options.verbose: printh('manager', 'error rename domain')
 		return
 	
 	printh('manager', 'main')
-	print(getStat(CFG('stats')), getStat(CFG('domain-name')))
+	print(getStat(VDM_CFG('stats')), getStat(VDM_CFG('domain-name')))
 	pass
 
-def init_config():
+def init_config(init_stat='closed', init_name=''):
 	global stats, dname
 
-	fixPath(VDM_ENV['repo-dir'])
-	fixPath(VDM_ENV['workspace-dir'])
-	fixPath(VDM_ENV['config-dir'])
+	fixPath(VDM_CFG())
+	fixPath(VDM_WRKS())
+	fixPath(VDM_REPS())
 
-	if fixPath(CFG('stats'), True):
-		putStat(CFG('stats'), 'closed')
-	
-	if fixPath(CFG('domain-name'), True):
-		putStat(CFG('domain-name'), '')
+	if fixPath(VDM_CFG('stats'), True):
+		putStat(VDM_CFG('stats'), init_stat)
+	if fixPath(VDM_CFG('domain-name'), True):
+		putStat(VDM_CFG('domain-name'), init_name)
 	pass
 
 if __name__ == '__main__':

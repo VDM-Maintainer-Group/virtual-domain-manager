@@ -11,7 +11,6 @@ from helper.ImportHelper import *
 from helper.PathHelper import *
 from helper.PrintHelper import *
 from helper.ConfigHelper import *
-from functools import partial
 
 def main():
 	global IMPORT_PYENV
@@ -21,10 +20,7 @@ def main():
 	addPythonEnv(workShift('helper'))
 	require('PrintHelper', 'printh')("test", "require test")
 	
-	PluginProxy = require("PluginProxy")
-	imp = require('ImportHelper').require_cur
-	imp_cur = partial(imp, this=PluginProxy)
-	PluginProxy.__dict__.update({'require':require, 'required':imp_cur})
+	PluginProxy = requireInject("PluginProxy")
 	PluginProxy.PluginProxy()
 	pass
 

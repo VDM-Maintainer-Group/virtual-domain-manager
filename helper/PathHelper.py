@@ -3,7 +3,8 @@ PathHelper: useful path helper function utilities
 @author: Mark Hong
 @level: debug
 '''
-from os import path, getcwd, mknod, makedirs, chdir, remove, removedirs
+from os import path, mknod, makedirs, chdir, remove, removedirs
+from os import getcwd, listdir, rename
 from tempfile import mkdtemp
 
 def fixPath(path_name, isFile=False):
@@ -30,6 +31,13 @@ def validPath(path_name, isFile=False):
 
 def currentPath():
 	return getcwd()
+
+def fileDirRename(old_name, new_name):
+	if validPath(fileFullPath(old_name)):
+		rename(old_name, new_name)
+	else:
+		raise Exception('Error rename domain')
+	pass
 
 def fileDirPath(file_path):
 	return path.dirname(fileFullPath(file_path))
