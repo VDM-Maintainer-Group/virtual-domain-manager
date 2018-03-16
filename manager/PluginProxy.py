@@ -1,4 +1,3 @@
-#!/usr/bin/python
 """
 Plugin Proxy Class
 @author: Mark Hong

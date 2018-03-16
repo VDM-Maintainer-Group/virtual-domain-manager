@@ -8,6 +8,8 @@ from optparse import OptionParser
 from helper.ConfigHelper import *
 from helper.LogHelper import *
 from helper.PathHelper import *
+from manager.PluginHelper import PluginHelper
+from manager.PluginProxy import PluginProxy
 
 global options
 
@@ -29,6 +31,11 @@ def create_domain(ws_name):
 		__plugins = logConsole('config', 'Plugins? (splitted by SPACE)', default=list()).split(' ')
 		fixPath(VDM_REPS(ws_name))
 		fixPath(VDM_WRKS(ws_name))
+		fixPath(pathShift(VDM_WRKS(ws_name), 'os_status'))	# for System plugins
+		fixPath(pathShift(VDM_WRKS(ws_name), 'webpages'))	# for Broswer plugins
+		fixPath(pathShift(VDM_WRKS(ws_name), 'documents'))	# for Editor plugins
+		fixPath(pathShift(VDM_WRKS(ws_name), 'entites'))	# for RealWorld notification
+		fixPath(pathShift(VDM_WRKS(ws_name), 'notes'))		# for Note programm
 
 		__config=pathShift(VDM_WRKS(ws_name),'config.json')
 		fixPath(__config, True)
@@ -68,15 +75,16 @@ def main():
 
 	# domain directory operation #
 	if options.list_flag:
-		list_domain()
+		return list_domain()
 	elif options.new_ws:
 		return create_domain(options.new_ws)
 	elif options.re_name:
 		return rename_domain(options.re_name)
 
-	# domain content operation #
+	# domain plugins operation #
+	ph = PluginHelper()
 	if options.save_flag:
-		save_domain()
+		return save_domain()
 	elif options.open_ws:
 		return open_domain(options.open_ws)
 	elif options.exit_ws:
