@@ -12,3 +12,15 @@ def printh(tip, cmd, color=None, split=' '):
 		+ ' '
 		)
 	pass
+
+def log_sucess(prompt):
+	pass
+
+def log_normal(prompt):
+	pass
+
+def log_warn(prompt):
+	pass
+
+def log_error(prompt):
+	pass

@@ -60,29 +60,28 @@ def close_domain():
 def main():
 	init_config()
 
+	# GUI Configuration #
 	if options.open_gui:
 		# call gui program here
 		return
 
+	# domain directory operation #
 	if options.list_flag:
 		list_domain()
-		pass
 	elif options.new_ws:
-		create_domain(options.new_ws)
-		return
+		return create_domain(options.new_ws)
 	elif options.re_name:
-		rename_domain(options.re_name)
-		return
+		return rename_domain(options.re_name)
+	else: return
 
-	if options.save_flag: #save current domain
+	# domain content operation #
+	if options.save_flag:
 		save_domain()
-		pass
 	elif options.open_ws:
-		open_domain(options.open_ws)
-		return
-	elif options.exit_ws: #close current domain
-		close_domain()
-		return
+		return open_domain(options.open_ws)
+	elif options.exit_ws:
+		return close_domain()
+	else: return
 	
 	printh('manager', 'main')
 	print(getStat(VDM_CFG('stats')), getStat(VDM_CFG('domain-name')))
@@ -132,8 +131,9 @@ if __name__ == '__main__':
 		default="", 
 		help="open an existing workspace")
 	parser.add_option("-x", "--exit",
+		action="store_true",
 		dest="exit_ws", 
-		default="", 
+		default=False, 
 		help="close current workspace")
 	parser.add_option("-r", "--rename",
 		dest="re_name", 
