@@ -10,7 +10,12 @@ plugin_schema={
 	'version': str(),
 	'plugins': list()
 }
-plugin_code=Enum('plugin', ('SUCCESS', 'FAILED', 'PROXY'))
+plugin_cat={
+	'SYSTEM':'os_status', 
+	'BROSWER':'webpages',
+	'EDITOR':'documents'
+}
+plugin_code=Enum('plugin-code', ('SUCCESS', 'FAILED', 'PROXY'))
 
 def m_init():
 	global global_var, work_dir, config
@@ -21,6 +26,7 @@ def m_init():
 
 	global_var.update({'plugin_schema':	plugin_schema})
 	global_var.update({'plugin_code':	plugin_code})
+	global_var.update({'plugin_cat':	plugin_cat})
 
 	global_var.update({'VDM_ENV':		config})
 	global_var.update({'__user_dir__':	currentPath()})

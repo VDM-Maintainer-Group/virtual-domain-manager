@@ -11,7 +11,7 @@ from helper.PathHelper import *
 from manager.PluginHelper import PluginHelper
 from manager.PluginProxy import PluginProxy
 
-global options
+global options, ph
 
 def list_domain():
 	tmp = listPathDir(VDM_WRKS())
@@ -31,11 +31,11 @@ def create_domain(ws_name):
 		__plugins = logConsole('config', 'Plugins? (splitted by SPACE)', default=list()).split(' ')
 		fixPath(VDM_REPS(ws_name))
 		fixPath(VDM_WRKS(ws_name))
-		fixPath(pathShift(VDM_WRKS(ws_name), 'os_status'))	# for System plugins
-		fixPath(pathShift(VDM_WRKS(ws_name), 'webpages'))	# for Broswer plugins
-		fixPath(pathShift(VDM_WRKS(ws_name), 'documents'))	# for Editor plugins
-		fixPath(pathShift(VDM_WRKS(ws_name), 'entites'))	# for RealWorld notification
-		fixPath(pathShift(VDM_WRKS(ws_name), 'notes'))		# for Note programm
+		for item in plugin_cat.values():
+			fixPath(pathShift(VDM_WRKS(ws_name), item))
+			pass
+		fixPath(pathShift(VDM_WRKS(ws_name), 'entites'))	# for Notify
+		fixPath(pathShift(VDM_WRKS(ws_name), 'notes'))		# for Notes
 
 		__config=pathShift(VDM_WRKS(ws_name),'config.json')
 		fixPath(__config, True)
@@ -56,13 +56,13 @@ def rename_domain(ws_name):
 		if options.verbose: logHelp('manager', 'error rename domain')
 	pass
 
-def save_domain():
+def save_domain(): #onSave
 	pass
 
-def open_domain(ws_name):
+def open_domain(): #onResume
 	pass
 
-def close_domain():
+def close_domain(): #onExit
 	pass
 
 def main():
@@ -82,14 +82,18 @@ def main():
 		return rename_domain(options.re_name)
 
 	# domain plugins operation #
-	ph = PluginHelper()
+	__name = getStat(VDM_CFG('domain-name'))
+	ph = PluginHelper(VDM_WRKS(__name), VDM_REPS(__name))
 	if options.save_flag:
-		return save_domain()
-	elif options.open_ws:
-		return open_domain(options.open_ws)
+		ph.save_domain()
 	elif options.exit_ws:
 		return close_domain()
 
+	__name = options.open_ws
+	ph = PluginHelper(VDM_WRKS(__name), VDM_REPS(__name))
+	if options.open_ws:
+		return open_domain()
+	
 	logHelp('manager', 'main')
 	logNormal( getStat(VDM_CFG('stats')), getStat(VDM_CFG('domain-name')) )
 	pass
