@@ -17,7 +17,7 @@ def getStat(uri):
 
 def load_json(uri):
 	try:
-		with open(uri) as cf:
+		with open(uri, 'r') as cf:
 			return json.load(cf)
 	except Exception as e:
 		raise e
@@ -25,7 +25,8 @@ def load_json(uri):
 
 def save_json(config, uri):
 	try:
-		json.dump(config, uri)
+		with open(uri, 'w') as cf:
+			json.dump(config, cf)
 	except Exception as e:
 		raise e
 	pass

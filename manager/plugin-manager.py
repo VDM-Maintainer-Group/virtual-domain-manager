@@ -9,16 +9,16 @@ import plugins
 from optparse import OptionParser
 from helper.ImportHelper import *
 from helper.PathHelper import *
-from helper.PrintHelper import *
+from helper.LogHelper import *
 from helper.ConfigHelper import *
 
 def main():
 	global IMPORT_PYENV
-	printh('Plugin Manager', 'main')
+	logHelp('Plugin Manager', 'main')
 	print([__user_dir__, __work_dir__, currentPath()])
 
 	addPythonEnv(workShift('helper'))
-	require('PrintHelper', 'printh')("test", "require test")
+	require('LogHelper', 'logHelp')("test", "require test")
 	
 	PluginProxy = requireInject("PluginProxy")
 	PluginProxy.PluginProxy()

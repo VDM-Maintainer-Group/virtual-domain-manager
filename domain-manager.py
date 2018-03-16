@@ -2,8 +2,15 @@
 import runpy
 from sys import argv
 from functools import partial
+from enum import Enum
 from helper.PathHelper import *
 from helper.ConfigHelper import load_json
+
+plugin_schema={
+	'version': str(),
+	'plugins': list()
+}
+plugin_code=Enum('plugin', ('SUCCESS', 'FAILED', 'PROXY'))
 
 def m_init():
 	global global_var, work_dir, config
@@ -11,6 +18,9 @@ def m_init():
 
 	work_dir = fileDirPath(__file__)
 	config = load_json(pathShift(work_dir, 'config.json'))
+
+	global_var.update({'plugin_schema':	plugin_schema})
+	global_var.update({'plugin_code':	plugin_code})
 
 	global_var.update({'VDM_ENV':		config})
 	global_var.update({'__user_dir__':	currentPath()})

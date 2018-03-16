@@ -6,20 +6,14 @@ Domain Manager
 import plugins
 from optparse import OptionParser
 from helper.ConfigHelper import *
-from helper.PrintHelper import *
+from helper.LogHelper import *
 from helper.PathHelper import *
 
 global options
 
-config_template={
-	"plugins":{
-		"plugin":-1
-	}
-}
-
 def list_domain():
 	tmp = listPathDir(VDM_WRKS())
-	printh('manager', str(tmp))
+	logHelp('manager', str(tmp))
 	if options.verbose:
 		for t in tmp:
 			print('%s: '%t)
@@ -28,14 +22,21 @@ def list_domain():
 	pass
 
 def create_domain(ws_name):
+	__checked = logConsole('config', 'New domain %s? %s'%(G_T(ws_name), '(Y/[N])'), default='N')
+	if not __checked[0] in ['Y', 'y']: return
+	
 	try:
+		__plugins = logConsole('config', 'Plugins? (splitted by SPACE)', default=list()).split(' ')
 		fixPath(VDM_REPS(ws_name))
 		fixPath(VDM_WRKS(ws_name))
+
 		__config=pathShift(VDM_WRKS(ws_name),'config.json')
 		fixPath(__config, True)
-
+		plugin_schema['version'] = 'v0.1'
+		plugin_schema['plugins'] = __plugins
+		save_json(plugin_schema, __config)
 	except Exception as e:
-		if options.verbose: printh('manager', 'error create domain')
+		if options.verbose: logHelp('manager', 'error create domain')
 	pass
 
 def rename_domain(ws_name):
@@ -45,7 +46,7 @@ def rename_domain(ws_name):
 		fileDirRename(VDM_REPS(__name), ws_name)
 		putStat(VDM_CFG('domain-name'), ws_name)
 	except Exception as e:
-		if options.verbose: printh('manager', 'error rename domain')
+		if options.verbose: logHelp('manager', 'error rename domain')
 	pass
 
 def save_domain():
@@ -72,7 +73,6 @@ def main():
 		return create_domain(options.new_ws)
 	elif options.re_name:
 		return rename_domain(options.re_name)
-	else: return
 
 	# domain content operation #
 	if options.save_flag:
@@ -81,10 +81,9 @@ def main():
 		return open_domain(options.open_ws)
 	elif options.exit_ws:
 		return close_domain()
-	else: return
-	
-	printh('manager', 'main')
-	print(getStat(VDM_CFG('stats')), getStat(VDM_CFG('domain-name')))
+
+	logHelp('manager', 'main')
+	logNormal( getStat(VDM_CFG('stats')), getStat(VDM_CFG('domain-name')) )
 	pass
 
 def init_config(init_stat='closed', init_name=''):

@@ -34,13 +34,13 @@ def listPathDir(path_name, isFile=False):
 	tmp=[fileFullPath(t) for t in tmp]
 	for t in tmp:
 		if path.isfile(t)!=isFile: tmp.remove(t)
-	return tmp
+	return [str(path.basename(t)) for t in tmp]
 
 def currentPath():
 	return getcwd()
 
 def fileDirRename(old_name, new_name):
-	if validPath(fileFullPath(old_name)):
+	if validPath(old_name):
 		rename(old_name, new_name)
 	else:
 		raise Exception('Error rename domain')
