@@ -37,7 +37,8 @@ def m_init():
 		'plugin_code':		plugin_code,
 		'plugin_cat':		plugin_cat,
 		'__user_dir__':		currentPath(),
-		'__work_dir__':		fileDirPath(__file__),
+		'__work_dir__':
+			partial(pathShift, pathShift(fileDirPath(__file__),'plugins'))
 		'VDM_WRKS':			global_var['VDM_WRKS'],
 		'VDM_REPS':			global_var['VDM_REPS']
 	}

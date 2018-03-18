@@ -77,8 +77,9 @@ def open_domain(): #onResume
 	pass
 
 def close_domain(): #onExit
+	if getStat(VDM_CFG('stats'))=='closed': return
 	try:
-		pass
+		ph.close_domain()
 	except Exception as e:
 		if options.verbose: logError('error close domain')
 	else:
