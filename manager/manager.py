@@ -9,7 +9,6 @@ from helper.ConfigHelper import *
 from helper.LogHelper import *
 from helper.PathHelper import *
 from manager.PluginHelper import PluginHelper
-from manager.PluginProxy import PluginProxy
 
 global options, ph
 
@@ -31,7 +30,7 @@ def create_domain(ws_name):
 		__plugins = logConsole('config', 'Plugins? (splitted by SPACE)', default=list()).split(' ')
 		fixPath(VDM_REPS(ws_name))
 		fixPath(VDM_WRKS(ws_name))
-		for item in plugin_cat.values():
+		for item in __helper.plugin_cat.values():
 			fixPath(pathShift(VDM_WRKS(ws_name), item))
 			pass
 		fixPath(pathShift(VDM_WRKS(ws_name), 'entites'))	# for Notify
@@ -39,11 +38,12 @@ def create_domain(ws_name):
 
 		__config=pathShift(VDM_WRKS(ws_name),'config.json')
 		fixPath(__config, True)
-		plugin_schema['version'] = 'v0.1'
-		plugin_schema['plugins'] = __plugins
-		save_json(plugin_schema, __config)
+		__tmp = dict(__helper.plugin_schema)
+		__tmp['version'] = 'v0.1'
+		__tmp['plugins'] = __plugins
+		save_json(__tmp, __config)
 	except Exception as e:
-		if options.verbose: logHelp('manager', 'error create domain')
+		if options.verbose: logError('error create domain')
 	pass
 
 def rename_domain(ws_name):
@@ -53,16 +53,37 @@ def rename_domain(ws_name):
 		fileDirRename(VDM_REPS(__name), ws_name)
 		putStat(VDM_CFG('domain-name'), ws_name)
 	except Exception as e:
-		if options.verbose: logHelp('manager', 'error rename domain')
+		if options.verbose: logError('error rename domain')
 	pass
 
 def save_domain(): #onSave
+	try:
+		ph.save_domain()
+	except Exception as e:
+		if options.verbose: logError('error save domain')
+	else:
+		pass
 	pass
 
 def open_domain(): #onResume
+	try:
+		ph.open_domain()
+	except Exception as e:
+		print(e)
+		if options.verbose: logError('error open domain')
+	else:
+		putStat(VDM_CFG('domain-name'), ph.name)
+		putStat(VDM_CFG('stats'), 'pending')
 	pass
 
 def close_domain(): #onExit
+	try:
+		pass
+	except Exception as e:
+		if options.verbose: logError('error close domain')
+	else:
+		putStat(VDM_CFG('domain-name'), '')
+		putStat(VDM_CFG('stats'), 'closed')
 	pass
 
 def main():
@@ -71,6 +92,7 @@ def main():
 	# GUI Configuration #
 	if options.open_gui:
 		# call gui program here
+		logWarning('Nothing happend...')
 		return
 
 	# domain directory operation #
@@ -82,20 +104,22 @@ def main():
 		return rename_domain(options.re_name)
 
 	# domain plugins operation #
+	global ph
 	__name = getStat(VDM_CFG('domain-name'))
-	ph = PluginHelper(VDM_WRKS(__name), VDM_REPS(__name))
+	ph = PluginHelper(__name, __helper)
+
 	if options.save_flag:
-		ph.save_domain()
+		save_domain()
 	elif options.exit_ws:
 		return close_domain()
-
-	__name = options.open_ws
-	ph = PluginHelper(VDM_WRKS(__name), VDM_REPS(__name))
-	if options.open_ws:
-		return open_domain()
+	elif options.open_ws:
+		close_domain()
+		ph = PluginHelper(options.open_ws, __helper)
+		open_domain()
+		return
 	
 	logHelp('manager', 'main')
-	logNormal( getStat(VDM_CFG('stats')), getStat(VDM_CFG('domain-name')) )
+	logNormal( getStat(VDM_CFG('domain-name')), getStat(VDM_CFG('stats')) )
 	pass
 
 def init_config(init_stat='closed', init_name=''):

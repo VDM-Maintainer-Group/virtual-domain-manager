@@ -18,25 +18,30 @@ plugin_cat={
 plugin_code=Enum('plugin-code', ('SUCCESS', 'FAILED', 'PROXY'))
 
 def m_init():
-	global global_var, work_dir, config
+	global global_var, work_dir, __config, __helper
 	global_var = {}
 
 	work_dir = fileDirPath(__file__)
-	config = load_json(pathShift(work_dir, 'config.json'))
+	__config = load_json(pathShift(work_dir, 'config.json'))
 
-	global_var.update({'plugin_schema':	plugin_schema})
-	global_var.update({'plugin_code':	plugin_code})
-	global_var.update({'plugin_cat':	plugin_cat})
-
-	global_var.update({'VDM_ENV':		config})
-	global_var.update({'__user_dir__':	currentPath()})
-	global_var.update({'__work_dir__':	fileDirPath(__file__)})
+	global_var.update({'VDM_ENV':		__config})
 	global_var.update({'userShift':		partial(pathShift, currentPath())})
 	global_var.update({'workShift':		partial(pathShift, work_dir)})
 	global_var.update({'VDM_WRKS':	partial(pathShift, 
-				fileFullPath(config['workspace-dir']))})
+				fileFullPath(__config['workspace-dir']))})
 	global_var.update({'VDM_REPS':	partial(pathShift, 
-				fileFullPath(config['repo-dir']))})
+				fileFullPath(__config['repo-dir']))})
+
+	__helper = {
+		'plugin_schema':	plugin_schema,
+		'plugin_code':		plugin_code,
+		'plugin_cat':		plugin_cat,
+		'__user_dir__':		currentPath(),
+		'__work_dir__':		fileDirPath(__file__),
+		'VDM_WRKS':			global_var['VDM_WRKS'],
+		'VDM_REPS':			global_var['VDM_REPS']
+	}
+	global_var.update({'__helper': __helper})
 	pass
 
 def main():
@@ -53,7 +58,7 @@ def main():
 		else:
 			global_var.update({'argv':	argv})
 			global_var.update({'VDM_CFG':	partial(pathShift, 
-				fileFullPath(config['config-dir']))})
+				fileFullPath(__config['config-dir']))})
 			runpy.run_path('manager.pyc',
 							global_var, '__main__')
 			pass

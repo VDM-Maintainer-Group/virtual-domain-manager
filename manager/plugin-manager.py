@@ -12,16 +12,20 @@ from helper.PathHelper import *
 from helper.LogHelper import *
 from helper.ConfigHelper import *
 
-def main():
-	global IMPORT_PYENV
-	logHelp('Plugin Manager', 'main')
-	print([__user_dir__, __work_dir__, currentPath()])
-
+def __test():
 	addPythonEnv(workShift('helper'))
 	require('LogHelper', 'logHelp')("test", "require test")
 	
 	PluginProxy = requireInject("PluginProxy")
 	PluginProxy.PluginProxy()
+	pass
+
+def main():
+	global IMPORT_PYENV
+	logHelp('Plugin Manager', 'main')
+	print([__helper.__user_dir__, __helper.__work_dir__, currentPath()])
+
+	__test()
 	pass
 
 if __name__ == '__main__':
