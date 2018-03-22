@@ -3,11 +3,23 @@ Plugin Helper Class
 @author: Mark Hong
 @level: debug
 """
+import apt, apt_pkg
 from helper.LogHelper import *
 from helper.PathHelper import *
 from helper.ImportHelper import *
 
-def plugEnvInject(obj):
+def pluginDepsParse(deps):
+	__keys = ['python', 'apt']
+	pass
+
+def pluginPkgLint(pkg):
+	__desc = ['name', 'author', 'license', 'keywords','description']
+	__lint = ['version', 'category', 'platform']
+	__runtime = ['main', 'dependency']
+	__scripts = ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
+	pass
+
+def pluginEnvInject(obj):
 	#user_dir_shift
 	#work_dir_shift
 	pass

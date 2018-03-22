@@ -2,8 +2,12 @@
 
 com_l1()
 {
-	local cur=${COMP_WORDS[COMP_CWORD]}
-	COMPREPLY=( $(compgen -W "plugin" -- $cur) )
+	local cur opts
+
+	cur=${COMP_WORDS[COMP_CWORD]}
+	opts="plugin sync"
+
+	COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
 }
 
 complete -F com_l1 domain-manager
