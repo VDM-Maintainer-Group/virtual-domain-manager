@@ -25,4 +25,4 @@ sudo cp $PWD/script/domain-manager-completion.bash /etc/bash_completion.d/
 source /etc/bash_completion.d/domain-manager-completion.bash
 printf "[Install]\tBash auto-completion installed\n"
 
-printf "\t========     Complete!    ========\n\n"
+printf "\t========     Complete!    ========\n"

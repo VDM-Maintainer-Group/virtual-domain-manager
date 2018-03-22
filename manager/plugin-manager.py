@@ -23,8 +23,7 @@ def __test():
 def main():
 	global IMPORT_PYENV
 	logHelp('Plugin Manager', 'main')
-	print([__helper.__user_dir__, __helper.__work_dir__, currentPath()])
-
+	print([__helper['__user_dir__'], __helper['__work_dir__'], currentPath()])
 	__test()
 	pass
 

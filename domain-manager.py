@@ -37,8 +37,9 @@ def m_init():
 		'plugin_code':		plugin_code,
 		'plugin_cat':		plugin_cat,
 		'__user_dir__':		currentPath(),
-		'__work_dir__':
-			partial(pathShift, pathShift(fileDirPath(__file__),'plugins'))
+		'__work_dir__':		fileDirPath(__file__),
+		'VDM_PLGS':
+			partial(pathShift, pathShift(fileDirPath(__file__),'plugins')),
 		'VDM_WRKS':			global_var['VDM_WRKS'],
 		'VDM_REPS':			global_var['VDM_REPS']
 	}
@@ -47,7 +48,8 @@ def m_init():
 
 def main():
 	func_map = {
-		'plugin': 'plugin-manager.pyc'
+		'plugin': 'plugin-manager.pyc',
+		'sync': 'sync-manager.pyc',
 	}
 
 	with workSpace(pathShift(work_dir, 'manager')) as wrk:
