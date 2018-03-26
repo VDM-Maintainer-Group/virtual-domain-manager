@@ -107,22 +107,23 @@ def main():
 	# domain plugins operation #
 	global ph
 	__name = getStat(VDM_CFG('domain-name'))
-	__stat = getStat(VMD_CFG('stats'))
-	if __stat=='closed': return
-	ph = PluginHelper(__name, __helper)
+	__stat = getStat(VDM_CFG('stats'))
+	if __name!='':
+		ph = PluginHelper(__name, __helper)
 
-	if options.save_flag:
-		save_domain()
-	elif options.exit_ws:
-		return close_domain()
-	elif options.open_ws:
-		close_domain()
-		ph = PluginHelper(options.open_ws, __helper)
-		open_domain()
-		return
+		if options.save_flag:
+			save_domain()
+		if options.exit_ws:
+			return close_domain()
+		elif options.open_ws:
+			close_domain()
+			ph = PluginHelper(options.open_ws, __helper)
+			open_domain()
+			return
+		pass
 	
 	logHelp('manager', 'main')
-	logNormal( getStat(VDM_CFG('domain-name')), getStat(VDM_CFG('stats')) )
+	logNormal(__name, __stat)
 	pass
 
 def init_config(init_stat='closed', init_name=''):
