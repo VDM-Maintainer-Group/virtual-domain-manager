@@ -5,7 +5,7 @@ Plugin Proxy Class
 """
 class PluginProxy:
 	"""docstring for PluginProxy"""
-	def __init__(self):
+	def __init__(self, name):
 		os = require('os')
 		print('os: ', os)
 

@@ -107,6 +107,8 @@ def main():
 	# domain plugins operation #
 	global ph
 	__name = getStat(VDM_CFG('domain-name'))
+	__stat = getStat(VMD_CFG('stats'))
+	if __stat=='closed': return
 	ph = PluginHelper(__name, __helper)
 
 	if options.save_flag:

@@ -36,9 +36,6 @@ def listPathDir(path_name, isFile=False):
 		if path.isfile(t)!=isFile: tmp.remove(t)
 	return [str(path.basename(t)) for t in tmp]
 
-def currentPath():
-	return getcwd()
-
 def fileDirRename(old_name, new_name):
 	if validPath(old_name):
 		rename(old_name, new_name)
@@ -59,6 +56,9 @@ def pathShift(basePath=None, relPath=""):
 	else:
 		return path.join(getcwd(), relPath)
 	pass
+
+def workShift(relPath=""):
+	return path.join(getcwd(), relPath)
 
 class workSpace:
 	"""docstring for workSpace"""

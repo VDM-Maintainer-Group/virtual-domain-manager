@@ -25,8 +25,7 @@ def m_init():
 	__config = load_json(pathShift(work_dir, 'config.json'))
 
 	global_var.update({'VDM_ENV':		__config})
-	global_var.update({'userShift':		partial(pathShift, currentPath())})
-	global_var.update({'workShift':		partial(pathShift, work_dir)})
+	global_var.update({'userShift':		partial(pathShift, workShift())})
 	global_var.update({'VDM_WRKS':	partial(pathShift, 
 				fileFullPath(__config['workspace-dir']))})
 	global_var.update({'VDM_REPS':	partial(pathShift, 
@@ -36,8 +35,7 @@ def m_init():
 		'plugin_schema':	plugin_schema,
 		'plugin_code':		plugin_code,
 		'plugin_cat':		plugin_cat,
-		'__user_dir__':		currentPath(),
-		'__work_dir__':		fileDirPath(__file__),
+		'__user_dir__':		workShift(),
 		'VDM_PLGS':
 			partial(pathShift, pathShift(fileDirPath(__file__),'plugins')),
 		'VDM_WRKS':			global_var['VDM_WRKS'],

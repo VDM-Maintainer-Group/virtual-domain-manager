@@ -11,7 +11,7 @@
 	"main": "plugin-entry.py",
 	"dependency":{
 		"python":["xml","wrapper","helper"],
-		"apt":["gedit",]
+		"apt":["gedit"]
 	},
 	"scripts": {
 		"pre-install":"echo 'pre-install'",
