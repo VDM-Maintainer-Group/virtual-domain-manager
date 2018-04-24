@@ -9,6 +9,9 @@
 	"description": "This is a plugin norm tutorial.",
 
 	"main": "plugin-entry.py",
+	"public": {
+		"sayHello": "print 'Hello World!' in command line over C code"
+	},
 	"dependency":{
 		"python":["xml","wrapper","helper"],
 		"apt":["gedit"]

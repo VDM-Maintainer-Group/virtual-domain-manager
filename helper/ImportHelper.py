@@ -10,7 +10,7 @@ from functools import partial
 from PathHelper import *
 
 IMPORT_PYENV=['./']
-IMPORT_DLENV=['./']
+IMPORT_DLENV=['./', '/usr/bin']
 IMPORT_BLACK=['os', 'sys']
 
 def addPythonEnv(param):
@@ -74,7 +74,7 @@ def require(file_path, *args):
 			file_path = __ENV if __ENV else file_path
 			__module = cdll.LoadLibrary(file_path)
 			pass
-		except OSError as e:
+		except OSError as e: # no more try
 			pass
 	finally:
 		sys.path = tmp_path

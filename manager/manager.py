@@ -30,7 +30,8 @@ def create_domain(ws_name):
 		__plugins = logConsole('config', 'Plugins? (splitted by SPACE)', default=list()).split(' ')
 		fixPath(VDM_REPS(ws_name))
 		fixPath(VDM_WRKS(ws_name))
-		for item in __helper.plugin_cat.values():
+
+		for item in __helper['plugin_cat'].values():
 			fixPath(pathShift(VDM_WRKS(ws_name), item))
 			pass
 		fixPath(pathShift(VDM_WRKS(ws_name), 'entites'))	# for Notify
@@ -38,12 +39,12 @@ def create_domain(ws_name):
 
 		__config=pathShift(VDM_WRKS(ws_name),'config.json')
 		fixPath(__config, True)
-		__tmp = dict(__helper.plugin_schema)
+		__tmp = dict(__helper['plugin_schema'])
 		__tmp['version'] = 'v0.1'
 		__tmp['plugins'] = __plugins
 		save_json(__tmp, __config)
 	except Exception as e:
-		if options.verbose: logError('error create domain')
+		if options.verbose: logError('error creating domain', e.message)
 	pass
 
 def rename_domain(ws_name):

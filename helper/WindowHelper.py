@@ -1,3 +1,8 @@
+'''
+WindowHelper: dealing with WindowManager
+@author: Mark Hong
+@level: debug
+'''
 import wnck
 
 class wnck(object):
@@ -6,16 +11,16 @@ class wnck(object):
 		super(wnck, self).__init__()
 		pass
 
-	def wnck_create(xid, screen, workspacee, hook=None):
+	def wnck_create(xid, screen, workspace, hook=None):
 		pass
 
 	def wnck_move(xid, screen, workspace, hook=None):
 		pass
 
-	def wnck_get_all():
+	def wnck_get_one(xid):
 		pass
 
-	def wnck_get_one(xid):
+	def wnck_get_all():
 		pass
 
 	def wnck_window_resize(xid, pos_t, size_t, status):

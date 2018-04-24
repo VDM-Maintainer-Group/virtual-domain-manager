@@ -17,7 +17,7 @@ def pluginDepsParse(deps):
 def pluginPkgLint(pkg):
 	__desc = ['name', 'author', 'license', 'keywords','description']
 	__lint = ['version', 'category', 'platform']
-	__runtime = ['main', 'dependency']
+	__runtime = ['main', 'public', 'dependency']
 	__scripts = ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
 	pass
 

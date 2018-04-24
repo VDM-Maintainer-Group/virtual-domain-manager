@@ -1,5 +1,5 @@
 
-all:clean check compile
+all:clean compile
 
 check:
 	@script/dependency.sh
