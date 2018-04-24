@@ -61,7 +61,7 @@ def save_domain(): #onSave
 	try:
 		ph.save_domain()
 	except Exception as e:
-		if options.verbose: logError('error save domain')
+		if options.verbose: logError('error saving domain')
 	else:
 		pass
 	pass
@@ -71,7 +71,7 @@ def open_domain(): #onResume
 		ph.open_domain()
 	except Exception as e:
 		print(e)
-		if options.verbose: logError('error open domain')
+		if options.verbose: logError('error opening domain')
 	else:
 		putStat(VDM_CFG('domain-name'), ph.name)
 		putStat(VDM_CFG('stats'), 'pending')
