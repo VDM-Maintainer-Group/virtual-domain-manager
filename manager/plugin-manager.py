@@ -12,6 +12,17 @@ from helper.PathHelper import *
 from helper.LogHelper import *
 from helper.ConfigHelper import *
 
+def pluginDepsParse(deps):
+	__keys = ['python', 'apt']
+	pass
+
+def pluginPkgLint(pkg):
+	__desc = ['name', 'author', 'license', 'keywords','description']
+	__lint = ['version', 'category', 'platform']
+	__runtime = ['main', 'dependency']
+	__scripts = ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
+	pass
+
 def main():
 	global IMPORT_PYENV
 	logHelp('Plugin Manager', 'main')

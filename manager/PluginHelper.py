@@ -10,17 +10,6 @@ from helper.PathHelper import *
 from helper.ImportHelper import *
 from PluginProxy import PluginProxy
 
-def pluginDepsParse(deps):
-	__keys = ['python', 'apt']
-	pass
-
-def pluginPkgLint(pkg):
-	__desc = ['name', 'author', 'license', 'keywords','description']
-	__lint = ['version', 'category', 'platform']
-	__runtime = ['main', 'dependency']
-	__scripts = ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
-	pass
-
 def pluginListSort(plgs):
 	# sort plugin list for execution
 	pass
@@ -45,13 +34,18 @@ class PluginHelper:
 		self.name = ws_name
 		self.helper = helper
 		self.ret_code = helper['plugin_code']
-		WRK=partial(pathShift, helper['VDM_WRKS'](ws_name))
+		WRKS=partial(pathShift, helper['VDM_WRKS'](ws_name))
+		REPS=helper['VDM_REPS']
+		PLGS=helper['VDM_PLGS']
 		CFG=load_json(pathShift(helper['VDM_WRKS'](ws_name),'config.json'))
 
 		#CFG['version']
-		self.PLGS = dict()
-		for plg in CFG['plugins']: self.PLGS[plg] = PluginProxy(plg)
-		pluginListSort(self.PLGS)
+		self.plugins = dict()
+		for plg in CFG['plugins']:
+			#lint plugin config
+			self.PLGS[plg] = PluginProxy(plg)
+			pass
+		pluginListSort(self.plugins)
 		pass
 
 	def ret_check(ret):
