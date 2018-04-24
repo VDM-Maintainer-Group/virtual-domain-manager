@@ -39,9 +39,10 @@ def create_domain(ws_name):
 
 		__config=pathShift(VDM_WRKS(ws_name),'config.json')
 		fixPath(__config, True)
-		__tmp = dict(__helper['plugin_schema'])
-		__tmp['version'] = 'v0.1'
-		__tmp['plugins'] = __plugins
+		__tmp = {
+			'version': 'v0.1',
+			'plugins': __plugins
+		}
 		save_json(__tmp, __config)
 	except Exception as e:
 		if options.verbose: logError('error creating domain', e.message)

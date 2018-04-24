@@ -61,7 +61,7 @@ def workShift(relPath=""):
 	return path.join(getcwd(), relPath)
 
 class workSpace:
-	"""docstring for workSpace"""
+	"""move into the workspace for convinient"""
 	def __init__(self, wrk):
 		self.wrk = wrk
 		self.pwd = getcwd()
@@ -78,7 +78,7 @@ class workSpace:
 		pass
 
 class tempSpace:
-	"""docstring for tempSpace"""
+	"""create a temporary directory to do some magic"""
 	def __init__(self):
 		self.pwd = getcwd()
 		self.tmp = mkdtemp()

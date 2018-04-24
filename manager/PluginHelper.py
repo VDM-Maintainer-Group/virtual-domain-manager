@@ -43,15 +43,19 @@ class PluginHelper:
 	"""
 	def __init__(self, ws_name, helper):
 		self.name = ws_name
-		self.helper = helper
-		self.ret_code = helper['plugin_code']
+		self.ret_cod = helper['plugin_code']
+
 		WRK=partial(pathShift, helper['VDM_WRKS'](ws_name))
 		CFG=load_json(pathShift(helper['VDM_WRKS'](ws_name),'config.json'))
-
-		#CFG['version']
-		self.PLGS = dict()
-		for plg in CFG['plugins']: self.PLGS[plg] = PluginProxy(plg)
-		pluginListSort(self.PLGS)
+		PLGS = helper['VDM_PLGS']
+		#helper['plugin_cat']
+		self.PlgCol = dict()
+		for plg in CFG['plugins']:
+			#dBrowser, dEditor, dSystem
+			ProxyClass = requireInject("PluginProxy").PluginProxy
+			# self.PlgCol[plg] = ProxyClass(plg)
+			pass
+		pluginListSort(self.PlgCol)
 		pass
 
 	def ret_check(ret):
@@ -66,19 +70,23 @@ class PluginHelper:
 		pass
 
 	def save_domain(self):
-		for k,v in self.PLGS.items():
-			ret = v.onSave()
+		for k,v in self.PlgCol.items():
+			with tempSpace() as tmp:
+				ret = v.onSave()
+				pass
 			pass
 		pass
 
 	def close_domain(self):
-		for k,v in self.PLGS.items():
-			ret = v.onExit()
+		for k,v in self.PlgCol.items():
+			with tempSpace() as tmp:
+				ret = v.onExit()
 			pass
 		pass
 
 	def open_domain(self):
-		for k,v in self.PLGS.items():
-			ret = v.onResume()
+		for k,v in self.PlgCol.items():
+			with tempSpace() as tmp:
+				ret = v.onResume()
 			pass
 		pass

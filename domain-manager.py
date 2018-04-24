@@ -32,7 +32,6 @@ def m_init():
 				fileFullPath(__config['repo-dir']))})
 
 	__helper = {
-		'plugin_schema':	plugin_schema,
 		'plugin_code':		plugin_code,
 		'plugin_cat':		plugin_cat,
 		'__user_dir__':		workShift(),
