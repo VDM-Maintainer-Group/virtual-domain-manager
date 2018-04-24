@@ -90,37 +90,52 @@ def close_domain(): #onExit
 def main():
 	init_config()
 
-	# GUI Configuration #
+	''' GUI Configuration '''
 	if options.open_gui:
 		# call gui program here
 		logWarning('Nothing happend...')
 		return
 
-	# domain directory operation #
-	if options.list_flag:
+	''' domain directory operation '''
+	if options.list_ws:
 		return list_domain()
 	elif options.new_ws:
 		return create_domain(options.new_ws)
 	elif options.re_name:
 		return rename_domain(options.re_name)
 
-	# domain plugins operation #
-	global ph
+	''' domain plugins operation
+	|      |    closed    |            open            |
+	| :--: | :----------: | :------------------------: |
+	| Name | (NEED RESET) | SAVE, CLOSE, OPEN, RESTORE |
+	| None |     OPEN     |        (NEED RESET)        |
+	'''
+	global ph, fsm_stat
 	__name = getStat(VDM_CFG('domain-name'))
 	__stat = getStat(VDM_CFG('stats'))
-	if __name!='':
-		ph = PluginHelper(__name, __helper)
 
-		if options.save_flag:
-			save_domain()
-		if options.exit_ws:
-			return close_domain()
-		elif options.open_ws:
-			close_domain()
-			ph = PluginHelper(options.open_ws, __helper)
-			open_domain()
-			return
+	if not (testStat(__name) or testStat(__stat)):
+		fsm_stat = 0 #normally close
+	elif testStat(__name) and testStat(__stat):
+		fsm_stat = 1 #normally open
+	else:
+		fsm_stat = -1 #abnormal
+
+	if fsm_stat==-1: #NOTE: reset abnormal status for now
+		putStat(VDM_CFG('domain-name'), '')
+		putStat(VDM_CFG('stats'), 'closed')
 		pass
+
+	if fsm_stat==1:
+		ph = PluginHelper(__name, __helper) #for current workspace
+		if options.save_ws:	save_domain()
+		if options.exit_ws:	return close_domain()
+	elif options.open_ws and fsm_stat>=0:
+		close_domain()
+		if testStat(options.open_ws):
+			ph = PluginHelper(options.open_ws, __helper) #for new workspace
+		open_domain()
+		return
 	
 	logHelp('manager', 'main')
 	logNormal(__name, __stat)
@@ -153,12 +168,12 @@ if __name__ == '__main__':
 		help="open setup GUI")
 	parser.add_option("-l", "--list",
 		action="store_true",
-		dest="list_flag", 
+		dest="list_ws", 
 		default=False, 
 		help="list all the workspace")
 	parser.add_option("-s", "--save",
 		action="store_true",
-		dest="save_flag", 
+		dest="save_ws", 
 		default=False, 
 		help="save the current workspace")
 	parser.add_option("-a", "--new",

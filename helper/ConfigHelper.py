@@ -5,6 +5,14 @@ ConfigHelper: useful configuration function utilities
 '''
 import json
 
+def testStat(stat):
+	if stat=='' or stat=='closed':
+		return False
+	elif stat=='open':
+		return True
+	else:
+		return None
+
 def putStat(uri, stat):
 	with open(uri, 'w') as f:
 		f.write(stat)
