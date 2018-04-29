@@ -11,9 +11,9 @@ plugin_schema={
 	'plugins': list()
 }
 plugin_cat={
-	'SYSTEM': 'settings', 
-	'BROSWER':'webpages',
-	'EDITOR': 'documents'
+	'system': 'settings', 
+	'browser':'webpages',
+	'editor': 'documents'
 }
 plugin_code=Enum('plugin-code', ('SUCCESS', 'FAILED', 'PROXY'))
 
@@ -34,11 +34,9 @@ def m_init():
 	__helper = {
 		'plugin_code':		plugin_code,
 		'plugin_cat':		plugin_cat,
-		'__user_dir__':		workShift(),
 		'VDM_WRKS':			global_var['VDM_WRKS'],
 		'VDM_REPS':			global_var['VDM_REPS'],
-		'VDM_PLGS':
-			partial(pathShift, pathShift(work_dir, 'plugins'))
+		'VDM_PLGS':			pathShift(work_dir, 'plugins')
 	}
 	global_var.update({'__helper': __helper})
 	pass

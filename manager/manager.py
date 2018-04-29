@@ -8,7 +8,7 @@ from optparse import OptionParser
 from helper.ConfigHelper import *
 from helper.LogHelper import *
 from helper.PathHelper import *
-from manager.PluginHelper import PluginHelper
+from manager.DomainHelper import DomainHelper
 
 global options, ph
 
@@ -129,13 +129,13 @@ def main():
 		pass
 
 	if fsm_stat==1:
-		ph = PluginHelper(__name, __helper) #for current workspace
+		ph = DomainHelper(__name, __helper) #for current workspace
 		if options.save_ws:	save_domain()
 		if options.exit_ws:	return close_domain()
 	elif options.open_ws and fsm_stat>=0:
 		close_domain()
 		if testStat(options.open_ws):
-			ph = PluginHelper(options.open_ws, __helper) #for new workspace
+			ph = DomainHelper(options.open_ws, __helper) #for new workspace
 		open_domain()
 		return
 	
