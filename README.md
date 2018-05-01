@@ -1,4 +1,4 @@
-`# Vritual Domain Manager
+# Vritual Domain Manager
 
 Virtual Domain Manager is for fast virtual workspace setup, archieve and restore.
 
@@ -18,8 +18,8 @@ Python 2.7.x (remains checked in installation script).
 Todo list:
 
 - ~~plugin API norm AND ctypes.cdll wrapper AND plugin proxy~~
-- plugin manager (register/test/install/remove)
 - ~~domain manager (setup/restore/rename/delete)~~
+- plugin manager (register/test/install/remove)
 - plugin oracle with precompiled or website repository URI
 - cross-platform compatability
 - simple Tkinter GUI
