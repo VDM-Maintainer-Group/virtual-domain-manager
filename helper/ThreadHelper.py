@@ -3,9 +3,32 @@ ThreadHelper: useful thread function utilities
 @author: Mark Hong
 @level: debug
 '''
-import threading, greenlet
+import time, threading, greenlet
 
-#next rewrite with greenlet, factory and collection
+def startThread(target, args=()):
+	''' start a daemon default thread
+	'''
+	args = tuple(args)
+	t = threading.Thread(target=target, args=args)
+	t.setDaemon(True)
+	t.start()
+	return t
+
+def watchLoop(handle_t, hook=None, interval=0.5):
+	while True:
+		for t in handle_t:
+			if not t.isAlive():
+				if hook==None:
+					exit()
+				else:
+					hook()
+				pass
+			pass
+		time.sleep(interval)
+		pass
+	pass
+
+#TODO: next rewrite with greenlet, factory and collection
 def exec_watch(process, hook=None, fatal=False, gen=True):
 	if gen:#external loop
 		process.start()

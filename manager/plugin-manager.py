@@ -46,11 +46,15 @@ if __name__ == '__main__':
 		dest="plugin_name", 
 		default="", 
 		help="install a new plugin from PWD")
+	parser.add_option("", "--run",
+		dest="plugin_name", 
+		default="", 
+		help="run an existing plugin function")
 	parser.add_option("-r", "--remove",
 		dest="plugin_name", 
 		default="", 
 		help="remove an existing plugin")
-	parser.add_option("-d", "--debug",
+	parser.add_option("", "--debug",
 		dest="plugin_name", 
 		default="", 
 		help="test environment for developing plugin")

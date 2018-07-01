@@ -1,10 +1,12 @@
+''' Plugin Template
+'''
 
 def init():
 	addPythonEnv(['./', '~/'])
-	addCDllEnv(['./bin', '/usr/bin'])
+	addCDllEnv('./bin')
 	PLUGIN_ORDER = -1
 	required('helper', 'PathHelper')
-	required('helper', 'HookHelper')
+	# required('helper', 'HookHelper')
 	required('helper', 'IpcHelper')
 	required('helper', 'WindowHelper')
 	required('helper', 'ThreadHelper')
@@ -22,6 +24,7 @@ def onExit():
 	return 0
 
 def onTrigger(*args): # manually by user
+	if args[0]=='sayHello': printf("%s\n", "Hello World!")
 	return 0
 
 def onDaemon(): # not implement yet

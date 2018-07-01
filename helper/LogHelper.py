@@ -11,7 +11,7 @@ def G_T(text): return colored(text, 'green')
 def B_T(text): return colored(text, 'blue')
 def C_T(text): return colored(text, 'cyan')
 def M_T(text): return colored(text, 'magenta')
-def M_T(text): return colored(text, 'yellow')
+def Y_T(text): return colored(text, 'yellow')
 
 def printh(tip, cmd, tip_color=None, cmd_color=None, split=' ', end='\n'):
 	print(colored('[%s]%s'%(tip, split), tip_color) 
