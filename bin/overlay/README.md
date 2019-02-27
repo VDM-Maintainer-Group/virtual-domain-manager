@@ -1,9 +1,18 @@
-## Fullscreen Overlay Transition
-This program would provide *fullscreen overlay animation* during the *domain switch process* for smooth transition view.
+## Fullscreen Overlay
 
-* Qt5 based
+VDM needs a *virtual desktop* to differ from the original desktop, which is called the *overlay*.
 
+The *display, switch and manage* functions are displayed on this overlay to replace the default GUI version of VDM, to provide immersive experience.
 
-* support theme change via API (optional with dde glass blur effect)
-* better to provide callback function, after the animation is loaded, then perform the switch process
-* API: *setBackground(color, opacity, isBlurred), *drawPromptArea, *setPromptAreaSize
+### API
+* theme change
+    ```C
+    setBackground(color, opacity, isBlurred); // (optional with dde glass blur effect)
+    drawPromptArea(const *painter);
+    setPromptAreaSize(anchor, height, width, isFullscreen);
+    ```
+* callback function, then perform the switch process
+    ```C
+    backgroundLoaded(*func);
+    workspaceLoading(*func);
+    ```
