@@ -1,4 +1,5 @@
 .vscode
+build
 domain-manager
+*.o
 *.pyc
-build/*
