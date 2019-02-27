@@ -2,14 +2,14 @@
 all:clean compile
 
 check:
-	@script/dependency.sh
+	@scripts/dependency.sh
 compile:
-	@script/compile.sh
+	@scripts/compile.sh
 install:cleandist compile
-	@script/install.sh
+	@scripts/install.sh
 uninstall:
-	@script/uninstall.sh
+	@scripts/uninstall.sh
 clean:
-	@script/clean.sh
+	@scripts/clean.sh
 cleandist:clean
 	@rm -rf ./build

@@ -1,43 +1,39 @@
 # Vritual Domain Manager
 
-Virtual Domain Manager is for fast virtual workspace setup, archieve and restore.
+Virtual Domain Manager (VDM) is for fast virtual workspace content *setup, archieve and restore*.
 
 ## Introduction
 
-> WORKSAPCEs extend the **render space**. SCREENs extend the **display space**.
+VDM embraces both concept *worksapce* and *screen-space*, which allows you to archive and reload your workloads, at any place, at any time.
 
-*VDM* embraces both *worksapce* and *screen-space*, which allows you to extract or archive your workloads along timeline.
+While there are no system-side mechnism to manage the status of variety programs (Windows 10 is trying hard on its [Timeline](https://support.microsoft.com/en-us/help/4230676/windows-10-get-help-with-timeline)), VDM works dedicatedly on GNU/Linux platforms with plugins integrated to implement the archive&extract functions.
 
-You are free to re-define the usage of your workspaces and multi-screen, under facility of VDM.
-
-While there are no system-side mechnism to manage the status of variety programs, VDM works as userspace program with plugins to fragment the functions of VDM (archive/extract). More plugins, More funs!
+More plugins, More funs!
 
 ## Dependencies
 
-Python 2.7.x (remains checked in installation script).
+Python 3.7+
 
 ## Installation
 
-* (optional) configure default `config.json`
-* `mkdir build`
-* `make check && make install`
-* `domain-manager -h` for more help
+1. (optional) configure default `config.json`
+2. `mkdir build`
+3. `make check && make install`
+4. `domain-manager -h` for more help
 
 ## Usage
 
 Todo list:
 
-- ~~plugin API norm AND ctypes.cdll wrapper AND plugin proxy~~
-- ~~domain manager (setup/restore/rename/delete)~~
+- domain manager (setup/restore/rename/delete)
 - plugin manager (register/test/install/remove)
-- plugin oracle with precompiled or website repository URI
-- cross-platform compatability
-- simple Tkinter GUI
-- daemon for realtime plugin response
+- plugin oracle (fetch plugin from website repository URI)
+- PyQt GUI
+- backend daemon
 
 ## Plugin Development
 
-Please refer to the tutorial [here](plugin-template/README.md).
+Please refer to the tutorial [here](plugins/template/README.md).
 
 ## License
 
