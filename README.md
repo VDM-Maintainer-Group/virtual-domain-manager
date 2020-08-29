@@ -1,14 +1,19 @@
+> This project is under sloooooow development, your helps are needed!
+
 # Vritual Domain Manager
 
-Virtual Domain Manager (VDM) is for fast virtual workspace contents *setup, archive and restore*.
+Virtual Domain Manager (VDM) is for fast arranging your workloads, *archive, restore and synchronize (ARS)*.
 
 ## Introduction
 
-VDM embraces both concept *worksapce* and *screen-space*, which allows you to archive and restore your workloads, at any place, at any time.
+VDM embraces both concept *worksapce* and *screen-space*, where the workloads are placed on the *virtual workspace (desktop)* and *multiple screens* on your computer, respectively.
+VDM aims at recognize the **position** and **contents** of those applications, and allows you archive them and restore them later, exactly in the same status you would like to see!
 
-While there are no system-side mechnism to manage the status of variety programs (Windows 10 is trying hard on its [Timeline](https://support.microsoft.com/en-us/help/4230676/windows-10-get-help-with-timeline)), VDM works dedicatedly on GNU/Linux platforms with integrated plugins to implement the archive&restore functions.
+Unfortunately, while there are no system-side mechanism/regulation to *recognize the contents* of variety of applications (though Windows10 is trying hard on its UWP [Timeline](https://support.microsoft.com/en-us/help/4230676/windows-10-get-help-with-timeline)), VDM is now dedicatedly developed on GNU/Linux platform and highly coupled with Linux kernel.
 
-More plugins, More funs!
+VDM basically only provides a framework with *ARS interface* with some utility functions, and relies on OUR efforts to implement the application-dependent *ARS functions*.
+
+So, more plugins, more funs!
 
 ## Dependencies
 
@@ -21,7 +26,7 @@ Python 3.7+
 
 ## Usage
 
-> (Not available for now)
+> (Not available now)
 
 ## Plugin Development
 
