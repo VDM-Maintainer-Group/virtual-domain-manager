@@ -11,7 +11,7 @@ from optparse import OptionParser
 from helper.ConfigHelper import *
 from helper.LogHelper import *
 from helper.PathHelper import *
-from manager.DomainHelper import DomainHelper
+from helper.DomainHelper import DomainHelper
 
 global options, ph
 

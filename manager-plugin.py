@@ -41,7 +41,7 @@ if __name__ == '__main__':
 		action="store_true",
 		dest="verbose", 
 		default=False, 
-		help="silient without debug information")
+		help="silent without debug information")
 	parser.add_option("-a", "--add",
 		dest="plugin_name", 
 		default="", 
