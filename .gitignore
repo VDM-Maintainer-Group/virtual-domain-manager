@@ -1,5 +1,6 @@
 .vscode
 build
-domain-manager
+__pycache__
 *.o
+*.so
 *.pyc

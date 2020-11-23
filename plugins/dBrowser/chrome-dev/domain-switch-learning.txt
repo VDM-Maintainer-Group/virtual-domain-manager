@@ -1,6 +1,0 @@
-1. chrome tab url acquire ---> 
-	Chromagnon, https://github.com/JRBANCEL/Chromagnon
-
-2. firefox tab url acquire --->
-	https://askubuntu.com/questions/887234/how-to-get-the-url-from-a-firefox-tab-from-the-terminal
-
