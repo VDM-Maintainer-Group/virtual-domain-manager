@@ -30,7 +30,7 @@ So, more plugins, more fun!
 > 
 > **Plugin Development**
 > 
-> Please refer to the tutorial [here](plugin-template/README.md).
+> Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template).
 
 ## License
 
