@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''
 ThreadHelper: useful thread function utilities
 @author: Mark Hong

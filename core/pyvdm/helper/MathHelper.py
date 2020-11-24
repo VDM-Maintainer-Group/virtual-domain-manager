@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''
 MathHelper: useful math function utilities
 @author: Mark Hong

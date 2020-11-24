@@ -1,9 +1,9 @@
+#!/usr/bin/env python3
 '''
 PrintHelper: useful print function utilities
 @author: Mark Hong
 @level: debug
 '''
-from __future__ import print_function
 from termcolor import colored, cprint
 
 def R_T(text): return colored(text, 'red')
