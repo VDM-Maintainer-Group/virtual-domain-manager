@@ -26,8 +26,5 @@ add_subdirectory(core)
 add_subdirectory(gui)
 #add_executable
 
-
-
-
-
-
+# vdm python build
+#TODO: pyvdm package including "pyvdm.core", "pyvdm.capability" (as binding), "pyvdm.gui" (as executables).
