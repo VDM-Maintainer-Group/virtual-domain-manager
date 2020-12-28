@@ -14,7 +14,9 @@ VDM basically only provides a framework with *ARS interface* with some utility f
 So, more plugins, more fun!
 
 ## (In-Refactoring)
-<img src="./previews/structure.png" width="500px" />
+<p align="center">
+  <img src="./previews/structure.png" width="650px" />
+</p>
 
 > **Dependencies**
 > 
