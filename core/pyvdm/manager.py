@@ -8,10 +8,7 @@ from sys import argv
 from enum import Enum
 from functools import partial
 from optparse import OptionParser
-from helper.ConfigHelper import *
-from helper.LogHelper import *
-from helper.PathHelper import *
-from helper.DomainHelper import DomainHelper
+from pyvdm.interface import SRC_API
 
 global options, ph
 
