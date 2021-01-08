@@ -1,63 +1,69 @@
-#!/usr/bin/python3
-"""
-Plugin Manager
-@author: Mark Hong
-#call: temporarily register
-#install: cp plugin files to install dir
-"""
-import plugins
-from optparse import OptionParser
-from helper.ImportHelper import *
-from helper.PathHelper import *
-from helper.LogHelper import *
-from helper.ConfigHelper import *
+#!/usr/bin/env python3
+# fix relative path import
+import sys
+from pathlib import Path
+sys.path.append( Path(__file__).resolve().parent.as_posix() )
+# normal import
+import json, argparse
+from utils import *
 
-def pluginDepsParse(deps):
-	__keys = ['python', 'apt']
-	pass
+# set(CONFIG_DIR "$HOME/.vdm")
+# set(PLUGINS_DIR "$HOME/.vdm/plugins")
+REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
+OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
+OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
+global options
 
-def pluginPkgLint(pkg):
-	__desc = ['name', 'author', 'license', 'keywords','description']
-	__lint = ['version', 'category', 'platform']
-	__runtime = ['main', 'dependency']
-	__scripts = ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
-	pass
+class PluginWrapper:
+    def __init__(self):
+        pass
+    pass
 
-def main():
-	global IMPORT_PYENV
-	logHelp('Plugin Manager', 'main')
-	print([__helper['__user_dir__'], workShift()])
-	pass
+class PluginManager(object):
+    def __init__(self):
+        pass
+    pass
+
+def main_install(argv):
+    args = parser.parse_args(args=argv)
+    # help="install a new plugin from PWD"
+    # help="silent without debug information"
+    pass
+
+def main_uninstall(argv):
+    args = parser.parse_args(args=argv)
+    # "remove an existing plugin"
+    pass
+
+def main_list(argv):
+    args = parser.parse_args(args=argv)
+    # help="list all plugins."
+    pass
+
+def main_run(argv):
+    args = parser.parse_args(args=argv)
+    # "run an existing plugin function"
+    pass
+
+def main(args):
+    _func = 'main_'+args.command[0]
+    if _func in __dict__.keys() and callable(__dict__[_func]):
+        #FIXME: __dict__ not defined
+        __dict__[_func](args.args)
+    else:
+        print('The command {} is not supported.'.format(R_T(args.command[0])))
+    pass
 
 if __name__ == '__main__':
-	global options
-	parser = OptionParser()
-	parser.add_option("-l", "--list",
-		action="store_true",
-		dest="list_flag", 
-		default=False, 
-		help="list all plugins.")
-	parser.add_option("-q", "--quiet",
-		action="store_true",
-		dest="verbose", 
-		default=False, 
-		help="silent without debug information")
-	parser.add_option("-a", "--add",
-		dest="plugin_name", 
-		default="", 
-		help="install a new plugin from PWD")
-	parser.add_option("", "--run",
-		dest="plugin_name", 
-		default="", 
-		help="run an existing plugin function")
-	parser.add_option("-r", "--remove",
-		dest="plugin_name", 
-		default="", 
-		help="remove an existing plugin")
-	parser.add_option("", "--debug",
-		dest="plugin_name", 
-		default="", 
-		help="test environment for developing plugin")
-
-	(options, args) = parser.parse_args()
-	main()
+    try:
+        parser = argparse.ArgumentParser(
+            description='VDM Plugin Manager.')
+        parser.add_argument('command', nargs=1,
+            help="install / uninstall / list / run")
+        parser.add_argument('args', metavar="arguments", nargs='*')
+        args = parser.parse_args()
+        main(args)
+    except Exception as e:
+        print(e)
+    finally:
+        exit()

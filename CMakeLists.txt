@@ -29,6 +29,8 @@ INSTALL(FILES ${PYVDM_API}
         DESTINATION ${PYVDM_INSTALL_DIR}/interface)
 INSTALL(DIRECTORY "./core/pyvdm/"
         DESTINATION ${PYVDM_INSTALL_DIR}/core)
+INSTALL(DIRECTORY "./assets"
+        DESTINATION ${PYVDM_INSTALL_DIR}/assets)
 INSTALL(DIRECTORY "./gui/pyvdm/"
         DESTINATION ${PYVDM_INSTALL_DIR}/gui)
 add_custom_target(uninstall COMMAND sudo rm -r ${Python_SITELIB}/pyvdm)
