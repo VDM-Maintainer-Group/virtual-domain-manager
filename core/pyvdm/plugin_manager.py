@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 # fix relative path import
+from core.pyvdm.utils import WorkSpace
 import sys
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import json, argparse
-from utils import *
+import tempfile, shutil
+from pyvdm.interface import SRC_API
+from utils import * #from pyvdm.core.utils import *
 
 # set(CONFIG_DIR "$HOME/.vdm")
-# set(PLUGINS_DIR "$HOME/.vdm/plugins")
+PLUGIN_DIRECTORY= Path('~/.vdm/plugins').expanduser()
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
@@ -20,10 +23,29 @@ class PluginWrapper:
     pass
 
 class PluginManager:
-    def __init__(self):
+    def __init__(self, root=''):
+        if root:
+            self.root = Path(root).resolve()
+        else:
+            self.root = PLUGIN_DIRECTORY
+        self.temp = Path( tempfile.gettempdir() )
         pass
 
     def install(self, url):
+        #TODO: if with online url, download as file in _path
+        _path = Path(url).expanduser().resolve()
+        # whethere a file provided or not
+        if not _path.is_file():
+            return False #file_error
+        # try to unpack the file
+        try:
+            tmp_dir = self.temp / _path.stem
+            shutil.unpack_archive(_path, tmp_dir.as_posix())
+            with WorkSpace(tmp_dir) as ws:
+                _plugin = PluginWrapper()
+                pass
+        except Exception as e:
+            return False #file_error
         pass
 
     def uninstall(self, names):
@@ -38,12 +60,13 @@ class PluginManager:
     pass
 
 def execute(pm, command, args):
+    assert( isinstance(pm, PluginManager) )
     if command=='install':
         pm.install(args.url)
     elif command=='uninstall':
         pm.uninstall(args.names)
     elif command=='list':
-        pm.list()
+        pm.list(args.names)
     elif command=='run':
         pm.run(args.plugin_name, args.plugin_function)
     else:

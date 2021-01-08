@@ -3,6 +3,8 @@ import random, math, string
 from crcmod import mkCrcFun
 import logging
 from termcolor import colored, cprint
+from pathlib import Path
+from os import chdir
 
 def R_T(text): return colored(text, 'red')
 def G_T(text): return colored(text, 'green')
@@ -10,6 +12,33 @@ def B_T(text): return colored(text, 'blue')
 def C_T(text): return colored(text, 'cyan')
 def M_T(text): return colored(text, 'magenta')
 def Y_T(text): return colored(text, 'yellow')
+
+class WorkSpace:
+    def __init__(self, p, *p_l, **kargs):
+        self.wrk = Path(p, *p_l).expanduser().resolve()
+        self.pwd = Path.cwd()
+        if 'forceUpdate' in kargs.keys():
+            self.forceUpdate = True
+        else:
+            self.forceUpdate = False
+        pass
+    
+    def __enter__(self):
+        if not Path(self.wrk).is_dir():
+            if self.forceUpdate:
+                Path(self.wrk).mkdir(mode=0o755, parents=True, exist_ok=True)
+            else:
+                return self.__exit__(*sys.exc_info())
+        else:
+            pass
+        chdir(self.wrk)
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        chdir(self.pwd)
+        if exc_tb: pass
+        pass
+    pass
 
 def getRandomSerial(len, dtype='hex'):
     if dtype=='hex':
