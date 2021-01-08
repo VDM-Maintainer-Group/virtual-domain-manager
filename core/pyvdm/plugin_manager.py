@@ -12,46 +12,58 @@ from utils import *
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
-global options
 
 class PluginWrapper:
     def __init__(self):
         pass
     pass
 
-class PluginManager(object):
+class PluginManager:
     def __init__(self):
         pass
+
+    def install(self):
+        pass
+
+    def uninstall(self):
+        pass
+
+    def list(self):
+        pass
+
+    def run(self):
+        pass
+
     pass
 
-def main_install(argv):
+def plugin_install(argv):
     args = parser.parse_args(args=argv)
     # help="install a new plugin from PWD"
     # help="silent without debug information"
     pass
 
-def main_uninstall(argv):
+def plugin_uninstall(argv):
     args = parser.parse_args(args=argv)
     # "remove an existing plugin"
     pass
 
-def main_list(argv):
+def plugin_list(argv):
     args = parser.parse_args(args=argv)
     # help="list all plugins."
     pass
 
-def main_run(argv):
+def plugin_run(argv):
     args = parser.parse_args(args=argv)
     # "run an existing plugin function"
     pass
 
 def main(args):
-    _func = 'main_'+args.command[0]
-    if _func in __dict__.keys() and callable(__dict__[_func]):
-        #FIXME: __dict__ not defined
-        __dict__[_func](args.args)
+    _func = 'plugin_'+args.command[0]
+    _globals = globals()
+    if _func in _globals.keys() and callable(_globals[_func]):
+        _globals[_func](args.args)
     else:
-        print('The command {} is not supported.'.format(R_T(args.command[0])))
+        print('The command <{}> is not supported.'.format(args.command[0]))
     pass
 
 if __name__ == '__main__':
