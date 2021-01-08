@@ -12,6 +12,7 @@ from utils import *
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
+global args
 
 class PluginWrapper:
     def __init__(self):
@@ -36,46 +37,41 @@ class PluginManager:
 
     pass
 
-def plugin_install(argv):
-    args = parser.parse_args(args=argv)
-    # help="install a new plugin from PWD"
-    # help="silent without debug information"
-    pass
-
-def plugin_uninstall(argv):
-    args = parser.parse_args(args=argv)
-    # "remove an existing plugin"
-    pass
-
-def plugin_list(argv):
-    args = parser.parse_args(args=argv)
-    # help="list all plugins."
-    pass
-
-def plugin_run(argv):
-    args = parser.parse_args(args=argv)
-    # "run an existing plugin function"
-    pass
-
 def main(args):
-    _func = 'plugin_'+args.command[0]
-    _globals = globals()
-    if _func in _globals.keys() and callable(_globals[_func]):
-        _globals[_func](args.args)
-    else:
-        print('The command <{}> is not supported.'.format(args.command[0]))
+    # print('The command <{}> is not supported.'.format(args.command[0]))
     pass
 
 if __name__ == '__main__':
     try:
+        # help="silent without debug information"
         parser = argparse.ArgumentParser(
             description='VDM Plugin Manager.')
-        parser.add_argument('command', nargs=1,
-            help="install / uninstall / list / run")
-        parser.add_argument('args', metavar="arguments", nargs='*')
+        subparsers = parser.add_subparsers(dest='command')
+        #
+        p_install = subparsers.add_parser('install',
+            help='install a new VDM plugin.')
+        p_install.add_argument('url', metavar='plugin_file',
+            help='the path to the plugin file in .zip format')
+        #
+        p_uninstall = subparsers.add_parser('uninstall',
+            help='uninstall VDM plugins.')
+        p_uninstall.add_argument('names', metavar='plugin_names', nargs='+',
+            help='the plugin name(s) to uninstall.')
+        #
+        p_list = subparsers.add_parser('list',
+            help='list information of installed VDM plugins.')
+        #
+        p_run = subparsers.add_parser('run',
+            help='run the function of an existing plugin.')
+        p_run.add_argument('plugin_name',
+            help='plugin name')
+        p_run.add_argument('plugin_function',
+            help='plugin function name')
+        #
         args = parser.parse_args()
+        print(args)
         main(args)
     except Exception as e:
-        print(e)
+        raise e#print(e)
     finally:
-        exit()
+        pass#exit()
