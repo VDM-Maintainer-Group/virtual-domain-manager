@@ -31,8 +31,12 @@ class PluginWrapper():
 
     def __getattribute__(self, name):
         if name.startswith('on'):
-            _func = self.obj.__getattribute__(name)
-            return _func
+            try:
+                _func = self.obj.__getattribute__(name)
+                return _func
+            except:
+                print('%s is an illegal function name.'%name)
+                return super().__getattribute__(name)  
         else:
             return super().__getattribute__(name)
 
