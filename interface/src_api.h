@@ -6,7 +6,7 @@ extern int onStop(void);
 
 extern int onSave(const char *);
 extern int onResume(const char *);
-extern int onClose(const char *);
+extern int onClose(void);
 
 extern int onTrigger(void *);
 

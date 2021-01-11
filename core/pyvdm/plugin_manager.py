@@ -7,6 +7,8 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import json, argparse
 import tempfile, shutil
+import ctypes
+from functools import wraps
 from pyvdm.interface import SRC_API
 from pyvdm.core.utils import * #from utils import *
 
@@ -17,9 +19,48 @@ OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
 global args
 
-class PluginWrapper:
-    def __init__(self):
+class PluginWrapper():
+    def __init__(self, entry):
+        if entry.endswith('.py'):
+            self.load_python(entry)
+        elif entry.enswith('.so'):
+            self.load_cdll(entry)
+        else:
+            raise Exception('Unsupported plugin entry.')
         pass
+
+    def __getattribute__(self, name):
+        if name.startswith('on'):
+            _func = self.obj.__getattribute__(name)
+            return _func
+        else:
+            return super().__getattribute__(name)
+
+    @staticmethod
+    def wrap_call_on_string(func):
+        @wraps(func)
+        def _wrap(_string):
+            return func( _string.encode() )
+        return _wrap
+
+    def load_python(self, entry):
+        obj = None
+        _module = __import__(entry)
+        for obj in _module.__dict__.values():
+            if isinstance(obj, SRC_API):
+                break
+        assert( isinstance(self.obj, SRC_API) )
+        self.obj = obj
+        pass
+
+    def load_cdll(self, entry):
+        obj = ctypes.cdll(entry)
+        obj.onSave = self.wrap_call_on_string(obj.onSave)
+        obj.onResume = self.wrap_call_on_string(obj.onResume)
+        #obj.onTrigger
+        self.obj = obj
+        pass
+
     pass
 
 class PluginManager:
@@ -36,10 +77,10 @@ class PluginManager:
     def test_config(config):
         # test required config fields
         for key in REQUIRED_FIELDS:
-            if key not in config.keys():
+            if key not in config:
                 return False # config: required field missing
-        # test whether main entry is legal (*.py or *.dll)
-        if not (config['main'].endswith('.py') or config['main'].endswith('.dll')):
+        # test whether main entry is legal (*.py or *.so)
+        if not (config['main'].endswith('.py') or config['main'].endswith('.so')):
             return False # config: illegal main entry
         # test whether main entry is provided
         _pre_built = Path('./release', config['main']).exists()
@@ -62,16 +103,19 @@ class PluginManager:
         except:
             return False #file_error
         # try to test plugin integrity
-        try:
-            with WorkSpace(tmp_dir) as ws:
+        with WorkSpace(tmp_dir) as ws:
+            try:
                 _config = json.load('config.json')
                 ret = self.test_config(_config)
                 if ret!=True:
                     return ret
+            except:
+                return False #config file error
+            try:
                 _plugin = PluginWrapper(_config['main'])
-                pass
-        except:
-            return False #config file error
+            except Exception as e:
+                return False #plugin loading error
+            pass
         # move to root dir
         shutil.move( POSIX(tmp_dir), POSIX(self.root) )
         return True

@@ -22,7 +22,7 @@ class SRC_API(metaclass=ABCMeta):
     def onClose(self):
         return 0
     
-    @abstractmethod
+    # @abstractmethod
     def onTrigger(self, *args):
         return 0
 
