@@ -8,7 +8,7 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 import json, argparse
 import tempfile, shutil
 from pyvdm.interface import SRC_API
-from utils import * #from pyvdm.core.utils import *
+from pyvdm.core.utils import * #from utils import *
 
 # set(CONFIG_DIR "$HOME/.vdm")
 PLUGIN_DIRECTORY= Path('~/.vdm/plugins').expanduser()
@@ -28,25 +28,53 @@ class PluginManager:
             self.root = Path(root).resolve()
         else:
             self.root = PLUGIN_DIRECTORY
+        self.root.mkdir(exist_ok=True, parents=True) #ensure root existing
         self.temp = Path( tempfile.gettempdir() )
         pass
+
+    @staticmethod
+    def test_config(config):
+        # test required config fields
+        for key in REQUIRED_FIELDS:
+            if key not in config.keys():
+                return False # config: required field missing
+        # test whether main entry is legal (*.py or *.dll)
+        if not (config['main'].endswith('.py') or config['main'].endswith('.dll')):
+            return False # config: illegal main entry
+        # test whether main entry is provided
+        _pre_built = Path('./release', config['main']).exists()
+        _post_built= ('scripts' in config) and ('pre-install' in config['scripts'])
+        if not (_pre_built or _post_built):
+            return False # config: no existing main entry
+        # all test pass
+        return True
 
     def install(self, url):
         #TODO: if with online url, download as file in _path
         _path = Path(url).expanduser().resolve()
-        # whethere a file provided or not
+        # test whethere a file provided or not
         if not _path.is_file():
             return False #file_error
-        # try to unpack the file
+        # try to unpack the file to tmp_dir
         try:
             tmp_dir = self.temp / _path.stem
-            shutil.unpack_archive(_path, tmp_dir.as_posix())
-            with WorkSpace(tmp_dir) as ws:
-                _plugin = PluginWrapper()
-                pass
-        except Exception as e:
+            shutil.unpack_archive( _path, POSIX(tmp_dir) )
+        except:
             return False #file_error
-        pass
+        # try to test plugin integrity
+        try:
+            with WorkSpace(tmp_dir) as ws:
+                _config = json.load('config.json')
+                ret = self.test_config(_config)
+                if ret!=True:
+                    return ret
+                _plugin = PluginWrapper(_config['main'])
+                pass
+        except:
+            return False #config file error
+        # move to root dir
+        shutil.move( POSIX(tmp_dir), POSIX(self.root) )
+        return True
 
     def uninstall(self, names):
         pass

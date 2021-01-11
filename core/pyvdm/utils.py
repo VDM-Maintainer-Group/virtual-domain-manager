@@ -6,6 +6,8 @@ from termcolor import colored, cprint
 from pathlib import Path
 from os import chdir
 
+POSIX  = lambda x: x.as_posix() if hasattr(x, 'as_posix') else x
+
 def R_T(text): return colored(text, 'red')
 def G_T(text): return colored(text, 'green')
 def B_T(text): return colored(text, 'blue')
