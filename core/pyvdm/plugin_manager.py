@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
-import json, argparse
+import os, json, argparse
 import tempfile, shutil
 import ctypes
 from functools import wraps
@@ -13,6 +13,7 @@ from pyvdm.interface import SRC_API
 from pyvdm.core.utils import * #from utils import *
 
 # set(CONFIG_DIR "$HOME/.vdm")
+PLUGIN_BUILD_LEVEL = 'release'
 PLUGIN_DIRECTORY= Path('~/.vdm/plugins').expanduser()
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
@@ -87,10 +88,15 @@ class PluginManager:
         if not (config['main'].endswith('.py') or config['main'].endswith('.so')):
             return False # config: illegal main entry
         # test whether main entry is provided
-        _pre_built = Path('./release', config['main']).exists()
+        _pre_built = Path(PLUGIN_BUILD_LEVEL, config['main']).exists()
         _post_built= ('scripts' in config) and ('pre-install' in config['scripts'])
         if not (_pre_built or _post_built):
             return False # config: no existing main entry
+        # test build command and build plugin
+        if not _pre_built and _post_built:
+            ret = os.system(config['scripts']['pre-install'])
+            if (ret < 0) or (not Path(PLUGIN_BUILD_LEVEL, config['main']).exists()):
+                return False # config: build plugin failed
         # all test pass
         return True
 
@@ -115,6 +121,9 @@ class PluginManager:
                     return ret
             except:
                 return False #config file error
+            pass
+        # try to load plugin
+        with WorkSpace(tmp_dir, PLUGIN_BUILD_LEVEL) as ws:
             try:
                 _plugin = PluginWrapper(_config['main'])
             except Exception as e:
@@ -122,6 +131,11 @@ class PluginManager:
             pass
         # move to root dir
         shutil.move( POSIX(tmp_dir), POSIX(self.root) )
+        #NOTE: disable 'post-install' for safety issue
+        # with WorkSpace(self.root) as ws:
+        #     if ('scripts' in _config) and ('post-install' in _config['scripts']):
+        #         ret = os.system(_config['scripts']['post-install'])
+        #     pass
         return True
 
     def uninstall(self, names):
