@@ -129,8 +129,9 @@ class PluginManager:
             except Exception as e:
                 return False #plugin loading error
             pass
-        # move to root dir
-        shutil.move( POSIX(tmp_dir), POSIX(self.root) )
+        # move to root dir with new name
+        shutil.move( POSIX(tmp_dir), POSIX(self.root / _config['name']+'-'+_config['version']) )
+        #TODO: if is update, return update_flag and remove existing versions
         #NOTE: disable 'post-install' for safety issue
         # with WorkSpace(self.root) as ws:
         #     if ('scripts' in _config) and ('post-install' in _config['scripts']):
