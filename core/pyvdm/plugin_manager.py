@@ -216,7 +216,7 @@ class PluginManager:
         result = dict()
 
         for item in _installed:
-            (_name, _version) = _regex.findall(item.stem)
+            (_name, _version) = _regex.findall(item.stem)[0]
             if len(names)==0 or (_name in names):
                 _config = json_load( POSIX(item / CONFIG_FILENAME) )
                 if _name not in result:
