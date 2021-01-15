@@ -48,8 +48,9 @@ class PluginWrapper():
     @staticmethod
     def wrap_call_on_string(func):
         @wraps(func)
-        def _wrap(_string):
-            return func( _string.encode() )
+        def _wrap(*args):
+            args = tuple( [x.encode() if isinstance(x,str) else x for x in args] )
+            return func( *args )
         return _wrap
 
     def load_python(self, entry):

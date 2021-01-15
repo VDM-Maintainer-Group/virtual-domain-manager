@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""
-Domain Manager
-@author: Mark Hong
-"""
-import runpy
-from sys import argv
-from enum import Enum
+
 from functools import partial
 from optparse import OptionParser
 from pyvdm.interface import SRC_API
