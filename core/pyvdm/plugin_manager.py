@@ -10,7 +10,7 @@ import ctypes
 from distutils.version import LooseVersion
 from functools import wraps
 from pyvdm.interface import SRC_API
-from utils import * #from pyvdm.core.utils import *
+from .utils import * #from pyvdm.core.utils import *
 
 # set(CONFIG_DIR "$HOME/.vdm")
 PLUGIN_BUILD_LEVEL = 'release'
