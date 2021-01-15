@@ -63,7 +63,7 @@ class PluginWrapper():
         pass
 
     def load_cdll(self, entry):
-        obj = ctypes.cdll(entry)
+        obj = ctypes.CDLL(entry)
         obj.onSave = self.wrap_call_on_string(obj.onSave)
         obj.onResume = self.wrap_call_on_string(obj.onResume)
         #obj.onTrigger
@@ -109,6 +109,23 @@ class PluginManager:
                 return False # config: build plugin failed
         # all test pass
         return True
+
+    def getInstalledPlugin(self, name):
+        _installed = list(sorted(self.root.glob( '%s-*.*'%name ), reverse=True))
+        #
+        with WorkSpace(self.root, _installed[0]) as ws:
+            _config = json.load('config.json')
+            if self.test_config(_config)!=True:
+                return False #plugin loading error
+            pass
+        #
+        with WorkSpace(self.root, _installed[0], PLUGIN_BUILD_LEVEL) as ws:
+            try:
+                _plugin = PluginWrapper(_config, _config['main'])
+            except Exception as e:
+                return False #plugin loading error
+            pass
+        return _plugin
 
     def install(self, url):
         #TODO: if with online url, download as file in _path
@@ -193,7 +210,12 @@ class PluginManager:
 
         return result
 
-    def run(self, name, function):
+    def run(self, name, function, *args):
+        _plugin = self.getInstalledPlugin(name)
+        if _plugin:
+            getattr(_plugin, function)(*args)
+        else:
+            return False # plugin loading error
         pass
 
     pass
