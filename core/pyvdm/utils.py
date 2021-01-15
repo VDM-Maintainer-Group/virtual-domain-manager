@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import random, math, string
 import sys, logging
+import json
 from crcmod import mkCrcFun
 from termcolor import colored, cprint
 from pathlib import Path
@@ -41,6 +42,12 @@ class WorkSpace:
         if exc_tb: pass
         pass
     pass
+
+def json_load(filename):
+    fd = open(filename, 'r')
+    _dict = json.load(fd)
+    fd.close()
+    return _dict
 
 def getRandomSerial(len, dtype='hex'):
     if dtype=='hex':

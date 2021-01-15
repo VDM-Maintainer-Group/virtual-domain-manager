@@ -4,13 +4,13 @@ import sys
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
-import os, json, argparse, re
+import os, argparse, re
 import tempfile, shutil
 import ctypes
 from distutils.version import LooseVersion
 from functools import wraps
 from pyvdm.interface import SRC_API
-from .utils import *
+from utils import *
 
 # set(CONFIG_DIR "$HOME/.vdm")
 PLUGIN_BUILD_LEVEL = 'release'
@@ -89,6 +89,7 @@ class PluginManager:
         # test required config fields
         for key in REQUIRED_FIELDS:
             if key not in config:
+                print('config: required field missing')
                 return False # config: required field missing
         # test whether main entry is legal (*.py or *.so)
         if not (config['main'].endswith('.py') or config['main'].endswith('.so')):
@@ -116,7 +117,7 @@ class PluginManager:
         _installed = list(sorted(self.root.glob( '%s-*.*'%name ), reverse=True))
         #
         with WorkSpace(self.root, _installed[0]) as ws:
-            _config = json.load(CONFIG_FILENAME)
+            _config = json_load(CONFIG_FILENAME)
             if self.test_config(_config)!=True:
                 return False #plugin loading error
             pass
@@ -134,21 +135,24 @@ class PluginManager:
         _path = Path(url).expanduser().resolve()
         # test whether a file provided or not
         if not _path.is_file():
+            print('config file error 0')
             return False #file_error
         # try to unpack the file to tmp_dir
         try:
             tmp_dir = self.temp / _path.stem
-            shutil.unpack_archive( _path, POSIX(tmp_dir) )
+            shutil.unpack_archive( POSIX(_path), POSIX(tmp_dir) )
         except:
+            print('config file error 1')
             return False #file_error
         # try to test plugin integrity
         with WorkSpace(tmp_dir) as ws:
             try:
-                _config = json.load(CONFIG_FILENAME)
+                _config = json_load(CONFIG_FILENAME)
                 ret = self.test_config(_config)
                 if ret!=True:
                     return ret
-            except:
+            except Exception as e:
+                print('config file error 2')
                 return False #config file error
             pass
         # try to load plugin
@@ -156,6 +160,7 @@ class PluginManager:
             try:
                 _plugin = PluginWrapper(_config, _config['main'])
             except Exception as e:
+                print('plugin loading error')
                 return False #plugin loading error
             pass
         # move to root dir with new name
@@ -202,7 +207,7 @@ class PluginManager:
         for item in _installed:
             (_name, _version) = _regex.findall(item.stem)
             if len(names)==0 or (_name in names):
-                _config = json.load( POSIX(item / CONFIG_FILENAME) )
+                _config = json_load( POSIX(item / CONFIG_FILENAME) )
                 if _name not in result:
                     result[_name] = [_config]
                 else:
