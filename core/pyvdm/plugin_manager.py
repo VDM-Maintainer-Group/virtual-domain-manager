@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # fix relative path import
-from core.pyvdm.utils import WorkSpace
 import sys
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
-import os, json, argparse
+import os, json, argparse, re
 import tempfile, shutil
 import ctypes
+from distutils.version import LooseVersion
 from functools import wraps
 from pyvdm.interface import SRC_API
 from pyvdm.core.utils import * #from utils import *
@@ -22,6 +22,7 @@ global args
 
 class PluginWrapper():
     def __init__(self, entry):
+        self.root = Path.cwd()
         if entry.endswith('.py'):
             self.load_python(entry)
         elif entry.enswith('.so'):
@@ -31,15 +32,17 @@ class PluginWrapper():
         pass
 
     def __getattribute__(self, name):
-        if name.startswith('on'):
-            try:
-                _func = self.obj.__getattribute__(name)
-                return _func
-            except:
-                print('%s is an illegal function name.'%name)
-                return super().__getattribute__(name)  
-        else:
-            return super().__getattribute__(name)
+        with WorkSpace( POSIX(self.root) ) as ws:
+            if name.startswith('on'):
+                try:
+                    _func = self.obj.__getattribute__(name)
+                    return _func
+                except:
+                    print('%s is an illegal function name.'%name)
+                    return super().__getattribute__(name)  
+            else:
+                return super().__getattribute__(name)
+        pass
 
     @staticmethod
     def wrap_call_on_string(func):
@@ -92,6 +95,12 @@ class PluginManager:
         _post_built= ('scripts' in config) and ('pre-install' in config['scripts'])
         if not (_pre_built or _post_built):
             return False # config: no existing main entry
+        # test capability requirement
+        if ('capability' in config) and isinstance(config['capability'], list):
+            for item in config['capability']:
+                #TODO: invoke dependency check on each item
+                pass
+            pass
         # test build command and build plugin
         if not _pre_built and _post_built:
             ret = os.system(config['scripts']['pre-install'])
@@ -103,7 +112,7 @@ class PluginManager:
     def install(self, url):
         #TODO: if with online url, download as file in _path
         _path = Path(url).expanduser().resolve()
-        # test whethere a file provided or not
+        # test whether a file provided or not
         if not _path.is_file():
             return False #file_error
         # try to unpack the file to tmp_dir
@@ -130,8 +139,20 @@ class PluginManager:
                 return False #plugin loading error
             pass
         # move to root dir with new name
-        shutil.move( POSIX(tmp_dir), POSIX(self.root / _config['name']+'-'+_config['version']) )
-        #TODO: if is update, return update_flag and remove existing versions
+        _regex = re.compile('\w+-(?P<version>\d\.\d.*)')
+        _installed = sorted(self.root.glob( '%s-*.*'%_config['name'] ))
+        for item in _installed:
+            _version = _regex.findall(item.stem)[0]
+            if LooseVersion(_version) < LooseVersion(_config['version']):
+                print('Remove elder version: %s'%item.stem)
+                shutil.rmtree(item)
+            else:
+                print('Higher version installed: %s'%item.stem)
+                return False # higher version plugin installed
+            pass
+        _new_name = _config['name']+'-'+_config['version']
+        shutil.move( POSIX(tmp_dir), POSIX(self.root / _new_name) )
+        print('Plugin installed: %s'%_new_name)
         #NOTE: disable 'post-install' for safety issue
         # with WorkSpace(self.root) as ws:
         #     if ('scripts' in _config) and ('post-install' in _config['scripts']):
