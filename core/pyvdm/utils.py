@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import random, math, string
+import sys, logging
 from crcmod import mkCrcFun
-import logging
 from termcolor import colored, cprint
 from pathlib import Path
 from os import chdir
