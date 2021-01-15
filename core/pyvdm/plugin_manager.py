@@ -139,7 +139,7 @@ class PluginManager:
                 return False #plugin loading error
             pass
         # move to root dir with new name
-        _regex = re.compile('\w+-(?P<version>\d\.\d.*)')
+        _regex = re.compile( '%s-(\d\.\d.*)'%_config['name'] ) #(?P<name>\w+)-(?P<version>\d\.\d.*)
         _installed = sorted(self.root.glob( '%s-*.*'%_config['name'] ))
         for item in _installed:
             _version = _regex.findall(item.stem)[0]
@@ -147,7 +147,7 @@ class PluginManager:
                 print('Remove elder version: %s'%item.stem)
                 shutil.rmtree(item)
             else:
-                print('Higher version installed: %s'%item.stem)
+                print('Higher version already installed: %s'%item.stem)
                 return False # higher version plugin installed
             pass
         _new_name = _config['name']+'-'+_config['version']
