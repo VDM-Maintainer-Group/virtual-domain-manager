@@ -27,23 +27,24 @@ class PluginWrapper():
         self.root = Path.cwd()
         if entry.endswith('.py'):
             self.load_python(entry)
-        elif entry.enswith('.so'):
+        elif entry.endswith('.so'):
             self.load_cdll(entry)
         else:
             raise Exception('Unsupported plugin entry.')
         pass
 
     def __getattribute__(self, name):
-        with WorkSpace( POSIX(self.root) ) as ws:
-            if name.startswith('on'):
-                try:
-                    _func = self.obj.__getattribute__(name)
-                    return _func
-                except:
-                    print('%s is an illegal function name.'%name)
-                    return super().__getattribute__(name)  
-            else:
+        print(name)
+        if name.startswith('on'):
+            try:
+                _func = self.obj.__getattribute__(name)
+                _func = self.wrap_call_in_workspace(_func)
+                return _func
+            except:
+                print('%s is an illegal function name.'%name)
                 return super().__getattribute__(name)
+        else:
+            return super().__getattribute__(name)
         pass
 
     @staticmethod
@@ -52,6 +53,15 @@ class PluginWrapper():
         def _wrap(*args):
             args = tuple( [x.encode() if isinstance(x,str) else x for x in args] )
             return func( *args )
+        return _wrap
+
+    @staticmethod
+    def wrap_call_in_workspace(func):
+        @wraps(func)
+        def _wrap(*args, **kargs):
+            with WorkSpace( POSIX(self.root) ):
+                ret = func(*args, **kargs)
+            return ret
         return _wrap
 
     def load_python(self, entry):
@@ -65,7 +75,7 @@ class PluginWrapper():
         pass
 
     def load_cdll(self, entry):
-        obj = ctypes.CDLL(entry)
+        obj = ctypes.CDLL( POSIX(Path(entry).resolve()) )
         obj.onSave = self.wrap_call_on_string(obj.onSave)
         obj.onResume = self.wrap_call_on_string(obj.onResume)
         #obj.onTrigger
@@ -160,6 +170,7 @@ class PluginManager:
             try:
                 _plugin = PluginWrapper(_config, _config['main'])
             except Exception as e:
+                print(e)
                 print('plugin loading error')
                 return False #plugin loading error
             pass
