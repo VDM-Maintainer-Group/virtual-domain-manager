@@ -21,7 +21,8 @@ OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninsta
 global args
 
 class PluginWrapper():
-    def __init__(self, entry):
+    def __init__(self, config, entry):
+        self.config = config
         self.root = Path.cwd()
         if entry.endswith('.py'):
             self.load_python(entry)
@@ -134,12 +135,12 @@ class PluginManager:
         # try to load plugin
         with WorkSpace(tmp_dir, PLUGIN_BUILD_LEVEL) as ws:
             try:
-                _plugin = PluginWrapper(_config['main'])
+                _plugin = PluginWrapper(_config, _config['main'])
             except Exception as e:
                 return False #plugin loading error
             pass
         # move to root dir with new name
-        _regex = re.compile( '%s-(\d\.\d.*)'%_config['name'] ) #(?P<name>\w+)-(?P<version>\d\.\d.*)
+        _regex = re.compile( '%s-(\d\.\d.*)'%_config['name'] )
         _installed = sorted(self.root.glob( '%s-*.*'%_config['name'] ))
         for item in _installed:
             _version = _regex.findall(item.stem)[0]
@@ -174,8 +175,23 @@ class PluginManager:
             pass
         pass
 
-    def list(self, name=[]):
-        pass
+    def list(self, names=[]):
+        _regex = re.compile('(?P<name>\w+)-(?P<version>\d\.\d.*)')
+        _installed = sorted( self.root.glob( '*-*.*' ) )
+        result = dict()
+
+        for item in _installed:
+            (_name, _version) = _regex.findall(item.stem)
+            if len(names)==0 or (_name in names):
+                _config = json.load( POSIX(item / 'config.json') )
+                if _name not in result:
+                    result[_name] = [_config]
+                else:
+                    result[_name].append(_config)
+            pass
+        print(result)
+
+        return result
 
     def run(self, name, function):
         pass
