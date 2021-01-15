@@ -144,8 +144,8 @@ class PluginManager:
         for item in _installed:
             _version = _regex.findall(item.stem)[0]
             if LooseVersion(_version) < LooseVersion(_config['version']):
-                print('Remove elder version: %s'%item.stem)
                 shutil.rmtree(item)
+                print('Remove elder version: %s'%item.stem)
             else:
                 print('Higher version already installed: %s'%item.stem)
                 return False # higher version plugin installed
@@ -161,6 +161,17 @@ class PluginManager:
         return True
 
     def uninstall(self, names):
+        names = list(names)
+        with WorkSpace(self.root) as ws:
+            for name in names:
+                _regex = re.compile( '%s-(\d\.\d.*)'%name )
+                _installed = sorted(self.root.glob( '%s-*.*'%name ))
+                for item in _installed:
+                    _version = _regex.findall(item.stem)[0]
+                    shutil.rmtree(item)
+                    print('Removed plugin: %s'%item.stem)
+                pass
+            pass
         pass
 
     def list(self, name=[]):
