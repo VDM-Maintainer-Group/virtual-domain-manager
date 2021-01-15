@@ -10,10 +10,11 @@ import ctypes
 from distutils.version import LooseVersion
 from functools import wraps
 from pyvdm.interface import SRC_API
-from .utils import * #from pyvdm.core.utils import *
+from .utils import *
 
 # set(CONFIG_DIR "$HOME/.vdm")
 PLUGIN_BUILD_LEVEL = 'release'
+CONFIG_FILENAME    = 'package.json'
 PLUGIN_DIRECTORY= Path('~/.vdm/plugins').expanduser()
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
@@ -115,7 +116,7 @@ class PluginManager:
         _installed = list(sorted(self.root.glob( '%s-*.*'%name ), reverse=True))
         #
         with WorkSpace(self.root, _installed[0]) as ws:
-            _config = json.load('config.json')
+            _config = json.load(CONFIG_FILENAME)
             if self.test_config(_config)!=True:
                 return False #plugin loading error
             pass
@@ -143,7 +144,7 @@ class PluginManager:
         # try to test plugin integrity
         with WorkSpace(tmp_dir) as ws:
             try:
-                _config = json.load('config.json')
+                _config = json.load(CONFIG_FILENAME)
                 ret = self.test_config(_config)
                 if ret!=True:
                     return ret
@@ -201,7 +202,7 @@ class PluginManager:
         for item in _installed:
             (_name, _version) = _regex.findall(item.stem)
             if len(names)==0 or (_name in names):
-                _config = json.load( POSIX(item / 'config.json') )
+                _config = json.load( POSIX(item / CONFIG_FILENAME) )
                 if _name not in result:
                     result[_name] = [_config]
                 else:
