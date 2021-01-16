@@ -6,50 +6,15 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import os, argparse, re
 import tempfile, shutil
-import PluginManager as P_MAN
-from utils import *
-
-DOMAIN_ROOT = Path('~/.vdm').expanduser()
-CONFIG_FILENAME = 'config.json'
+import pyvdm.core.PluginManager as P_MAN
+import pyvdm.core.DomainManager as D_MAN
+from pyvdm.core.utils import *
 
 class CoreManager:
     def __init__(self):
-        pass
-
-    def getDomainConfig(self, name):
-        pass
-
-    def setDomainConfig(self, name, config):
-        pass
-
-    def testStat(self):
-        # test and normalize the stat file
-        pass
-
-    def getStat(self):
-        # read the stat file: createdTime + lastUpdatedTime
-        pass
-
-    def putStat(self): #setStat
-        pass
-
-    #---------- offline domain operations ----------#
-    def create_domain(self, name):
-        # if exist 
-        # interactive, or not?
-        # fix path existence when create (and touch the stat file)
-        # record enabled plugins folder
-        # save the config file
-        pass
-
-    def update_domain(self, name, config):
-        # allow rename the domain (remember to update stat file)
-        pass
-
-    def delete_domain(self, name):
-        pass
-
-    def list_domain(self):
+        # createdTime + lastUpdatedTime
+        self.root = D_MAN.DOMAIN_ROOT
+        self.stat = StatFile(self.root)
         pass
 
     #---------- online domain operations -----------#
@@ -68,18 +33,66 @@ class CoreManager:
         # close current open domain (return if no open)
         pass
 
-    def close_and_open(self, name):
+    def switch_domain(self, name):
         # don't have to restart all plugins
         # return if re-open the open domain
         pass
 
     pass
 
-if __name__ == '__main__':
-    #"-l", "--list", help="list all the workspace"
-    #"-s", "--save", help="save the current workspace"
-    #"-a", "--new",  help="create a new workspace"
-    #"-o", "--open", help="open an existing workspace"
-    #"-x", "--exit", help="close current workspace"
-    #"-r", "--rename",help="rename an existing workspace"
+def execute(command, args):
+    if command=='domain':
+        dm = D_MAN.DomainManager()
+        D_MAN.execute(dm, args.domain_command, args)
+        return
+    
+    if command=='plugin':
+        pm = P_MAN.PluginManager()
+        P_MAN.execute(pm, args.plugin_command, args)
+        return
+
+    cm = CoreManager()
+    if args.save_flag:
+        cm.save_domain()
+    elif args.close_flag:
+        cm.close_domain()
+    elif args.domain_name:
+        cm.switch_domain(args.domain_name)
+    else:
+        print('<Current Domain Status>')
     pass
+
+if __name__ == '__main__':
+    try:
+        parser = argparse.ArgumentParser(
+            description = 'The VDM Core.'
+        )
+        parser.add_argument('--save', dest='save_flag', action='store_true',
+            help='save the current open domain.')
+        parser.add_argument('--open', dest='domain_name',
+            help='open an existing domain.')
+        parser.add_argument('--close', dest='close_flag', action='store_true',
+            help='close the current open domain.')
+        subparsers = parser.add_subparsers(dest='command')
+
+        # domain_manager
+        dm_parser = subparsers.add_parser('domain',
+            help='Call VDM Domain Manager.')
+        dm_subparsers = dm_parser.add_subparsers(dest='domain_command')
+        D_MAN.init_subparsers(dm_subparsers)
+
+        # plugin_manager
+        pm_parser = subparsers.add_parser('plugin',
+            help='Call VDM Plugin Manager.')
+        pm_subparsers = pm_parser.add_subparsers(dest='plugin_command')
+        P_MAN.init_subparsers(pm_subparsers)
+
+        # sync_manager
+        #TODO: add sync_manager    
+        
+        args = parser.parse_args()
+        execute(args.command, args)
+    except Exception as e:
+        raise e#print(e)
+    finally:
+        pass#exit()

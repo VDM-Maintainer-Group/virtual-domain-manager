@@ -10,9 +10,8 @@ import ctypes
 from distutils.version import LooseVersion
 from functools import wraps
 from pyvdm.interface import SRC_API
-from utils import *
+from pyvdm.core.utils import *
 
-# set(CONFIG_DIR "$HOME/.vdm")
 PLUGIN_BUILD_LEVEL = 'release'
 CONFIG_FILENAME    = 'package.json'
 PLUGIN_DIRECTORY= Path('~/.vdm/plugins').expanduser()
@@ -256,7 +255,7 @@ def init_subparsers(subparsers):
     p_install = subparsers.add_parser('install',
         help='install a new VDM plugin.')
     p_install.add_argument('url', metavar='plugin_file',
-        help='the path to the plugin file in .zip format')
+        help='the path to the plugin file in .zip format.')
     #
     p_uninstall = subparsers.add_parser('uninstall',
         help='uninstall VDM plugins.')
@@ -269,7 +268,7 @@ def init_subparsers(subparsers):
         help='the specified plugin name(s) to list.')
     #
     p_run = subparsers.add_parser('run',
-        help='run the function of an existing plugin.')
+        help='run the function of an existing VDM plugin.')
     p_run.add_argument('plugin_name',
         help='plugin name')
     p_run.add_argument('plugin_function',

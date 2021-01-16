@@ -7,6 +7,7 @@ from termcolor import colored, cprint
 from pathlib import Path
 from os import chdir
 
+STAT_FILENAME = 'stat'
 POSIX  = lambda x: x.as_posix() if hasattr(x, 'as_posix') else x
 
 def R_T(text): return colored(text, 'red')
@@ -40,6 +41,24 @@ class WorkSpace:
     def __exit__(self, exc_type, exc_value, exc_tb):
         chdir(self.pwd)
         if exc_tb: pass
+        pass
+    pass
+
+class StatFile:
+    def __init__(self, root):
+        self.root = root
+        self.stat_file = Path(root, STAT_FILENAME).resolve()
+        pass
+
+    def testStat(self):
+        # test and normalize the stat file
+        pass
+
+    def getStat(self):
+        # read the stat file
+        pass
+
+    def putStat(self): #setStat
         pass
     pass
 
