@@ -19,7 +19,6 @@ PLUGIN_DIRECTORY= Path('~/.vdm/plugins').expanduser()
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
-global args
 
 class PluginWrapper():
     def __init__(self, config, entry):
