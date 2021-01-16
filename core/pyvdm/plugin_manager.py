@@ -211,7 +211,7 @@ class PluginManager:
         pass
 
     def list(self, names=[]):
-        _regex = re.compile('(?P<name>\w+)-(?P<version>\d\.\d.*)')
+        _regex = re.compile('(?P<name>.+)-(?P<version>\d\.\d.*)')
         _installed = sorted( self.root.glob( '*-*.*' ) )
         result = dict()
 
