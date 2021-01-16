@@ -89,7 +89,7 @@ class PluginManager:
         else:
             self.root = PLUGIN_DIRECTORY
         self.root.mkdir(exist_ok=True, parents=True) #ensure root existing
-        self.temp = Path( tempfile.gettempdir() )
+        self.temp = Path( tempfile.TemporaryDirectory().name )
         pass
 
     @staticmethod
