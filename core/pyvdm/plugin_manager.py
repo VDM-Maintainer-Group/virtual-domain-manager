@@ -34,10 +34,9 @@ class PluginWrapper():
         pass
 
     def __getattribute__(self, name):
-        print(name)
         if name.startswith('on'):
             try:
-                _func = self.obj.__getattribute__(name)
+                _func = getattr(self.obj, name)
                 _func = self.wrap_call_in_workspace(_func)
                 return _func
             except:
@@ -55,8 +54,7 @@ class PluginWrapper():
             return func( *args )
         return _wrap
 
-    @staticmethod
-    def wrap_call_in_workspace(func):
+    def wrap_call_in_workspace(self, func):
         @wraps(func)
         def _wrap(*args, **kargs):
             with WorkSpace( POSIX(self.root) ):
@@ -231,8 +229,11 @@ class PluginManager:
     def run(self, name, function, *args):
         _plugin = self.getInstalledPlugin(name)
         if _plugin:
-            getattr(_plugin, function)(*args)
+            ret = getattr(_plugin, function)(*args)
+            print(ret)
+            return ret
         else:
+            print('plugin loading error')
             return False # plugin loading error
         pass
 
