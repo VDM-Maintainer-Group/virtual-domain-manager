@@ -18,9 +18,10 @@ class CoreManager:
         pass
 
     #---------- online domain operations -----------#
-    def save_domain(self):
+    def save_domain(self, delayed=False):
         # onSave
         # save to current open domain
+        # if delayed: return the list of StatFile, without `putFile`
         pass
 
     def open_domain(self, name):
@@ -29,13 +30,16 @@ class CoreManager:
         pass
 
     def close_domain(self):
-        # onSave --> onClose --> onStop
+        # onClose --> onStop
         # close current open domain (return if no open)
         pass
 
     def switch_domain(self, name):
-        # don't have to restart all plugins
-        # return if re-open the open domain
+        # if is_domain_open:
+        #   open_domain()
+        # else:
+        #   save_domain() --> close_domain() --> open_domain()
+        #   #restore, if re-open the same domain and the stat files changed
         pass
 
     pass

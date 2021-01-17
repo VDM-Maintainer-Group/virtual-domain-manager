@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import random, math, string
+import shutil
 import sys, logging
-import json
+import json, tempfile
 from crcmod import mkCrcFun
 from termcolor import colored, cprint
 from pathlib import Path
@@ -48,20 +49,30 @@ class StatFile:
     def __init__(self, root, prefix=None):
         self.root = root
         if prefix:
-            self.stat_file = Path(root, prefix+'.'+STAT_FILENAME).resolve()
+            _stat_file = prefix+'.'+STAT_FILENAME
         else:
-            self.stat_file = Path(root, STAT_FILENAME).resolve()
+            _stat_file = STAT_FILENAME
+        self.stat_file = Path(root, _stat_file).resolve()
         self.stat_file.touch(exist_ok=True)
+        _,self.temp_file = tempfile.mkstemp()
+        pass
+
+    def getFile(self):
+        shutil.copy( POSIX(self.stat_file), self.temp_file )
+        return self.temp_file
+
+    def putFile(self):
+        shutil.move( self.temp_file, POSIX(self.stat_file) )
         pass
 
     def getStat(self):
-        with open(self.stat_file, 'r') as fd:
+        with open(POSIX(self.stat_file), 'r') as fd:
             _name = fd.readline()
         return _name
 
     def putStat(self, name):
         try:
-            with open(self.stat_file, 'w') as fd:
+            with open(POSIX(self.stat_file), 'w') as fd:
                 fd.writelines([name])
             return True
         except Exception as e:
