@@ -48,18 +48,21 @@ class StatFile:
     def __init__(self, root):
         self.root = root
         self.stat_file = Path(root, STAT_FILENAME).resolve()
-        pass
-
-    def testStat(self):
-        # test and normalize the stat file
+        self.stat_file.touch(exist_ok=True)
         pass
 
     def getStat(self):
-        # read the stat file
-        pass
+        with open(self.stat_file, 'r') as fd:
+            _name = fd.readline()
+        return _name
 
-    def putStat(self): #setStat
-        pass
+    def putStat(self, name):
+        try:
+            with open(self.stat_file, 'w') as fd:
+                fd.writelines([name])
+            return True
+        except Exception as e:
+            return False
     pass
 
 def json_load(filename):
