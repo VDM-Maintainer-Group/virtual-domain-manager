@@ -45,9 +45,12 @@ class WorkSpace:
     pass
 
 class StatFile:
-    def __init__(self, root):
+    def __init__(self, root, prefix=None):
         self.root = root
-        self.stat_file = Path(root, STAT_FILENAME).resolve()
+        if prefix:
+            self.stat_file = Path(root, prefix+'.'+STAT_FILENAME).resolve()
+        else:
+            self.stat_file = Path(root, STAT_FILENAME).resolve()
         self.stat_file.touch(exist_ok=True)
         pass
 
