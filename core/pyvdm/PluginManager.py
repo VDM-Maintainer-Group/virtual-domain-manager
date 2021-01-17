@@ -119,16 +119,30 @@ class PluginManager:
         # all test pass
         return True
 
-    def getInstalledPlugin(self, name):
+    def getInstalledPlugin(self, name, required_version=None):
         _installed = list(sorted(self.root.glob( '%s-*.*'%name ), reverse=True))
+        # select the only plugin
+        _selected  = None
+        if not required_version:
+            _selected = _installed[0].stem
+        else:
+            _regex = re.compile( '%s-(\d\.\d.*)'%name )
+            for item in _installed:
+                _version = _regex.findall(item.stem)[0]
+                if LooseVersion(_version) >= LooseVersion(required_version):
+                    _selected = item.stem
+                    break
+            pass
+        if not _selected:
+            return None
         #
-        with WorkSpace(self.root, _installed[0]) as ws:
+        with WorkSpace(self.root, _selected) as ws:
             _config = json_load(CONFIG_FILENAME)
             if self.test_config(_config)!=True:
                 return False #plugin loading error
             pass
         #
-        with WorkSpace(self.root, _installed[0], PLUGIN_BUILD_LEVEL) as ws:
+        with WorkSpace(self.root, _selected, PLUGIN_BUILD_LEVEL) as ws:
             try:
                 _plugin = PluginWrapper(_config, _config['main'])
             except Exception as e:
