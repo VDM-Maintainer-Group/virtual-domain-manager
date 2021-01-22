@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # fix relative path import
-import sys
+import sys, time
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import os, argparse, re
-import tempfile, shutil
 import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.utils import *
 
-DOMAIN_ROOT = Path('~/.vdm').expanduser()
+PARENT_ROOT = Path('~/.vdm').expanduser()
+DOMAIN_ROOT = PARENT_ROOT / 'domains'
 CONFIG_FILENAME = 'config.json'
 
 class DomainManager():
@@ -19,23 +19,64 @@ class DomainManager():
         else:
             self.root = DOMAIN_ROOT
         self.root.mkdir(exist_ok=True, parents=True)
-        (self.root / STAT_FILENAME).touch(exist_ok=True)
-        self.stat = StatFile(self.root)
+        self.stat = StatFile( POSIX(self.root.parent) )
+        self.stat.touch()
         pass
 
     def getDomainConfig(self, name):
-        pass
+        _filename = POSIX(self.root / name / CONFIG_FILENAME)
+        return json_load(_filename)
 
     def setDomainConfig(self, name, config):
+        _filename = POSIX(self.root / name / CONFIG_FILENAME)
+        json_dump(_filename, config)
         pass
+
+    def configTui(self, name, config=None):
+        if not isinstance(config, dict):
+            config = dict()
+        # create/update domain name
+        if name not in config:
+            if not Tui.confirm('Create new domain \"%s\"?'%name):
+                return False #error
+            config['name'] = name
+        else:
+            config['name'] = Tui.ask('Domain Name', default=name)
+        # ask for plugins selection
+        _plugins = P_MAN.PluginManager().list()
+        _plugin_names = list( _plugins.keys() )
+        _selected = Tui.select('Plugins', _plugin_names)
+        config['plugins'] = dict()
+        for idx in _selected:
+            _name = _plugin_names[idx]
+            _version = _plugins[_name][0]['version']
+            config['plugins'].update( {_name:_version} )
+        # update timestamp
+        config['last_update_time'] = int( time.time() )
+        if 'created_time' not in config:
+            config['created_time'] = config['last_update_time']
+        return config
 
     #---------- offline domain operations ----------#
     def create_domain(self, name, config):
-        # if exist: return
-        # if not config: enter interactive tui
-        # fix path existence when create (and touch the stat file)
-        # record enabled plugins folder
+        # return if already exist
+        if (self.root / name).exists():
+            print('domain_alread_exist')
+            return False #domain_already_exist
+        # 
+        if not config:
+            config = self.configTui(name)
+        if not config:
+            return False #domain creation failed
+        # fix path existence when create
+        domain_path = self.root / name
+        domain_path.mkdir(exist_ok=True, parents=True)
         # save the config file
+        self.setDomainConfig(name, config)
+        # record enabled plugins folder (and touch the stat file)
+        for _name in config['plugins'].keys():
+            StatFile(domain_path, _name).touch()
+        print('Domain \"%s\" created.'%name)
         pass
 
     def update_domain(self, name, config):
@@ -70,14 +111,14 @@ def init_subparsers(subparsers):
         help='create a new domain.')
     p_add.add_argument('name', metavar='domain_name',
         help='the domain name.')
-    p_add.add_argument('config', metavar='config_file', nargs='*',
+    p_add.add_argument('config', metavar='config_file', nargs='?',
         help='(Optional) the path to the configuration file.')
     #
     p_update = subparsers.add_parser('update',
         help='update an existing domain.')
     p_update.add_argument('name', metavar='domain_name',
         help='the domain name.')
-    p_update.add_argument('config', metavar='config_file', nargs='*',
+    p_update.add_argument('config', metavar='config_file', nargs='?',
         help='(Optional) the path to the configuration file.')
     #
     p_rm = subparsers.add_parser('rm',

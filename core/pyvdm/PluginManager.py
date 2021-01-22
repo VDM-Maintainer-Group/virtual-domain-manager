@@ -14,7 +14,8 @@ from pyvdm.core.utils import *
 
 PLUGIN_BUILD_LEVEL = 'release'
 CONFIG_FILENAME    = 'package.json'
-PLUGIN_DIRECTORY= Path('~/.vdm/plugins').expanduser()
+PARENT_ROOT = Path('~/.vdm').expanduser()
+PLUGIN_DIRECTORY= PARENT_ROOT / 'plugins'
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
@@ -170,6 +171,7 @@ class PluginManager:
                 _config = json_load(CONFIG_FILENAME)
                 ret = self.test_config(_config)
                 if ret!=True:
+                    print('config file internal error')
                     return ret
             except Exception as e:
                 print('config file error 2')

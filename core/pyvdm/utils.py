@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import random, math, string
+from re import L
 import shutil
 import sys, logging
 import json, tempfile
 from crcmod import mkCrcFun
 from termcolor import colored, cprint
 from pathlib import Path
-from os import chdir
+from os import chdir, stat
 
 STAT_FILENAME = 'stat'
 POSIX  = lambda x: x.as_posix() if hasattr(x, 'as_posix') else x
@@ -17,6 +18,74 @@ def B_T(text): return colored(text, 'blue')
 def C_T(text): return colored(text, 'cyan')
 def M_T(text): return colored(text, 'magenta')
 def Y_T(text): return colored(text, 'yellow')
+
+class Tui:
+    def __init__(self):
+        pass
+    
+    @staticmethod
+    def cls():
+        pass
+
+    @staticmethod
+    def confirm(message, yes=True):
+        _opt = '([Y]/N)' if yes else '(Y/[N])'
+        print( '%s %s'%(message, _opt) )
+        #
+        _res = input('>>> ').strip()
+        if not _res:
+            return yes
+        elif _res in ['Y', 'y']:
+            return True
+        elif _res in ['N', 'n']:
+            return False
+        else:
+            print('Invalid Input. Please try again.')
+            return Tui.confirm(message, yes) #repeat
+        pass
+
+    @staticmethod
+    def ask(message, default=''):
+        _opt = '' if not default else ' (default: \"%s\")'%default
+        print( '%s%s'%(message, _opt) )
+        #
+        _res = input('>>> ').strip()
+        if _res:
+            return _res
+        elif default:
+            return default
+        else:
+            return Tui.ask(message, default)
+        pass
+
+    @staticmethod
+    def select(message, candidates, defaults=None, multi=True, retry=False):
+        assert( isinstance(candidates, list) )
+        if not retry:
+            _title = '======== %s ========'%message
+            _opt = [ '[%d] %s'%(idx+1,name) for idx,name in enumerate(candidates) ]
+            _opt = '\t'.join(_opt)
+            print(_title); print(_opt)
+        if defaults:
+            _selected = ['[%d]'%candidates.index(_) for _ in defaults]
+            _selected = ' '.join(_selected)
+            print('Default selection: %s'%_selected)
+        #
+        _res = input('(split by space) >>> ').strip().split()
+        if len(_res)==0 and defaults:
+            return defaults
+        for idx,item in enumerate(_res):
+            try:
+                _res[idx] = int(item) - 1
+                if _res[idx]<0 or _res[idx]>=len(candidates):
+                    raise Exception
+            except:
+                print('Invalid Selection: \"%s\". Please try again.'%item)
+                return Tui(message, candidates, multi, retry=True)
+            pass
+        return _res
+
+    pass
 
 class WorkSpace:
     def __init__(self, p, *p_l, **kargs):
@@ -46,7 +115,7 @@ class WorkSpace:
     pass
 
 class StatFile:
-    def __init__(self, root, prefix=None):
+    def __init__(self, root, prefix=None, touch=True):
         self.root = root
         if prefix:
             _stat_file = prefix+'.'+STAT_FILENAME
@@ -55,6 +124,10 @@ class StatFile:
         self.stat_file = Path(root, _stat_file).resolve()
         self.stat_file.touch(exist_ok=True)
         _,self.temp_file = tempfile.mkstemp()
+        pass
+
+    def touch(self):
+        self.stat_file.touch(exist_ok=True)
         pass
 
     def getFile(self):
@@ -80,10 +153,16 @@ class StatFile:
     pass
 
 def json_load(filename):
-    fd = open(filename, 'r')
+    fd = open(filename, 'r+')
     _dict = json.load(fd)
     fd.close()
     return _dict
+
+def json_dump(filename, config):
+    fd = open(filename, 'w+')
+    json.dump(config, fd)
+    fd.close()
+    pass
 
 def getRandomSerial(len, dtype='hex'):
     if dtype=='hex':
