@@ -4,7 +4,7 @@ import sys, time
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
-import os, argparse, re
+import os, argparse, re, shutil
 import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.utils import *
 
@@ -36,7 +36,7 @@ class DomainManager():
         if not isinstance(config, dict):
             config = dict()
         # create/update domain name
-        if name not in config:
+        if 'name' not in config:
             if not Tui.confirm('Create new domain \"%s\"?'%name):
                 return False #error
             config['name'] = name
@@ -44,11 +44,12 @@ class DomainManager():
             config['name'] = Tui.ask('Domain Name', default=name)
         # ask for plugins selection
         _plugins = P_MAN.PluginManager().list()
-        _plugin_names = list( _plugins.keys() )
-        _selected = Tui.select('Plugins', _plugin_names)
+        all_plugin_names = list( _plugins.keys() )
+        _plugin_names = list( config['plugins'].keys() )
+        _selected = Tui.select('Plugins', all_plugin_names, _plugin_names)
         config['plugins'] = dict()
         for idx in _selected:
-            _name = _plugin_names[idx]
+            _name = all_plugin_names[idx]
             _version = _plugins[_name][0]['version']
             config['plugins'].update( {_name:_version} )
         # update timestamp
@@ -67,27 +68,65 @@ class DomainManager():
         if not config:
             config = self.configTui(name)
         if not config:
-            return False #domain creation failed
+            print('domain config failed')
+            return False #domain config failed
         # fix path existence when create
         domain_path = self.root / name
         domain_path.mkdir(exist_ok=True, parents=True)
         # save the config file
         self.setDomainConfig(name, config)
-        # record enabled plugins folder (and touch the stat file)
+        # update enabled plugins folder (and touch the stat file)
         for _name in config['plugins'].keys():
             StatFile(domain_path, _name).touch()
         print('Domain \"%s\" created.'%name)
         pass
 
     def update_domain(self, name, config):
-        # allow rename the domain (remember to update stat file)
+        # check if domain open
+        if self.stat.getStat()==name:
+            print('domain_is_open')
+            return False #domain_is_open
+        # check if domain exists
+        if not (self.root / name).exists():
+            print('domain_not_exist')
+            return False #domain_not_exist
+        #
+        ori_config = json_load( POSIX(self.root/name/CONFIG_FILENAME) )
+        if not config:
+            config = self.configTui(name, ori_config)
+        if not config:
+            print('domain config failed')
+            return False #domain config failed
+        # rename the domain if necessary
+        if config['name']!=name:
+            shutil.move( POSIX(self.root/name), POSIX(self.root/config['name']) )
+            name = config['name']
+            pass
+        # save the config file
+        self.setDomainConfig(name, config)
+        # update enabled plugins folder (and touch the stat file)
+        for _name in config['plugins'].keys():
+            StatFile(self.root / name, _name).touch()
+        print('Domain \"%s\" updated.'%name)
         pass
 
     def delete_domain(self, name):
+        # check if domain open
+        if self.stat.getStat()==name:
+            print('domain_is_open')
+            return False #domain_is_open
+        # 
         pass
 
     def list_domain(self, names=[]):
-        pass
+        result = dict()
+        for item in self.root.iterdir():
+            _config = item / CONFIG_FILENAME
+            if item.is_dir() and (len(names)==0 or item.stem in names) and _config.is_file():
+                result[item.stem] = json_load(_config)
+            pass
+        print( result )
+        return result
 
     pass
 

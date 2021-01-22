@@ -67,8 +67,9 @@ class Tui:
             _opt = '\t'.join(_opt)
             print(_title); print(_opt)
         if defaults:
-            _selected = ['[%d]'%candidates.index(_) for _ in defaults]
-            _selected = ' '.join(_selected)
+            defaults = [candidates.index(x) for x in defaults]
+            _selected = ['[%d]'%(x+1) for x in defaults]
+            _selected = ', '.join(_selected)
             print('Default selection: %s'%_selected)
         #
         _res = input('(split by space) >>> ').strip().split()
