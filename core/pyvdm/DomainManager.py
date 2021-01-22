@@ -9,7 +9,7 @@ import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.utils import *
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
-DOMAIN_ROOT = PARENT_ROOT / 'domains'
+DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
 CONFIG_FILENAME = 'config.json'
 
 class DomainManager():
@@ -17,7 +17,7 @@ class DomainManager():
         if root:
             self.root = Path(root).resolve()
         else:
-            self.root = DOMAIN_ROOT
+            self.root = DOMAIN_DIRECTORY
         self.root.mkdir(exist_ok=True, parents=True)
         self.stat = StatFile( POSIX(self.root.parent) )
         self.stat.touch()

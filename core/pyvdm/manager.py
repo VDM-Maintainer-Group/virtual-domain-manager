@@ -10,11 +10,14 @@ import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
 from pyvdm.core.utils import *
 
+PARENT_ROOT = Path('~/.vdm').expanduser()
+PLUGIN_DIRECTORY = PARENT_ROOT / 'plugins'
+DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
+
 class CoreManager:
     def __init__(self):
-        # createdTime + lastUpdatedTime
-        self.root = D_MAN.DOMAIN_ROOT
-        self.stat = StatFile(self.root)
+        self.stat = StatFile(PARENT_ROOT)
+        
         pass
 
     #---------- online domain operations -----------#
@@ -46,12 +49,12 @@ class CoreManager:
 
 def execute(command, args):
     if command=='domain':
-        dm = D_MAN.DomainManager()
+        dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
         D_MAN.execute(dm, args.domain_command, args)
         return
     
     if command=='plugin':
-        pm = P_MAN.PluginManager()
+        pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
         P_MAN.execute(pm, args.plugin_command, args)
         return
 
