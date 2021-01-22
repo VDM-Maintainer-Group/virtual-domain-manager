@@ -115,7 +115,8 @@ class DomainManager():
         if self.stat.getStat()==name:
             print('domain_is_open')
             return False #domain_is_open
-        # 
+        #
+        shutil.rmtree( POSIX(self.root/name) )
         pass
 
     def list_domain(self, names=[]):
