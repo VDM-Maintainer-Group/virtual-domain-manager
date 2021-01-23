@@ -60,15 +60,19 @@ class TrayIcon(QSystemTrayIcon):
 
     def save_domain(self, e=None):
         self.cm.save_domain()
+        # notify + play sound effect
         pass
 
     def close_domain(self, e=None):
         self.cm.close_domain()
+        # notify + play sound effect
         pass
 
     def switch_domain(self, e):
         _name = e.text if hasattr(e, 'text') else e
+        # play transition animation on new threads (with sound effect)
         self.cm.switch_domain(_name)
+        # end animation playing (with sound effect)
         pass
 
     def quit(self, e):
