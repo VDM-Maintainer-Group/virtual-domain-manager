@@ -91,7 +91,7 @@ class DomainManager():
             print('domain_not_exist')
             return False #domain_not_exist
         #
-        ori_config = json_load( POSIX(self.root/name/CONFIG_FILENAME) )
+        ori_config = self.getDomainConfig(name)
         if not config:
             config = self.configTui(name, ori_config)
         if not config:
@@ -124,7 +124,7 @@ class DomainManager():
         for item in self.root.iterdir():
             _config = item / CONFIG_FILENAME
             if item.is_dir() and (len(names)==0 or item.stem in names) and _config.is_file():
-                result[item.stem] = json_load(_config)
+                result[item.stem] = json_load( POSIX(_config) )
             pass
         print( result )
         return result

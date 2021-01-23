@@ -16,33 +16,69 @@ DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
 
 class CoreManager:
     def __init__(self):
+        self.root = DOMAIN_DIRECTORY
         self.stat = StatFile(PARENT_ROOT)
-        
+        self.dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
+        self.pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
+        #
+        _domain = self.stat.getStat()
+        if _domain:
+            self.load(_domain)
+        pass
+
+    def load(self, name):
+        if hasattr(self, 'plugins'):
+            del self.plugins #cleanup
+        self.plugins = dict()
+        #
+        _config = self.dm.getDomainConfig(name)['plugins']
+        for _name,_ver in _config.items():
+            _plugin = self.pm.getInstalledPlugin(_name, _ver)
+            _stat   = StatFile(DOMAIN_DIRECTORY, _name)
+            self.plugins.update( {_plugin: _stat} )
         pass
 
     #---------- online domain operations -----------#
     def save_domain(self, delayed=False):
-        # onSave
+        if not self.stat.getStat():
+            return
         # save to current open domain
-        # if delayed: return the list of StatFile, without `putFile`
+        for _plugin,_stat in self.plugins.items():
+            _plugin.onSave( _stat.getFile() )
+            if not delayed: _stat.putFile()
+            pass
         pass
 
     def open_domain(self, name):
+        self.load(name)
         # onStart --> onResume
-        # return if re-open the open domain
+        for _plugin,_ in self.plugins.items():
+            _plugin.onStart()
+        for _plugin,_stat in self.plugins.items():
+            _plugin.onResume( _stat.getFile() )
+        # put new stat
+        self.stat.putStat(name)
         pass
 
     def close_domain(self):
+        if not self.stat.getStat():
+            return # no open domain
         # onClose --> onStop
-        # close current open domain (return if no open)
+        for _plugin,_stat in self.plugins.items():
+            _plugin.onClose()
+            _plugin.onStop()
+        # put empty stat
+        self.stat.putStat('')
         pass
 
     def switch_domain(self, name):
-        # if is_domain_open:
-        #   open_domain()
-        # else:
-        #   save_domain() --> close_domain() --> open_domain()
-        #   #restore, if re-open the same domain and the stat files changed
+        if not self.stat.getStat():
+            self.open_domain(name)
+        else:
+            #TODO: restore, if re-open the same domain and the stat files changed
+            self.save_domain()
+            self.close_domain()
+            self.open_domain(name)
         pass
 
     pass
