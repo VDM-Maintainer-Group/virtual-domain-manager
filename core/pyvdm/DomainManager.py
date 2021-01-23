@@ -45,7 +45,7 @@ class DomainManager():
         # ask for plugins selection
         _plugins = P_MAN.PluginManager().list()
         all_plugin_names = list( _plugins.keys() )
-        _plugin_names = list( config['plugins'].keys() )
+        _plugin_names = list( config['plugins'].keys() ) if 'plugins' in config else None
         _selected = Tui.select('Plugins', all_plugin_names, _plugin_names)
         config['plugins'] = dict()
         for idx in _selected:

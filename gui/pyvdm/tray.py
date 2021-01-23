@@ -6,7 +6,8 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 from pyvdm.core.manager import CoreManager
 from PyQt5.QtCore import (Qt, QSize)
-from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QIcon, QMenu)
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu)
 
 class TrayIcon(QSystemTrayIcon):
     def __init__(self, parent=None):
@@ -17,6 +18,7 @@ class TrayIcon(QSystemTrayIcon):
         self.setIcon( QIcon('../assets/VD_icon.png') )
         self.setContextMenu( self.getDefaultMenu() )
         self.activated.connect( self.onActivation )
+        self.setVisible(True)
         pass
     
     def getCurrentDomain(self, default='<None>'):
@@ -28,7 +30,7 @@ class TrayIcon(QSystemTrayIcon):
         menu = QMenu()
         # set title bar
         _name = self.getCurrentDomain()
-        self.title_bar = self.menu.addAction(_name)
+        self.title_bar = menu.addAction(_name)
         self.title_bar.setEnabled(False)
         menu.addSeparator()
         # add 'save', 'close' and 'switch' acts
@@ -56,6 +58,8 @@ class TrayIcon(QSystemTrayIcon):
         for _name in _domains:
             act_name = self.switch_menu.addAction(_name)
             act_name.triggered.connect(self.switch_domain)
+            if act_name==_open_name:
+                act_name.setEnabled(False)
         pass
 
     def save_domain(self, e=None):
