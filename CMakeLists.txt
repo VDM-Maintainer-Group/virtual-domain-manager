@@ -10,7 +10,7 @@ find_package(Python REQUIRED
             COMPONENTS Interpreter Development)
 #default configurations
 set(VDM_INSTALL_DIR "/opt/vdm")
-set(PYVDM_INSTALL_DIR ${Python_SITELIB}/pyvdm)
+set(PYVDM_DIST_DIR ${CMAKE_CURRENT_BINARY_DIR}/pyvdm)
 # set(CONFIG_DIR "$HOME/.vdm")
 # set(PLUGINS_DIR "$HOME/.vdm/plugins")
 
@@ -25,12 +25,11 @@ add_subdirectory(gui)
 
 # pyvdm installation: "pyvdm.interface" + "pyvdm.core" + "pyvdm.gui" + "pyvdm.capability" (binding, todo)
 file(GLOB PYVDM_API "./interface/*.py")
-INSTALL(FILES ${PYVDM_API}
-        DESTINATION ${PYVDM_INSTALL_DIR}/interface)
-INSTALL(DIRECTORY "./core/pyvdm/"
-        DESTINATION ${PYVDM_INSTALL_DIR}/core)
-INSTALL(DIRECTORY "./assets"
-        DESTINATION ${PYVDM_INSTALL_DIR}/assets)
-INSTALL(DIRECTORY "./gui/pyvdm/"
-        DESTINATION ${PYVDM_INSTALL_DIR}/gui)
-add_custom_target(uninstall COMMAND sudo rm -rf ${PYVDM_INSTALL_DIR})
+add_custom_target(build-pyvdm
+        COMMAND ${CMAKE_COMMAND} -E rm -rf ${PYVDM_DIST_DIR}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${PYVDM_DIST_DIR}/interface
+        COMMAND ${CMAKE_COMMAND} -E copy ${PYVDM_API} ${PYVDM_DIST_DIR}/interface
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/core/pyvdm/ ${PYVDM_DIST_DIR}/core
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/gui/pyvdm/ ${PYVDM_DIST_DIR}/gui
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/assets/ ${PYVDM_DIST_DIR}/assets
+)
