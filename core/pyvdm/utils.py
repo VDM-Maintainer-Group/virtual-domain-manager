@@ -1,23 +1,13 @@
 #!/usr/bin/env python3
 import random, math, string
-from re import L
 import shutil
 import sys, logging
 import json, tempfile
-from crcmod import mkCrcFun
-from termcolor import colored, cprint
 from pathlib import Path
-from os import chdir, stat
+from os import chdir
 
 STAT_FILENAME = 'stat'
 POSIX  = lambda x: x.as_posix() if hasattr(x, 'as_posix') else x
-
-def R_T(text): return colored(text, 'red')
-def G_T(text): return colored(text, 'green')
-def B_T(text): return colored(text, 'blue')
-def C_T(text): return colored(text, 'cyan')
-def M_T(text): return colored(text, 'magenta')
-def Y_T(text): return colored(text, 'yellow')
 
 class Tui:
     def __init__(self):
@@ -165,18 +155,18 @@ def json_dump(filename, config):
     fd.close()
     pass
 
-def getRandomSerial(len, dtype='hex'):
-    if dtype=='hex':
-        return ''.join(random.choice(string.hexdigits.upper()) for _ in range(len))
-    elif dtype=='dec':
-        return ''.join(random.choice(string.digits) for _ in range(len))
-    elif dtype=='char':
-        return ''.join(random.choice(string.uppercase) for _ in range(len))
-    else:
-        return ''
-    pass
+# def getRandomSerial(len, dtype='hex'):
+#     if dtype=='hex':
+#         return ''.join(random.choice(string.hexdigits.upper()) for _ in range(len))
+#     elif dtype=='dec':
+#         return ''.join(random.choice(string.digits) for _ in range(len))
+#     elif dtype=='char':
+#         return ''.join(random.choice(string.uppercase) for _ in range(len))
+#     else:
+#         return ''
+#     pass
 
-def getChecksum(obj, dtype='crc-16'):
-    _csm = ''
-    #TODO: to support crc-16/md5/sha1
-    return _csm
+# def getChecksum(obj, dtype='crc-16'):
+#     _csm = ''
+#     # to support crc-16/md5/sha1
+#     return _csm
