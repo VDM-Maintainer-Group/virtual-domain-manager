@@ -9,6 +9,8 @@ from PyQt5.QtCore import (Qt, QSize)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu)
 
+global app
+
 class TrayIcon(QSystemTrayIcon):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -86,7 +88,8 @@ class TrayIcon(QSystemTrayIcon):
 
     pass
 
-if __name__ == '__main__':
+def main():
+    global app
     # singleton instance restriction
     try:
         mf_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -99,3 +102,6 @@ if __name__ == '__main__':
     tray = TrayIcon()
     sys.exit(app.exec_())
     pass
+
+if __name__ == '__main__':
+    main()

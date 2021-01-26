@@ -105,36 +105,40 @@ def execute(command, args):
         print('<Current Domain Status>')
     pass
 
+def main():
+    parser = argparse.ArgumentParser(
+        description = 'The VDM Core.'
+    )
+    parser.add_argument('--save', dest='save_flag', action='store_true',
+        help='save the current open domain.')
+    parser.add_argument('--open', dest='domain_name',
+        help='open an existing domain.')
+    parser.add_argument('--close', dest='close_flag', action='store_true',
+        help='close the current open domain.')
+    subparsers = parser.add_subparsers(dest='command')
+
+    # domain_manager
+    dm_parser = subparsers.add_parser('domain',
+        help='Call VDM Domain Manager.')
+    dm_subparsers = dm_parser.add_subparsers(dest='domain_command')
+    D_MAN.init_subparsers(dm_subparsers)
+
+    # plugin_manager
+    pm_parser = subparsers.add_parser('plugin',
+        help='Call VDM Plugin Manager.')
+    pm_subparsers = pm_parser.add_subparsers(dest='plugin_command')
+    P_MAN.init_subparsers(pm_subparsers)
+
+    # sync_manager
+    #TODO: add sync_manager    
+    
+    args = parser.parse_args()
+    execute(args.command, args)
+    pass
+
 if __name__ == '__main__':
     try:
-        parser = argparse.ArgumentParser(
-            description = 'The VDM Core.'
-        )
-        parser.add_argument('--save', dest='save_flag', action='store_true',
-            help='save the current open domain.')
-        parser.add_argument('--open', dest='domain_name',
-            help='open an existing domain.')
-        parser.add_argument('--close', dest='close_flag', action='store_true',
-            help='close the current open domain.')
-        subparsers = parser.add_subparsers(dest='command')
-
-        # domain_manager
-        dm_parser = subparsers.add_parser('domain',
-            help='Call VDM Domain Manager.')
-        dm_subparsers = dm_parser.add_subparsers(dest='domain_command')
-        D_MAN.init_subparsers(dm_subparsers)
-
-        # plugin_manager
-        pm_parser = subparsers.add_parser('plugin',
-            help='Call VDM Plugin Manager.')
-        pm_subparsers = pm_parser.add_subparsers(dest='plugin_command')
-        P_MAN.init_subparsers(pm_subparsers)
-
-        # sync_manager
-        #TODO: add sync_manager    
-        
-        args = parser.parse_args()
-        execute(args.command, args)
+        main()
     except Exception as e:
         raise e#print(e)
     finally:
