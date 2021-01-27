@@ -41,13 +41,13 @@ class CoreManager:
     #---------- online domain operations -----------#
     def save_domain(self, delayed=False):
         if not self.stat.getStat():
-            return
+            return False
         # save to current open domain
         for _plugin,_stat in self.plugins.items():
             _plugin.onSave( _stat.getFile() )
             if not delayed: _stat.putFile()
             pass
-        pass
+        return True
 
     def open_domain(self, name):
         self.load(name)
@@ -62,14 +62,14 @@ class CoreManager:
 
     def close_domain(self):
         if not self.stat.getStat():
-            return # no open domain
+            return False# no open domain
         # onClose --> onStop
         for _plugin,_stat in self.plugins.items():
             _plugin.onClose()
             _plugin.onStop()
         # put empty stat
         self.stat.putStat('')
-        pass
+        return True
 
     def switch_domain(self, name):
         if not self.stat.getStat():

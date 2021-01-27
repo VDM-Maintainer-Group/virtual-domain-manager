@@ -4,12 +4,15 @@ import sys, signal, socket
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
+import pkg_resources
 from pyvdm.core.manager import CoreManager
-from PyQt5.QtCore import (Qt, QSize)
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import (Qt, QSize, QUrl)
+from PyQt5.QtGui import (QIcon, QMovie)
 from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu)
+from PyQt5.QtMultimedia import QSoundEffect
 
 global app
+ASSETS = lambda _: pkg_resources.resource_filename(__name__, _)
 
 class TrayIcon(QSystemTrayIcon):
     def __init__(self, parent=None):
@@ -17,12 +20,32 @@ class TrayIcon(QSystemTrayIcon):
         self.cm = CoreManager()
         self.dm = self.cm.dm
         #
-        self.setIcon( QIcon('../assets/VD_icon.png') )
+        self.setIcon( QIcon(ASSETS('VD_icon.png')) )
+        self.loadSoundEffect()
+        #
         self.setContextMenu( self.getDefaultMenu() )
         self.activated.connect( self.onActivation )
         self.setVisible(True)
         pass
     
+    def loadSoundEffect(self):
+        try:
+            self.se_save = QSoundEffect()
+            self.se_save.setSource( QUrl.fromLocalFile(ASSETS('SE-Save-SagradaReset.wav')) )
+            self.se_save.setVolume(0.25)
+        except:
+            self.se_save = None
+        try:
+            self.se_close = QSoundEffect()
+            self.se_close.setSource( QUrl.fromLocalFile(ASSETS('SE-Close-SagradaReset.wav')) )
+            self.se_close.setVolume(0.25)
+        except:
+            self.se_close = None
+        pass
+
+    def playTransitionScene():
+        pass
+
     def getCurrentDomain(self, default='<None>'):
         _name = self.cm.stat.getStat()
         _name = default if not _name else _name
@@ -64,14 +87,16 @@ class TrayIcon(QSystemTrayIcon):
                 act_name.setEnabled(False)
         pass
 
+    #---------- wrap of CoreManager operations ----------#
     def save_domain(self, e=None):
-        self.cm.save_domain()
-        # notify + play sound effect
+        if self.cm.save_domain():
+            self.se_save.play()
         pass
 
     def close_domain(self, e=None):
-        self.cm.close_domain()
-        # notify + play sound effect
+        self.se_close.play() 
+        if not self.cm.close_domain():
+            print('... save shi te na i.')
         pass
 
     def switch_domain(self, e):
