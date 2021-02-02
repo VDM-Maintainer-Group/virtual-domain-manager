@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu)
 from PyQt5.QtMultimedia import QSoundEffect
 
 global app
-ASSETS = lambda _: pkg_resources.resource_filename(__name__, _)
+ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
 
 class TrayIcon(QSystemTrayIcon):
     def __init__(self, parent=None):
