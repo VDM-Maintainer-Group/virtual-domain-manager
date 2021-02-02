@@ -25,7 +25,7 @@ class TrayIcon(QSystemTrayIcon):
         #
         self.setContextMenu( self.getDefaultMenu() )
         self.activated.connect( self.onActivation )
-        self.show(True)
+        self.show()
         pass
     
     def loadSoundEffect(self):
