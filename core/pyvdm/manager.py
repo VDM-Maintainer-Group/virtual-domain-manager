@@ -17,6 +17,8 @@ DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
 class CoreManager:
     def __init__(self):
         self.root = DOMAIN_DIRECTORY
+        self.root.mkdir(exist_ok=True, parents=True)
+        #
         self.stat = StatFile(PARENT_ROOT)
         self.dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
         self.pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
