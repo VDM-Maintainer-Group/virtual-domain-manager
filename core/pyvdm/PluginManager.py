@@ -126,13 +126,13 @@ class PluginManager:
         # select the only plugin
         _selected  = None
         if not required_version:
-            _selected = _installed[0].stem
+            _selected = _installed[0].name
         else:
             _regex = re.compile( '%s-(\d\.\d.*)'%name )
             for item in _installed:
-                _version = _regex.findall(item.stem)[0]
+                _version = _regex.findall(item.name)[0]
                 if LooseVersion(_version) >= LooseVersion(required_version):
-                    _selected = item.stem
+                    _selected = item.name
                     break
             pass
         if not _selected:
@@ -161,7 +161,7 @@ class PluginManager:
             return PluginCode['ARCHIVE_INVALID']
         # try to unpack the file to tmp_dir
         try:
-            tmp_dir = self.temp / _path.stem
+            tmp_dir = self.temp / _path.name
             shutil.unpack_archive( POSIX(_path), POSIX(tmp_dir) )
         except:
             return PluginCode['ARCHIVE_UNPACK_FAILED']
@@ -186,12 +186,12 @@ class PluginManager:
         _regex = re.compile( '%s-(\d\.\d.*)'%_config['name'] )
         _installed = sorted(self.root.glob( '%s-*.*'%_config['name'] ))
         for item in _installed:
-            _version = _regex.findall(item.stem)[0]
+            _version = _regex.findall(item.name)[0]
             if LooseVersion(_version) < LooseVersion(_config['version']):
                 shutil.rmtree(item)
-                print('Remove elder version: %s'%item.stem)
+                print('Remove elder version: %s'%item.name)
             else:
-                print('Higher version already installed: %s'%item.stem)
+                print('Higher version already installed: %s'%item.name)
                 return PluginCode['PLUGIN_HIGHER_VERSION']
             pass
         _new_name = _config['name']+'-'+_config['version']
@@ -211,9 +211,9 @@ class PluginManager:
                 _regex = re.compile( '%s-(\d\.\d.*)'%name )
                 _installed = sorted(self.root.glob( '%s-*.*'%name ))
                 for item in _installed:
-                    _version = _regex.findall(item.stem)[0]
+                    _version = _regex.findall(item.name)[0]
                     shutil.rmtree(item)
-                    print('Removed plugin: %s'%item.stem)
+                    print('Removed plugin: %s'%item.name)
                 pass
             pass
         return True #always
@@ -224,7 +224,7 @@ class PluginManager:
         result = dict()
 
         for item in _installed:
-            (_name, _version) = _regex.findall(item.stem)[0]
+            (_name, _version) = _regex.findall(item.name)[0]
             if len(names)==0 or (_name in names):
                 _config = json_load( POSIX(item / CONFIG_FILENAME) )
                 if _name not in result:
