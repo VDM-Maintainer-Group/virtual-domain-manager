@@ -12,6 +12,8 @@ PARENT_ROOT = Path('~/.vdm').expanduser()
 DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
 CONFIG_FILENAME = 'config.json'
 
+global logging_flag
+
 class DomainManager():
     def __init__(self, root=''):
         if root:
@@ -131,7 +133,9 @@ class DomainManager():
 
     pass
 
-def execute(dm, command, args):
+def execute(dm, command, args, verbose=False):
+    global logging_flag
+    logging_flag = verbose
     assert( isinstance(dm, DomainManager) )
     if command=='add':
         dm.create_domain(args.name, args.config)
@@ -176,6 +180,8 @@ if __name__ == "__main__":
     try:
         parser = argparse.ArgumentParser(
             description='VDM Domain Manager.')
+        parser.add_argument('-v', '--verbose', action='store_true',
+            help='enable verbose information logging.')
         subparsers = parser.add_subparsers(dest='command')
         init_subparsers(subparsers)
         #

@@ -20,6 +20,8 @@ REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
 
+global logging_flag
+
 class PluginWrapper():
     def __init__(self, config, entry):
         self.config = config
@@ -253,7 +255,9 @@ class PluginManager:
 
     pass
 
-def execute(pm, command, args):
+def execute(pm, command, args, verbose=False):
+    global logging_flag
+    logging_flag = verbose
     assert( isinstance(pm, PluginManager) )
     if command=='install':
         pm.install(args.url)
@@ -295,6 +299,8 @@ if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser(
             description='VDM Plugin Manager.')
+        parser.add_argument('-v', '--verbose', action='store_true',
+            help='enable verbose information logging.')
         subparsers = parser.add_subparsers(dest='command')
         init_subparsers(subparsers)
         #
