@@ -52,8 +52,8 @@ class CoreManager:
             return (DomainCode['DOMAIN_NOT_OPEN'], '')
         # save to current open domain
         for _plugin,_stat in self.plugins.items():
-            if _plugin.onSave( _stat.getFile() ) not in [0,1]:
-                return (DomainCode['DOMAIN_SAVE_FAILED'], _plugin['name'])
+            if _plugin.onSave( _stat.getFile() ) < 0:
+                return (DomainCode['DOMAIN_SAVE_FAILED'], _plugin.name)
             if not delayed: _stat.putFile()
             pass
         return True
@@ -64,11 +64,11 @@ class CoreManager:
             return (DomainCode['DOMAIN_LOAD_FAILED'], ret)
         # onStart --> onResume
         for _plugin,_ in self.plugins.items():
-            if _plugin.onStart() not in [0,1]:
-                return (DomainCode['DOMAIN_START_FAILED'], _plugin['name'])
+            if _plugin.onStart() < 0:
+                return (DomainCode['DOMAIN_START_FAILED'], _plugin.name)
         for _plugin,_stat in self.plugins.items():
-            if _plugin.onResume( _stat.getFile() ) not in [0,1]:
-                return (DomainCode['DOMAIN_RESUME_FAILED'], _plugin['name'])
+            if _plugin.onResume( _stat.getFile() ) < 0:
+                return (DomainCode['DOMAIN_RESUME_FAILED'], _plugin.name)
         # put new stat
         self.stat.putStat(name)
         return True
@@ -78,10 +78,10 @@ class CoreManager:
             return (DomainCode['DOMAIN_NOT_OPEN'], '')
         # onClose --> onStop
         for _plugin,_stat in self.plugins.items():
-            if _plugin.onClose() not in [0,1]:
-                return (DomainCode['DOMAIN_CLOSE_FAILED'], _plugin['name'])
-            if _plugin.onStop() not in [0,1]:
-                return (DomainCode['DOMAIN_STOP_FAILED'], _plugin['name'])
+            if _plugin.onClose() < 0:
+                return (DomainCode['DOMAIN_CLOSE_FAILED'], _plugin.name)
+            if _plugin.onStop() < 0:
+                return (DomainCode['DOMAIN_STOP_FAILED'], _plugin.name)
         # put empty stat
         self.stat.putStat('')
         return True
