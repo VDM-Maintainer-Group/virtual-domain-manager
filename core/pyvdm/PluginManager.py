@@ -11,6 +11,7 @@ from distutils.version import LooseVersion
 from functools import wraps
 from pyvdm.interface import SRC_API
 from pyvdm.core.utils import *
+from pyvdm.core.errcode import PluginCode
 
 PLUGIN_BUILD_LEVEL = 'release'
 CONFIG_FILENAME    = 'package.json'
@@ -19,8 +20,6 @@ PLUGIN_DIRECTORY= PARENT_ROOT / 'plugins'
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
-
-global logging_flag
 
 class PluginWrapper():
     def __init__(self, config, entry):
@@ -98,16 +97,15 @@ class PluginManager:
         # test required config fields
         for key in REQUIRED_FIELDS:
             if key not in config:
-                print('config: required field missing')
-                return False # config: required field missing
+                return PluginCode['CONFIG_REQUIRED_FIELD_MISSING']
         # test whether main entry is legal (*.py or *.so)
         if not (config['main'].endswith('.py') or config['main'].endswith('.so')):
-            return False # config: illegal main entry
+            return PluginCode['CONFIG_MAIN_ENTRY_ILLEGAL']
         # test whether main entry is provided
         _pre_built = Path(PLUGIN_BUILD_LEVEL, config['main']).exists()
         _post_built= ('scripts' in config) and ('pre-install' in config['scripts'])
         if not (_pre_built or _post_built):
-            return False # config: no existing main entry
+            return PluginCode['CONFIG_MAIN_ENTRY_MISSING']
         # test capability requirement
         if ('capability' in config) and isinstance(config['capability'], list):
             for item in config['capability']:
@@ -118,7 +116,7 @@ class PluginManager:
         if not _pre_built and _post_built:
             ret = os.system(config['scripts']['pre-install'])
             if (ret < 0) or (not Path(PLUGIN_BUILD_LEVEL, config['main']).exists()):
-                return False # config: build plugin failed
+                return PluginCode['PLUGIN_BUILD_FAILED']
         # all test pass
         return True
 
@@ -141,15 +139,16 @@ class PluginManager:
         #
         with WorkSpace(self.root, _selected) as ws:
             _config = json_load(CONFIG_FILENAME)
-            if self.test_config(_config)!=True:
-                return False #plugin loading error
+            ret = self.test_config(_config)
+            if ret!=True:
+                return ret
             pass
         #
         with WorkSpace(self.root, _selected, PLUGIN_BUILD_LEVEL) as ws:
             try:
                 _plugin = PluginWrapper(_config, _config['main'])
             except Exception as e:
-                return False #plugin loading error
+                return PluginCode['PLUGIN_WRAPPER_FAILED']
             pass
         return _plugin
 
@@ -158,35 +157,29 @@ class PluginManager:
         _path = Path(url).expanduser().resolve()
         # test whether a file provided or not
         if not _path.is_file():
-            print('config file error 0')
-            return False #file_error
+            return PluginCode['ARCHIVE_INVALID']
         # try to unpack the file to tmp_dir
         try:
             tmp_dir = self.temp / _path.stem
             shutil.unpack_archive( POSIX(_path), POSIX(tmp_dir) )
         except:
-            print('config file error 1')
-            return False #file_error
+            return PluginCode['ARCHIVE_UNPACK_FAILED']
         # try to test plugin integrity
         with WorkSpace(tmp_dir) as ws:
             try:
                 _config = json_load(CONFIG_FILENAME)
                 ret = self.test_config(_config)
                 if ret!=True:
-                    print('config file internal error')
                     return ret
             except Exception as e:
-                print('config file error 2')
-                return False #config file error
+                return PluginCode['CONFIG_FILE_MISSING']
             pass
         # try to load plugin
         with WorkSpace(tmp_dir, PLUGIN_BUILD_LEVEL) as ws:
             try:
                 _plugin = PluginWrapper(_config, _config['main'])
             except Exception as e:
-                print(e)
-                print('plugin loading error')
-                return False #plugin loading error
+                return PluginCode['PLUGIN_WRAPPER_FAILED']
             pass
         # move to root dir with new name
         _regex = re.compile( '%s-(\d\.\d.*)'%_config['name'] )
@@ -198,7 +191,7 @@ class PluginManager:
                 print('Remove elder version: %s'%item.stem)
             else:
                 print('Higher version already installed: %s'%item.stem)
-                return False # higher version plugin installed
+                return PluginCode['PLUGIN_HIGHER_VERSION']
             pass
         _new_name = _config['name']+'-'+_config['version']
         shutil.move( POSIX(tmp_dir), POSIX(self.root / _new_name) )
@@ -222,7 +215,7 @@ class PluginManager:
                     print('Removed plugin: %s'%item.stem)
                 pass
             pass
-        pass
+        return True #always
 
     def list(self, names=[]):
         _regex = re.compile('(?P<name>.+)-(?P<version>\d\.\d.*)')
@@ -246,30 +239,26 @@ class PluginManager:
         _plugin = self.getInstalledPlugin(name)
         if _plugin:
             ret = getattr(_plugin, function)(*args)
-            print(ret)
             return ret
         else:
-            print('plugin loading error')
-            return False # plugin loading error
+            return PluginCode['PLUGIN_LOAD_FAILED']
         pass
 
     pass
 
 def execute(pm, command, args, verbose=False):
-    global logging_flag
-    logging_flag = verbose
     assert( isinstance(pm, PluginManager) )
     if command=='install':
-        pm.install(args.url)
+        return pm.install(args.url)
     elif command=='uninstall':
-        pm.uninstall(args.names)
+        return pm.uninstall(args.names)
     elif command=='list':
-        pm.list(args.names)
+        return pm.list(args.names)
     elif command=='run':
-        pm.run(args.plugin_name, args.plugin_function)
+        return pm.run(args.plugin_name, args.plugin_function)
     else:
         print('The command <{}> is not supported.'.format(command))
-    pass
+    return
 
 def init_subparsers(subparsers):
     p_install = subparsers.add_parser('install',
@@ -308,6 +297,6 @@ if __name__ == '__main__':
         pm = PluginManager()
         execute(pm, args.command, args)
     except Exception as e:
-        raise e#print(e)
+        raise e if args.verbose else 0
     finally:
-        pass#exit()
+        0 if args.verbose else exit()

@@ -7,12 +7,11 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 import os, argparse, re, shutil
 import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.utils import *
+from pyvdm.core.errcode import DomainCode
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
 CONFIG_FILENAME = 'config.json'
-
-global logging_flag
 
 class DomainManager():
     def __init__(self, root=''):
@@ -40,7 +39,7 @@ class DomainManager():
         # create/update domain name
         if 'name' not in config:
             if not Tui.confirm('Create new domain \"%s\"?'%name):
-                return False #error
+                return None #error
             config['name'] = name
         else:
             config['name'] = Tui.ask('Domain Name', default=name)
@@ -64,14 +63,12 @@ class DomainManager():
     def create_domain(self, name, config):
         # return if already exist
         if (self.root / name).exists():
-            print('domain_alread_exist')
-            return False #domain_already_exist
+            return DomainCode['DOMAIN_ALREADY_EXIST']
         # 
         if not config:
             config = self.configTui(name)
         if not config:
-            print('domain config failed')
-            return False #domain config failed
+            return DomainCode['DOMAIN_CONFIG_FAILED']
         # fix path existence when create
         domain_path = self.root / name
         domain_path.mkdir(exist_ok=True, parents=True)
@@ -81,24 +78,21 @@ class DomainManager():
         for _name in config['plugins'].keys():
             StatFile(domain_path, _name).touch()
         print('Domain \"%s\" created.'%name)
-        pass
+        return True
 
     def update_domain(self, name, config):
         # check if domain open
         if self.stat.getStat()==name:
-            print('domain_is_open')
-            return False #domain_is_open
+            return DomainCode['DOMAIN_IS_OPEN']
         # check if domain exists
         if not (self.root / name).exists():
-            print('domain_not_exist')
-            return False #domain_not_exist
+            return DomainCode['DOMAIN_NOT_EXIST']
         #
         ori_config = self.getDomainConfig(name)
         if not config:
             config = self.configTui(name, ori_config)
         if not config:
-            print('domain config failed')
-            return False #domain config failed
+            return DomainCode['DOMAIN_CONFIG_FAILED']
         # rename the domain if necessary
         if config['name']!=name:
             shutil.move( POSIX(self.root/name), POSIX(self.root/config['name']) )
@@ -110,16 +104,15 @@ class DomainManager():
         for _name in config['plugins'].keys():
             StatFile(self.root / name, _name).touch()
         print('Domain \"%s\" updated.'%name)
-        pass
+        return True
 
     def delete_domain(self, name):
         # check if domain open
         if self.stat.getStat()==name:
-            print('domain_is_open')
-            return False #domain_is_open
+            return DomainCode['DOMAIN_IS_OPEN']
         #
         shutil.rmtree( POSIX(self.root/name) )
-        pass
+        return True
 
     def list_domain(self, names=[]):
         result = dict()
@@ -134,20 +127,18 @@ class DomainManager():
     pass
 
 def execute(dm, command, args, verbose=False):
-    global logging_flag
-    logging_flag = verbose
     assert( isinstance(dm, DomainManager) )
     if command=='add':
-        dm.create_domain(args.name, args.config)
+        return dm.create_domain(args.name, args.config)
     elif command=='update':
-        dm.update_domain(args.name, args.config)
-    elif command=='rm':
-        dm.delete_domain(args.name)
-    elif command=='list':
-        dm.list_domain(args.names)
+        return dm.update_domain(args.name, args.config)
+    elif command=='rm' or command=='remove':
+        return dm.delete_domain(args.name)
+    elif command=='ls' or command=='list':
+        return dm.list_domain(args.names)
     else:
         print('The command <{}> is not supported.'.format(command))
-    pass
+    return
 
 def init_subparsers(subparsers):
     #
@@ -165,9 +156,9 @@ def init_subparsers(subparsers):
     p_update.add_argument('config', metavar='config_file', nargs='?',
         help='(Optional) the path to the configuration file.')
     #
-    p_rm = subparsers.add_parser('rm',
+    p_remove = subparsers.add_parser('remove',
         help='remove and existing domain.')
-    p_rm.add_argument('name', metavar='domain_name',
+    p_remove.add_argument('name', metavar='domain_name',
         help='the domain name.')
     #
     p_list = subparsers.add_parser('list',
@@ -189,6 +180,6 @@ if __name__ == "__main__":
         dm = DomainManager()
         execute(dm, args.command, args)
     except Exception as e:
-        raise e#print(e)
+        raise e if args.verbose else 0
     finally:
-        pass#exit()
+        0 if args.verbose else exit()

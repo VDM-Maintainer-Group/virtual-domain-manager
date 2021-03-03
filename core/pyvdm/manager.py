@@ -10,8 +10,6 @@ import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
 from pyvdm.core.utils import *
 
-global logging_flag
-
 PARENT_ROOT = Path('~/.vdm').expanduser()
 PLUGIN_DIRECTORY = PARENT_ROOT / 'plugins'
 DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
@@ -87,17 +85,15 @@ class CoreManager:
 
     pass
 
-def execute(command, args, verbose=False):
-    global logging_flag
-    logging_flag = verbose
+def execute(command, args):
     if command=='domain':
         dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
-        D_MAN.execute(dm, args.domain_command, args, verbose)
+        D_MAN.execute(dm, args.domain_command, args)
         return
     
     if command=='plugin':
         pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
-        P_MAN.execute(pm, args.plugin_command, args, verbose)
+        P_MAN.execute(pm, args.plugin_command, args)
         return
 
     cm = CoreManager()
@@ -115,8 +111,6 @@ def main():
     parser = argparse.ArgumentParser(
         description = 'The VDM Core.'
     )
-    parser.add_argument('-v', '--verbose', action='store_true',
-        help='enable verbose information logging.')
     parser.add_argument('--save', dest='save_flag', action='store_true',
         help='save the current open domain.')
     parser.add_argument('--open', dest='domain_name',
