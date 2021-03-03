@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # fix relative path import
+from core.pyvdm.errcode import DomainCode
 import sys
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
@@ -9,6 +10,7 @@ import tempfile, shutil
 import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
 from pyvdm.core.utils import *
+from pyvdm.core.errcode import *
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 PLUGIN_DIRECTORY = PARENT_ROOT / 'plugins'
@@ -35,52 +37,66 @@ class CoreManager:
         #
         _config = self.dm.getDomainConfig(name)['plugins']
         for _name,_ver in _config.items():
-            _plugin = self.pm.getInstalledPlugin(_name, _ver)
+            _item = self.pm.getInstalledPlugin(_name, _ver)
+            if isinstance(_item, PluginCode):
+                return _item #return plugin error code
             _stat   = StatFile(DOMAIN_DIRECTORY, _name)
-            self.plugins.update( {_plugin: _stat} )
-        pass
+            self.plugins.update( {_item: _stat} )
+        return True
 
     #---------- online domain operations -----------#
     def save_domain(self, delayed=False):
         if not self.stat.getStat():
-            return False
+            return (DomainCode['DOMAIN_NOT_OPEN'], '')
         # save to current open domain
         for _plugin,_stat in self.plugins.items():
-            _plugin.onSave( _stat.getFile() )
+            if _plugin.onSave( _stat.getFile() ) not in [0,1]:
+                return (DomainCode['DOMAIN_SAVE_FAILED'], _plugin['name'])
             if not delayed: _stat.putFile()
             pass
         return True
 
     def open_domain(self, name):
-        self.load(name)
+        if not self.load(name):
+            return DomainCode['DOMAIN_LOAD_FAILED']
         # onStart --> onResume
         for _plugin,_ in self.plugins.items():
-            _plugin.onStart()
+            if _plugin.onStart() not in [0,1]:
+                return (DomainCode['DOMAIN_START_FAILED'], _plugin['name'])
         for _plugin,_stat in self.plugins.items():
-            _plugin.onResume( _stat.getFile() )
+            if _plugin.onResume( _stat.getFile() ) not in [0,1]:
+                return (DomainCode['DOMAIN_RESUME_FAILED'], _plugin['name'])
         # put new stat
         self.stat.putStat(name)
-        pass
+        return True
 
     def close_domain(self):
         if not self.stat.getStat():
-            return False# no open domain
+            return (DomainCode['DOMAIN_NOT_OPEN'], '')
         # onClose --> onStop
         for _plugin,_stat in self.plugins.items():
-            _plugin.onClose()
-            _plugin.onStop()
+            if _plugin.onClose() not in [0,1]:
+                return (DomainCode['DOMAIN_CLOSE_FAILED'], _plugin['name'])
+            if _plugin.onStop() not in [0,1]:
+                return (DomainCode['DOMAIN_STOP_FAILED'], _plugin['name'])
         # put empty stat
         self.stat.putStat('')
         return True
 
     def switch_domain(self, name):
         if not self.stat.getStat():
-            self.open_domain(name)
+            ret = self.open_domain(name)
+            if not ret: return ret
         else:
             #TODO: restore, if re-open the same domain and the stat files changed
-            self.save_domain()
-            self.close_domain()
-            self.open_domain(name)
+            ret = self.save_domain()
+            if not ret: return ret
+            #
+            ret = self.close_domain()
+            if not ret: return ret
+            #
+            ret = self.open_domain(name)
+            if not ret: return ret
         pass
 
     pass
@@ -88,24 +104,22 @@ class CoreManager:
 def execute(command, args):
     if command=='domain':
         dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
-        D_MAN.execute(dm, args.domain_command, args)
-        return
+        return D_MAN.execute(dm, args.domain_command, args)
     
     if command=='plugin':
         pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
-        P_MAN.execute(pm, args.plugin_command, args)
-        return
+        return P_MAN.execute(pm, args.plugin_command, args)
 
     cm = CoreManager()
     if args.save_flag:
-        cm.save_domain()
+        return cm.save_domain()
     elif args.close_flag:
-        cm.close_domain()
+        return cm.close_domain()
     elif args.domain_name:
-        cm.switch_domain(args.domain_name)
+        return cm.switch_domain(args.domain_name)
     else:
         print('<Current Domain Status>')
-    pass
+    return
 
 def main():
     parser = argparse.ArgumentParser(

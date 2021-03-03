@@ -24,6 +24,7 @@ OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninsta
 class PluginWrapper():
     def __init__(self, config, entry):
         self.config = config
+        self.name = config['name']
         self.root = Path.cwd()
         if entry.endswith('.py'):
             self.load_python(entry)
@@ -135,7 +136,7 @@ class PluginManager:
                     break
             pass
         if not _selected:
-            return None
+            return PluginCode['PLUGIN_LOAD_FAILED']
         #
         with WorkSpace(self.root, _selected) as ws:
             _config = json_load(CONFIG_FILENAME)
@@ -236,12 +237,11 @@ class PluginManager:
         return result
 
     def run(self, name, function, *args):
-        _plugin = self.getInstalledPlugin(name)
-        if _plugin:
-            ret = getattr(_plugin, function)(*args)
-            return ret
+        ret = self.getInstalledPlugin(name)
+        if isinstance(ret, PluginWrapper):
+            return getattr(ret, function)(*args)
         else:
-            return PluginCode['PLUGIN_LOAD_FAILED']
+            return ret
         pass
 
     pass
