@@ -25,10 +25,14 @@ class DomainManager():
         pass
 
     def getDomainConfig(self, name):
+        name = str(name)
+        if not (self.root / name).exists():
+            return DomainCode['DOMAIN_NOT_EXIST']
         _filename = POSIX(self.root / name / CONFIG_FILENAME)
         return json_load(_filename)
 
     def setDomainConfig(self, name, config):
+        name = str(name)
         _filename = POSIX(self.root / name / CONFIG_FILENAME)
         json_dump(_filename, config)
         pass

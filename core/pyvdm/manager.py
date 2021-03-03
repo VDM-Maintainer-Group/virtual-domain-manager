@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # fix relative path import
-from core.pyvdm.errcode import DomainCode
 import sys
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
@@ -35,7 +34,10 @@ class CoreManager:
             del self.plugins #cleanup
         self.plugins = dict()
         #
-        _config = self.dm.getDomainConfig(name)['plugins']
+        _config = self.dm.getDomainConfig(name)
+        if isinstance(_config, DomainCode):
+            return _config
+        _config = _config['plugins']
         for _name,_ver in _config.items():
             _item = self.pm.getInstalledPlugin(_name, _ver)
             if isinstance(_item, PluginCode):
@@ -57,8 +59,9 @@ class CoreManager:
         return True
 
     def open_domain(self, name):
-        if not self.load(name):
-            return DomainCode['DOMAIN_LOAD_FAILED']
+        ret = self.load(name)
+        if ret is not True:
+            return (DomainCode['DOMAIN_LOAD_FAILED'], ret)
         # onStart --> onResume
         for _plugin,_ in self.plugins.items():
             if _plugin.onStart() not in [0,1]:
@@ -86,18 +89,18 @@ class CoreManager:
     def switch_domain(self, name):
         if not self.stat.getStat():
             ret = self.open_domain(name)
-            if not ret: return ret
+            if ret is not True: return ret
         else:
             #TODO: restore, if re-open the same domain and the stat files changed
             ret = self.save_domain()
-            if not ret: return ret
+            if ret is not True: return ret
             #
             ret = self.close_domain()
-            if not ret: return ret
+            if ret is not True: return ret
             #
             ret = self.open_domain(name)
-            if not ret: return ret
-        pass
+            if ret is not True: return ret
+        return True
 
     pass
 

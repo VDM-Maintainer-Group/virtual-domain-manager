@@ -24,7 +24,6 @@ class TrayIcon(QSystemTrayIcon):
         self.loadSoundEffect()
         #
         self.setContextMenu( self.getDefaultMenu() )
-        self.activated.connect( self.onActivation )
         self.show()
         pass
     
@@ -64,6 +63,8 @@ class TrayIcon(QSystemTrayIcon):
         act_close = menu.addAction('Close Current Domain')
         act_close.triggered.connect(self.close_domain)
         self.switch_menu = menu.addMenu('Switch to') #leave empty for default
+        self.switch_menu.aboutToShow.connect( self.onActivation )
+        self.switch_menu.triggered.connect( self.switch_domain )
         menu.addSeparator()
         # add 'quit' act
         act_quit = menu.addAction('Quit')
@@ -71,39 +72,48 @@ class TrayIcon(QSystemTrayIcon):
         #
         return menu
 
-    def onActivation(self, reason):
-        if reason==QSystemTrayIcon.DoubleClick:
-            return
-        #
-        _open_name = self.getCurrentDomain('<None>')
+    def onActivation(self):
+        _open_name = self.getCurrentDomain()
         self.title_bar.setText( _open_name )
         #
         self.switch_menu.clear()
         _domains = list( self.dm.list_domain().keys() )
         for _name in _domains:
             act_name = self.switch_menu.addAction(_name)
-            act_name.triggered.connect(self.switch_domain)
-            if act_name==_open_name:
+            # act_name.triggered.connect(self.switch_domain)
+            if _name==_open_name:
                 act_name.setEnabled(False)
         pass
 
     #---------- wrap of CoreManager operations ----------#
     def save_domain(self, e=None):
-        if self.cm.save_domain():
+        ret = self.cm.save_domain()
+        if ret is not True:
+            print(ret)
+        else:
             self.se_save.play()
         pass
 
     def close_domain(self, e=None):
-        self.se_close.play() 
-        if not self.cm.close_domain():
+        self.se_close.play()
+        ret = self.cm.close_domain()
+        if ret is not True:
+            print(ret)
             print('... save shi te na i.')
+        else:
+            self.title_bar.setText( self.getCurrentDomain() )
         pass
 
     def switch_domain(self, e):
-        _name = e.text if hasattr(e, 'text') else e
+        _name = e.text() if hasattr(e, 'text') else e
         # play transition animation on new threads (with sound effect)
-        self.cm.switch_domain(_name)
-        # end animation playing (with sound effect)
+        ret = self.cm.switch_domain(_name)
+        if ret is True:
+            self.title_bar.setText( self.getCurrentDomain() )
+            # end animation playing (with sound effect)
+            pass
+        else:
+            print(ret)
         pass
 
     def quit(self, e):
