@@ -288,8 +288,6 @@ if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser(
             description='VDM Plugin Manager.')
-        parser.add_argument('-v', '--verbose', action='store_true',
-            help='enable verbose information logging.')
         subparsers = parser.add_subparsers(dest='command')
         init_subparsers(subparsers)
         #
@@ -297,6 +295,6 @@ if __name__ == '__main__':
         pm = PluginManager()
         execute(pm, args.command, args)
     except Exception as e:
-        raise e if args.verbose else 0
+        raise e#pass
     finally:
-        0 if args.verbose else exit()
+        pass#exit()
