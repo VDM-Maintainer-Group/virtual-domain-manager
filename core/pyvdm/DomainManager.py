@@ -140,6 +140,8 @@ def execute(dm, command, args, verbose=False):
         return dm.delete_domain(args.name)
     elif command=='ls' or command=='list':
         return dm.list_domain(args.names)
+    elif command==None:
+        print('<Domain Directory Status>')
     else:
         print('The command <{}> is not supported.'.format(command))
     return

@@ -256,6 +256,8 @@ def execute(pm, command, args, verbose=False):
         return pm.list(args.names)
     elif command=='run':
         return pm.run(args.plugin_name, args.plugin_function)
+    elif command==None:
+        print('<Plugin Directory Status>')
     else:
         print('The command <{}> is not supported.'.format(command))
     return
