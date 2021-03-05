@@ -42,7 +42,7 @@ class CoreManager:
             _item = self.pm.getInstalledPlugin(_name, _ver)
             if isinstance(_item, PluginCode):
                 return _item #return plugin error code
-            _stat   = StatFile(DOMAIN_DIRECTORY, _name)
+            _stat   = StatFile(DOMAIN_DIRECTORY/name, _name)
             self.plugins.update( {_item: _stat} )
         return True
 
