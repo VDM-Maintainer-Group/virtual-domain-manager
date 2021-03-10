@@ -33,7 +33,7 @@ class SceneManager(QWidget):
         #
         self.setFixedSize( self.parent.size() )
         self.setStyleSheet('''
-            QWidget {
+            .QWidget {
                 background: rgba(255,254,249, 0.96)
             }
         ''')
