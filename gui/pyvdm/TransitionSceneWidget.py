@@ -4,7 +4,7 @@ This is *mf*, a flash pass your mind.
 You Write, You Listen.
 '''
 import sys, pkg_resources
-from PyQt5.QtCore import (Qt, QPoint, QSize, QTimer, QThread)
+from PyQt5.QtCore import (Qt, QPoint, QSize, QTimer, QThread, pyqtSlot)
 from PyQt5.QtGui import (QFont, QFontMetrics, QIcon, QMovie)
 from PyQt5.QtWidgets import (QApplication, QLabel, QWidget, QDesktopWidget,
                     QLayout, QGridLayout)
@@ -25,7 +25,7 @@ class SceneManager(QWidget):
         self.grid = QGridLayout()
         self.grid.setSpacing(0)
         self.grid.setContentsMargins(0,0,0,0)
-        # self.grid.setAlignment(Qt.AlignCenter)
+        self.grid.setAlignment(Qt.AlignCenter)
         #
         self.label = QLabel('Transition Scene', self)
         self.grid.addWidget(self.label, 0, 0)
@@ -41,14 +41,20 @@ class SceneManager(QWidget):
 
     def setScene(self, filename):
         self.movie = QMovie( ASSETS(filename) )
+        self.movie.jumpToFrame(0)
+        self.movie_size = self.movie.currentImage().size()
+        #
         self.label.setMovie(self.movie)
+        self.label.setFixedSize( self.movie_size )
         pass
 
+    @pyqtSlot()
     def start(self):
         print(self.size(), self.label.size())
         if self.movie: self.movie.start()
         pass
 
+    @pyqtSlot()
     def stop(self):
         if self.movie: self.movie.stop()
         pass
