@@ -5,9 +5,10 @@ from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import pkg_resources
+from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager
 from PyQt5.QtCore import (Qt, QSize, QUrl)
-from PyQt5.QtGui import (QIcon, QMovie)
+from PyQt5.QtGui import (QIcon, )
 from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu)
 from PyQt5.QtMultimedia import QSoundEffect
 
@@ -19,6 +20,7 @@ class TrayIcon(QSystemTrayIcon):
         super().__init__(parent)
         self.cm = CoreManager()
         self.dm = self.cm.dm
+        self.w_ts = TransitionSceneWidget()
         #
         self.setIcon( QIcon(ASSETS('VD_icon.png')) )
         self.loadSoundEffect()
@@ -107,13 +109,15 @@ class TrayIcon(QSystemTrayIcon):
     def switch_domain(self, e):
         _name = e.text() if hasattr(e, 'text') else e
         # play transition animation on new threads (with sound effect)
+        self.w_ts.w_scene.start()
+        #
         ret = self.cm.switch_domain(_name)
         if ret is True:
             self.title_bar.setText( self.getCurrentDomain() )
-            # end animation playing (with sound effect)
-            pass
         else:
             print(ret)
+        # end animation playing (with sound effect)
+        self.w_ts.w_scene.stop()
         pass
 
     def quit(self, e):

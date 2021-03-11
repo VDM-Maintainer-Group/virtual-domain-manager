@@ -4,8 +4,8 @@ This is *mf*, a flash pass your mind.
 You Write, You Listen.
 '''
 import sys, pkg_resources
-from PyQt5.QtCore import (Qt, QPoint, QSize, QTimer, QThread, pyqtSlot)
-from PyQt5.QtGui import (QBrush, QColor, QFont, QFontMetrics, QIcon, QMovie, QPainter, QPen, QPixmap)
+from PyQt5.QtCore import (Qt, QSize, QRect, QTimer, QThread, pyqtSlot)
+from PyQt5.QtGui import (QBrush, QColor, QMovie, QPainter, QPen, QPixmap)
 from PyQt5.QtWidgets import (QApplication, QLabel, QProxyStyle, QWidget, QDesktopWidget,
                     QLayout, QGridLayout)
 
@@ -13,7 +13,7 @@ ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
 
 #Reference: https://stackoverflow.com/questions/54230005/qmovie-with-border-radius
 class RoundPixmapStyle(QProxyStyle):
-    def __init__(self, radius=10, *args, **kwargs):
+    def __init__(self, radius=0, *args, **kwargs):
         super(RoundPixmapStyle, self).__init__(*args, **kwargs)
         self._radius = radius
         pass
@@ -24,12 +24,22 @@ class RoundPixmapStyle(QProxyStyle):
 
     def drawItemPixmap(self, painter, rectangle, alignment, pixmap):
         painter.save()
-        pix = QPixmap(pixmap.size())
+        pix = QPixmap(pixmap.size()) #_rect.size()
         pix.fill(Qt.transparent)
         p = QPainter(pix)
+        #
+        w,h = pixmap.width(), pixmap.height()
+        _rect = QRect(pixmap.rect())
+        if w>h:
+            d = (w-h) / 2
+            _rect.adjust(d, 0, -d, 0)
+        else:
+            d = (h-w) / 2
+            _rect.adjust(0, d, 0, -d)
         p.setBrush(QBrush(pixmap))
         p.setPen(Qt.NoPen)
-        p.drawRoundedRect(pixmap.rect(), self._radius, self._radius)
+        p.drawRoundedRect(_rect, self._radius, self._radius) #pixmap.rect()
+        #
         p.end()
         super(RoundPixmapStyle, self).drawItemPixmap(painter, rectangle, alignment, pix)
         painter.restore()
@@ -43,7 +53,6 @@ class SceneManager(QWidget):
         self.styleHelper()
         self.setScene(filename)
         self.show()
-        self.start()
         pass
     
     def styleHelper(self):
@@ -68,18 +77,19 @@ class SceneManager(QWidget):
         #
         self.label.setMovie(self.movie)
         self.label.setFixedSize( self.movie_size )
-        self.proxy_style.setRadius( self.movie_size.width() / 2 )
+        self.proxy_style.setRadius( self.movie_size.height() / 2 )
         pass
 
     @pyqtSlot()
     def start(self):
-        # print(self.size(), self.label.size())
         if self.movie: self.movie.start()
+        self.setVisible(True)
         pass
 
     @pyqtSlot()
     def stop(self):
         if self.movie: self.movie.stop()
+        self.setVisible(False)
         pass
 
     pass
@@ -101,15 +111,14 @@ class TransitionSceneWidget(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setFocus()
-        self.show()
+        self.setVisible(False)
         pass
 
     #Reference: https://stackoverflow.com/questions/33982167/pyqt5-create-semi-transparent-window-with-non-transparent-children
     def paintEvent(self, event=None):
         painter = QPainter(self)
-        _color = QColor.fromRgb(255,254,249) #Qt.white
-        # rgba(255,254,249, 0.96)
-        painter.setOpacity(0.96)
+        _color = QColor('#f0f5e5') #fromRgb(255,254,249) #Qt.white
+        painter.setOpacity(0.97)
         painter.setBrush(_color)
         painter.setPen( QPen(_color) )
         painter.drawRect( self.rect() )
@@ -120,4 +129,5 @@ class TransitionSceneWidget(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_ts = TransitionSceneWidget()
+    main_ts.w_scene.start()
     sys.exit(app.exec_())
