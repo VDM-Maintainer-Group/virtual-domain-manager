@@ -3,7 +3,7 @@
 This is *mf*, a flash pass your mind.
 You Write, You Listen.
 '''
-import sys, pkg_resources
+import sys, time, pkg_resources
 from PyQt5.QtCore import (Qt, QSize, QRect, QTimer, QThread, pyqtSlot)
 from PyQt5.QtGui import (QBrush, QColor, QMovie, QPainter, QPen, QPixmap)
 from PyQt5.QtWidgets import (QApplication, QLabel, QProxyStyle, QWidget, QDesktopWidget,
@@ -52,7 +52,6 @@ class SceneManager(QWidget):
         self.parent = parent
         self.styleHelper()
         self.setScene(filename)
-        self.show()
         pass
     
     def styleHelper(self):
@@ -80,16 +79,14 @@ class SceneManager(QWidget):
         self.proxy_style.setRadius( self.movie_size.height() / 2 )
         pass
 
-    @pyqtSlot()
     def start(self):
         if self.movie: self.movie.start()
-        self.setVisible(True)
+        #play sound effect
         pass
 
-    @pyqtSlot()
     def stop(self):
         if self.movie: self.movie.stop()
-        self.setVisible(False)
+        #stop sound effect
         pass
 
     pass
@@ -100,6 +97,7 @@ class TransitionSceneWidget(QWidget):
         # set fullscreen size on default display
         self.setFixedSize( QDesktopWidget().availableGeometry().size() )
         self.w_scene  = SceneManager(self, 'MOV-Trans-BNA.gif')
+        self.start_time = time.time()
         # set main window layout as grid
         self.grid = QGridLayout()
         self.grid.setSpacing(0)
@@ -124,10 +122,28 @@ class TransitionSceneWidget(QWidget):
         painter.drawRect( self.rect() )
         pass
 
+    @pyqtSlot()
+    def start(self):
+        self.setVisible(True)
+        self.start_time = time.time()
+        self.w_scene.start()
+        pass
+
+    @pyqtSlot()
+    def stop(self):
+        _elapsed = time.time() - self.start_time
+        if _elapsed < 0.8:
+            _sleep = int( 1000*(0.8-_elapsed) )
+            QTimer.singleShot(_sleep, self.stop)
+        else:
+            self.setVisible(False)
+            self.w_scene.stop()
+        pass
+
     pass
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_ts = TransitionSceneWidget()
-    main_ts.w_scene.start()
+    main_ts.start()
     sys.exit(app.exec_())

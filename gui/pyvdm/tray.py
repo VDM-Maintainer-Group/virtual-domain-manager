@@ -7,7 +7,7 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 import pkg_resources
 from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager
-from PyQt5.QtCore import (Qt, QSize, QUrl)
+from PyQt5.QtCore import (QObject, QThread, Qt, QSize, QUrl, pyqtSignal)
 from PyQt5.QtGui import (QIcon, )
 from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu)
 from PyQt5.QtMultimedia import QSoundEffect
@@ -15,12 +15,45 @@ from PyQt5.QtMultimedia import QSoundEffect
 global app
 ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
 
+class MFWorker(QObject):
+    def __init__(self, func, args=None):
+        super().__init__(None)
+        self.func = func
+        self.args = args
+        self.thread = QThread()
+        self.moveToThread(self.thread)
+        self.thread.started.connect(self.run)
+        pass
+
+    def isRunning(self):
+        return self.thread.isRunning()
+
+    def start(self):
+        self.thread.start()
+        pass
+    
+    def terminate(self):
+        self.thread.exit(0)
+        pass
+
+    def run(self):
+        if self.args:
+            self.func(*self.args)
+        else:
+            self.func()
+        self.thread.exit(0)
+        pass
+    pass
+
 class TrayIcon(QSystemTrayIcon):
+    stop_signal = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.cm = CoreManager()
         self.dm = self.cm.dm
         self.w_ts = TransitionSceneWidget()
+        self.stop_signal.connect(self.w_ts.stop)
         #
         self.setIcon( QIcon(ASSETS('VD_icon.png')) )
         self.loadSoundEffect()
@@ -109,7 +142,8 @@ class TrayIcon(QSystemTrayIcon):
     def switch_domain(self, e):
         _name = e.text() if hasattr(e, 'text') else e
         # play transition animation on new threads (with sound effect)
-        self.w_ts.w_scene.start()
+        self.worker = MFWorker(self.w_ts.start)
+        self.worker.run()
         #
         ret = self.cm.switch_domain(_name)
         if ret is True:
@@ -117,7 +151,7 @@ class TrayIcon(QSystemTrayIcon):
         else:
             print(ret)
         # end animation playing (with sound effect)
-        self.w_ts.w_scene.stop()
+        self.stop_signal.emit()
         pass
 
     def quit(self, e):
