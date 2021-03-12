@@ -10,6 +10,9 @@ from PyQt5.QtWidgets import (QApplication, QGraphicsOpacityEffect, QLabel, QProx
                     QLayout, QGridLayout)
 
 ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
+SIZE_FULLSCREEN = -1
+SIZE_ORIGINAL   = 0
+
 
 #Reference: https://stackoverflow.com/questions/54230005/qmovie-with-border-radius
 class RoundPixmapStyle(QProxyStyle):
@@ -47,11 +50,12 @@ class RoundPixmapStyle(QProxyStyle):
     pass
 
 class SceneManager(QWidget):
-    def __init__(self, parent, filename):
+    def __init__(self, parent, filename, size=0, mask=True):
         super().__init__(parent)
         self.parent = parent
+        self.mask = mask
         self.styleHelper()
-        self.setScene(filename)
+        self.setScene(filename, size)
         pass
     
     def styleHelper(self):
@@ -61,22 +65,36 @@ class SceneManager(QWidget):
         self.grid.setAlignment(Qt.AlignCenter)
         #
         self.label = QLabel('Transition Scene', self)
-        self.proxy_style = RoundPixmapStyle(style=self.label.style())
-        self.label.setStyle(self.proxy_style)
+        if self.mask:
+            self.proxy_style = RoundPixmapStyle(style=self.label.style())
+            self.label.setStyle(self.proxy_style)
+        else:
+            self.proxy_style = None
         self.grid.addWidget(self.label, 0, 0)
         self.setLayout(self.grid)
         #
         self.setFixedSize( self.parent.size() )
         pass
 
-    def setScene(self, filename):
+    def setScene(self, filename, size):
         self.movie = QMovie( ASSETS(filename) )
         self.movie.jumpToFrame(0)
-        self.movie_size = self.movie.currentImage().size()
+        _movie_size = self.movie.currentImage().size()
+        if size==SIZE_ORIGINAL:
+            self.movie_size = _movie_size
+        elif size==SIZE_FULLSCREEN:
+            _movie_size.scale( self.parent.size(), Qt.KeepAspectRatio )
+            self.movie.setScaledSize(_movie_size)
+            pass
+        else: #custom size
+            _movie_size.scale( QSize(size, size), Qt.KeepAspectRatio )
+            self.movie.setScaledSize(_movie_size)
+            pass
         #
         self.label.setMovie(self.movie)
         self.label.setFixedSize( self.movie_size )
-        self.proxy_style.setRadius( self.movie_size.height() / 2 )
+        if self.mask and size!=SIZE_FULLSCREEN:
+            self.proxy_style.setRadius( self.movie_size.height() / 2 )
         pass
 
     def start(self):
@@ -92,11 +110,11 @@ class SceneManager(QWidget):
     pass
 
 class TransitionSceneWidget(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None, size=0, mask=True):
+        super().__init__(parent)
         # set fullscreen size on default display
         self.setFixedSize( QDesktopWidget().availableGeometry().size() )
-        self.w_scene  = SceneManager(self, 'MOV-Trans-BNA.gif')
+        self.w_scene  = SceneManager(self, 'MOV-Trans-BNA.gif', size, mask)
         self.start_time = time.time()
         # set main window layout as grid
         self.grid = QGridLayout()
