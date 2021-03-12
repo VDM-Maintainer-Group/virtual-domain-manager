@@ -4,9 +4,9 @@ This is *mf*, a flash pass your mind.
 You Write, You Listen.
 '''
 import sys, time, pkg_resources
-from PyQt5.QtCore import (Qt, QSize, QRect, QTimer, QThread, pyqtSlot)
+from PyQt5.QtCore import (QEasingCurve, QPropertyAnimation, Qt, QSize, QRect, QTimer, QThread, pyqtSlot)
 from PyQt5.QtGui import (QBrush, QColor, QMovie, QPainter, QPen, QPixmap)
-from PyQt5.QtWidgets import (QApplication, QLabel, QProxyStyle, QWidget, QDesktopWidget,
+from PyQt5.QtWidgets import (QApplication, QGraphicsOpacityEffect, QLabel, QProxyStyle, QWidget, QDesktopWidget,
                     QLayout, QGridLayout)
 
 ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
@@ -106,6 +106,7 @@ class TransitionSceneWidget(QWidget):
         self.setLayout(self.grid)
         self.resize(self.sizeHint())
         # set window style
+        self.styleHelper()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setFocus()
@@ -122,9 +123,46 @@ class TransitionSceneWidget(QWidget):
         painter.drawRect( self.rect() )
         pass
 
+    def styleHelper(self):
+        self.eff = QGraphicsOpacityEffect(self)
+        self.setGraphicsEffect(self.eff)
+        pass
+
+    #Reference: https://stackoverflow.com/questions/19087822/how-to-make-qt-widgets-fade-in-or-fade-out
+    def fadeIn(self):
+        self.fade_in = QPropertyAnimation(self.eff, b'opacity')
+        self.fade_in.setDuration(450)
+        self.fade_in.setStartValue(0); self.fade_in.setEndValue(1)
+        self.fade_in.setEasingCurve(QEasingCurve.InBack)
+        #
+        self.setVisible(True)
+        self.fade_in.start()
+        pass
+
+    def fadeOut(self, callback, args=None):
+        self.fade_out = QPropertyAnimation(self.eff, b'opacity')
+        self.fade_out.setDuration(450)
+        self.fade_out.setStartValue(1.); self.fade_out.setEndValue(0.0)
+        self.fade_out.setEasingCurve(QEasingCurve.OutBack)
+        #
+        if args is tuple:
+            _cb = lambda: callback(*args)
+        else:
+            _cb = lambda: callback()
+        #
+        self.setVisible(False)
+        self.fade_out.start()
+        self.fade_out.finished.connect(_cb)
+        pass
+
+    def hideScene(self):
+        self.setVisible(False)
+        self.w_scene.stop()
+        pass
+
     @pyqtSlot()
     def start(self):
-        self.setVisible(True)
+        self.fadeIn()
         self.start_time = time.time()
         self.w_scene.start()
         pass
@@ -132,12 +170,11 @@ class TransitionSceneWidget(QWidget):
     @pyqtSlot()
     def stop(self):
         _elapsed = time.time() - self.start_time
-        if _elapsed < 0.8:
-            _sleep = int( 1000*(0.8-_elapsed) )
+        if _elapsed < 0.5:
+            _sleep = int( 1000*(0.5-_elapsed) )
             QTimer.singleShot(_sleep, self.stop)
         else:
-            self.setVisible(False)
-            self.w_scene.stop()
+            self.fadeOut( self.hideScene )
         pass
 
     pass
@@ -146,4 +183,5 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_ts = TransitionSceneWidget()
     main_ts.start()
+    # main_ts.fade_in.finished.connect( main_ts.stop )
     sys.exit(app.exec_())
