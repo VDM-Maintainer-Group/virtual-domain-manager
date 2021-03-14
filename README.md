@@ -19,7 +19,7 @@ In the open working domain, VDM would request all the support applications to re
 
 > VDM is now dedicated developed on GNU/Linux platform and highly coupled with Linux kernel.
 >
-> Currently, we are seeking for help on: plugin development, capability library contribution, and any suggestions. If you want to join the maintainer team, please [contact us](sudofree_at_163_com).
+> Currently, we are seeking for help on: plugin development, capability library contribution, and any suggestions. If you want to join the maintainer team, please [contact us](mailto:sudofree_at_163_com).
 
 <p align="center">
   <img src="./previews/structure.png" width="650px" />
