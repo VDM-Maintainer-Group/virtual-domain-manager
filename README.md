@@ -17,13 +17,14 @@ This project, VDM, is a non-serious-but-effective "Plan B" design. Focusing on t
 
 In the open working domain, VDM would request all the support applications to report their necessary running status (open files, window status and etc.), record them for future restore. Unfortunately, while there are no such status-report APIs, VDM proposes a **plugin mechanism** to implement such support and provides **capability library** to simplify the development.
 
+<p align="center">
+  <img src="./previews/structure.png" width="650px" />
+</p>
+
 > VDM is now dedicated developed on GNU/Linux platform and highly coupled with Linux kernel.
 >
 > Currently, we are seeking for help on: plugin development, capability library contribution, and any suggestions. If you want to join the maintainer team, please [contact us](mailto:sudofree_at_163_com).
 
-<p align="center">
-  <img src="./previews/structure.png" width="650px" />
-</p>
 ## Installation
 
 1. **clone this repository**
