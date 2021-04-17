@@ -9,7 +9,7 @@ import tempfile, shutil
 import ctypes
 # from importlib.machinery import SourceFileLoader
 from distutils.version import LooseVersion
-from functools import wraps
+from functools import partial, wraps
 from pyvdm.interface import SRC_API
 from pyvdm.core.utils import *
 from pyvdm.core.errcode import PluginCode
@@ -29,8 +29,10 @@ class PluginWrapper():
         self.root = Path.cwd()
         if entry.endswith('.py'):
             self.load_python(entry)
+            self.type = 'python'
         elif entry.endswith('.so'):
             self.load_cdll(entry)
+            self.type = 'cdll'
         else:
             raise Exception('Unsupported plugin entry.')
         pass
@@ -39,6 +41,8 @@ class PluginWrapper():
         if name.startswith('on'):
             try:
                 _func = getattr(self.obj, name)
+                if self.type=='python':
+                    _func = partial(_func, self.obj)
                 _func = self.wrap_call_in_workspace(_func)
                 return _func
             except:
