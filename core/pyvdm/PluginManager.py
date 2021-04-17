@@ -7,6 +7,7 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 import os, argparse, re
 import tempfile, shutil
 import ctypes
+from importlib.machinery import SourceFileLoader
 from distutils.version import LooseVersion
 from functools import wraps
 from pyvdm.interface import SRC_API
@@ -65,7 +66,7 @@ class PluginWrapper():
 
     def load_python(self, entry):
         obj = None
-        _module = __import__(entry)
+        _module = SourceFileLoader(Path(entry).stem, entry).load_module()
         for obj in _module.__dict__.values():
             if isinstance(obj, SRC_API):
                 break
