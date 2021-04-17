@@ -1,4 +1,4 @@
 [submodule "capability"]
 	path = capability
 	url = https://github.com/VDM-Maintainer-Group/vdm-capability-library
-	branch = v0.1.1
+	branch = v0.1.2
