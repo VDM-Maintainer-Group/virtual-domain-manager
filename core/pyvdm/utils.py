@@ -97,9 +97,11 @@ class WorkSpace:
         else:
             pass
         chdir(self.wrk)
+        sys.path.append( self.wrk.as_posix() )
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
+        sys.path.remove( self.wrk.as_posix() )
         chdir(self.pwd)
         if exc_tb: pass
         pass

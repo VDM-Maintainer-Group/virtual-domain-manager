@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # fix relative path import
-import sys
+import sys, inspect
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import os, argparse, re
 import tempfile, shutil
 import ctypes
-from importlib.machinery import SourceFileLoader
+# from importlib.machinery import SourceFileLoader
 from distutils.version import LooseVersion
 from functools import wraps
 from pyvdm.interface import SRC_API
@@ -66,12 +66,12 @@ class PluginWrapper():
 
     def load_python(self, entry):
         obj = None
-        _module = SourceFileLoader(Path(entry).stem, entry).load_module()
-        for obj in _module.__dict__.values():
-            if isinstance(obj, SRC_API):
+        _module = __import__( Path(entry).stem )
+        for _,obj in inspect.getmembers(_module):
+            if inspect.isclass(obj) and issubclass(obj, SRC_API) and (obj is not SRC_API):
+                self.obj = obj
                 break
-        assert( isinstance(self.obj, SRC_API) )
-        self.obj = obj
+            pass
         pass
 
     def load_cdll(self, entry):
@@ -181,6 +181,7 @@ class PluginManager:
             try:
                 _plugin = PluginWrapper(_config, _config['main'])
             except Exception as e:
+                # raise e
                 return PluginCode['PLUGIN_WRAPPER_FAILED']
             pass
         # move to root dir with new name
