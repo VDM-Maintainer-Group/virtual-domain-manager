@@ -55,6 +55,10 @@ class TrayIcon(QSystemTrayIcon):
         self.w_ts = TransitionSceneWidget()
         self.stop_signal.connect(self.w_ts.stop)
         #
+        _open_domain = self.getCurrentDomain('')
+        if _open_domain: #for abnormal exit
+            self.cm.open_domain(_open_domain)
+        #
         self.setIcon( QIcon(ASSETS('VD_icon.png')) )
         self.loadSoundEffect()
         #
