@@ -88,9 +88,13 @@ In the open working domain, VDM would request all the support applications to re
 
   (To be updated ...)
 
+## Capability Development
+
+Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/).
+
 ## Plugin Development
 
-(To be updated ...) ~~Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template).~~
+Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/CONTRIBUTING.md).
 
 ## License
 
