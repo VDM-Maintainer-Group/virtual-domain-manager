@@ -1,8 +1,11 @@
 
 from enum import Enum,auto
 
+class ErrorCode(Enum):
+    pass
+
 ## Enum Code Section
-class PluginCode(Enum):
+class PluginCode(ErrorCode):
     CONFIG_REQUIRED_FIELD_MISSING = 0x1001
     CONFIG_MAIN_ENTRY_ILLEGAL     = 0x1002
     CONFIG_MAIN_ENTRY_MISSING     = 0x1003
@@ -15,7 +18,7 @@ class PluginCode(Enum):
     PLUGIN_HIGHER_VERSION         = 0x100A
     pass
 
-class DomainCode(Enum):
+class DomainCode(ErrorCode):
     DOMAIN_ALREADY_EXIST    = 0x1010
     DOMAIN_CONFIG_FAILED    = 0x1020
     DOMAIN_IS_OPEN          = 0x1030

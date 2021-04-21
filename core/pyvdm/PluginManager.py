@@ -12,7 +12,7 @@ from distutils.version import LooseVersion
 from functools import partial, wraps
 from pyvdm.interface import SRC_API
 from pyvdm.core.utils import *
-from pyvdm.core.errcode import PluginCode
+from pyvdm.core.errcode import PluginCode as ERR
 
 PLUGIN_BUILD_LEVEL = 'release'
 CONFIG_FILENAME    = 'package.json'
@@ -103,15 +103,15 @@ class PluginManager:
         # test required config fields
         for key in REQUIRED_FIELDS:
             if key not in config:
-                return PluginCode['CONFIG_REQUIRED_FIELD_MISSING']
+                return ERR.CONFIG_REQUIRED_FIELD_MISSING
         # test whether main entry is legal (*.py or *.so)
         if not (config['main'].endswith('.py') or config['main'].endswith('.so')):
-            return PluginCode['CONFIG_MAIN_ENTRY_ILLEGAL']
+            return ERR.CONFIG_MAIN_ENTRY_ILLEGAL
         # test whether main entry is provided
         _pre_built = Path(PLUGIN_BUILD_LEVEL, config['main']).exists()
         _post_built= ('scripts' in config) and ('pre-install' in config['scripts'])
         if not (_pre_built or _post_built):
-            return PluginCode['CONFIG_MAIN_ENTRY_MISSING']
+            return ERR.CONFIG_MAIN_ENTRY_MISSING
         # test capability requirement
         if ('capability' in config) and isinstance(config['capability'], list):
             for item in config['capability']:
@@ -122,7 +122,7 @@ class PluginManager:
         if not _pre_built and _post_built:
             ret = os.system(config['scripts']['pre-install'])
             if (ret < 0) or (not Path(PLUGIN_BUILD_LEVEL, config['main']).exists()):
-                return PluginCode['PLUGIN_BUILD_FAILED']
+                return ERR.PLUGIN_BUILD_FAILED
         # all test pass
         return True
 
@@ -141,7 +141,7 @@ class PluginManager:
                     break
             pass
         if not _selected:
-            return PluginCode['PLUGIN_LOAD_FAILED']
+            return ERR.PLUGIN_LOAD_FAILED
         #
         with WorkSpace(self.root, _selected) as ws:
             _config = json_load(CONFIG_FILENAME)
@@ -154,7 +154,7 @@ class PluginManager:
             try:
                 _plugin = PluginWrapper(_config, _config['main'])
             except Exception as e:
-                return PluginCode['PLUGIN_WRAPPER_FAILED']
+                return ERR.PLUGIN_WRAPPER_FAILED
             pass
         return _plugin
 
@@ -163,13 +163,13 @@ class PluginManager:
         _path = Path(url).expanduser().resolve()
         # test whether a file provided or not
         if not _path.is_file():
-            return PluginCode['ARCHIVE_INVALID']
+            return ERR.ARCHIVE_INVALID
         # try to unpack the file to tmp_dir
         try:
             tmp_dir = self.temp / _path.name
             shutil.unpack_archive( POSIX(_path), POSIX(tmp_dir) )
         except:
-            return PluginCode['ARCHIVE_UNPACK_FAILED']
+            return ERR.ARCHIVE_UNPACK_FAILED
         # try to test plugin integrity
         with WorkSpace(tmp_dir) as ws:
             try:
@@ -178,7 +178,7 @@ class PluginManager:
                 if ret!=True:
                     return ret
             except Exception as e:
-                return PluginCode['CONFIG_FILE_MISSING']
+                return ERR.CONFIG_FILE_MISSING
             pass
         # try to load plugin
         with WorkSpace(tmp_dir, PLUGIN_BUILD_LEVEL) as ws:
@@ -186,7 +186,7 @@ class PluginManager:
                 _plugin = PluginWrapper(_config, _config['main'])
             except Exception as e:
                 # raise e
-                return PluginCode['PLUGIN_WRAPPER_FAILED']
+                return ERR.PLUGIN_WRAPPER_FAILED
             pass
         # move to root dir with new name
         _regex = re.compile( '%s-(\d\.\d.*)'%_config['name'] )
@@ -198,7 +198,7 @@ class PluginManager:
                 print('Remove elder version: %s'%item.name)
             else:
                 print('Higher version already installed: %s'%item.name)
-                return PluginCode['PLUGIN_HIGHER_VERSION']
+                return ERR.PLUGIN_HIGHER_VERSION
             pass
         _new_name = _config['name']+'-'+_config['version']
         shutil.move( POSIX(tmp_dir), POSIX(self.root / _new_name) )
@@ -301,7 +301,9 @@ if __name__ == '__main__':
         #
         args = parser.parse_args()
         pm = PluginManager()
-        execute(pm, args.command, args)
+        ret = execute(pm, args.command, args)
+        if isinstance(ret, ERR):
+            raise Exception(ret.name)
     except Exception as e:
         raise e#pass
     finally:

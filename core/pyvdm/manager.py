@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # fix relative path import
+from core.pyvdm.errcode import ErrorCode
 import sys
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
@@ -49,11 +50,11 @@ class CoreManager:
     #---------- online domain operations -----------#
     def save_domain(self, delayed=False):
         if not self.stat.getStat():
-            return (DomainCode['DOMAIN_NOT_OPEN'], '')
+            return (DomainCode.DOMAIN_NOT_OPEN, '')
         # save to current open domain
         for _plugin,_stat in self.plugins.items():
             if _plugin.onSave( _stat.getFile() ) < 0:
-                return (DomainCode['DOMAIN_SAVE_FAILED'], _plugin.name)
+                return (DomainCode.DOMAIN_SAVE_FAILED, _plugin.name)
             if not delayed: _stat.putFile()
             pass
         return True
@@ -61,27 +62,27 @@ class CoreManager:
     def open_domain(self, name):
         ret = self.load(name)
         if ret is not True:
-            return (DomainCode['DOMAIN_LOAD_FAILED'], ret)
+            return (DomainCode.DOMAIN_LOAD_FAILED, ret)
         # onStart --> onResume
         for _plugin,_ in self.plugins.items():
             if _plugin.onStart() < 0:
-                return (DomainCode['DOMAIN_START_FAILED'], _plugin.name)
+                return (DomainCode.DOMAIN_START_FAILED, _plugin.name)
         for _plugin,_stat in self.plugins.items():
             if _plugin.onResume( _stat.getFile() ) < 0:
-                return (DomainCode['DOMAIN_RESUME_FAILED'], _plugin.name)
+                return (DomainCode.DOMAIN_RESUME_FAILED, _plugin.name)
         # put new stat
         self.stat.putStat(name)
         return True
 
     def close_domain(self):
         if not self.stat.getStat():
-            return (DomainCode['DOMAIN_NOT_OPEN'], '')
+            return (DomainCode.DOMAIN_NOT_OPEN, '')
         # onClose --> onStop
         for _plugin,_stat in self.plugins.items():
             if _plugin.onClose() < 0:
-                return (DomainCode['DOMAIN_CLOSE_FAILED'], _plugin.name)
+                return (DomainCode.DOMAIN_CLOSE_FAILED, _plugin.name)
             if _plugin.onStop() < 0:
-                return (DomainCode['DOMAIN_STOP_FAILED'], _plugin.name)
+                return (DomainCode.DOMAIN_STOP_FAILED, _plugin.name)
         # put empty stat
         self.stat.putStat('')
         return True
@@ -152,7 +153,9 @@ def main():
     #TODO: add sync_manager    
     
     args = parser.parse_args()
-    execute(args.command, args)
+    ret = execute(args.command, args)
+    if isinstance(ret, ErrorCode):
+        raise Exception( '%s: %s'%(type(ret).__name__, ret.name) )
     pass
 
 if __name__ == '__main__':

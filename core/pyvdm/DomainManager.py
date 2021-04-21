@@ -7,7 +7,7 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 import os, argparse, re, shutil
 import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.utils import *
-from pyvdm.core.errcode import DomainCode
+from pyvdm.core.errcode import DomainCode as ERR
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
@@ -27,7 +27,7 @@ class DomainManager():
     def getDomainConfig(self, name):
         name = str(name)
         if not (self.root / name).exists():
-            return DomainCode['DOMAIN_NOT_EXIST']
+            return ERR.DOMAIN_NOT_EXIST
         _filename = POSIX(self.root / name / CONFIG_FILENAME)
         return json_load(_filename)
 
@@ -67,12 +67,12 @@ class DomainManager():
     def create_domain(self, name, config):
         # return if already exist
         if (self.root / name).exists():
-            return DomainCode['DOMAIN_ALREADY_EXIST']
+            return ERR.DOMAIN_ALREADY_EXIST
         # 
         if not config:
             config = self.configTui(name)
         if not config:
-            return DomainCode['DOMAIN_CONFIG_FAILED']
+            return ERR.DOMAIN_CONFIG_FAILED
         # fix path existence when create
         domain_path = self.root / name
         domain_path.mkdir(exist_ok=True, parents=True)
@@ -87,16 +87,16 @@ class DomainManager():
     def update_domain(self, name, config):
         # check if domain open
         if self.stat.getStat()==name:
-            return DomainCode['DOMAIN_IS_OPEN']
+            return ERR.DOMAIN_IS_OPEN
         # check if domain exists
         if not (self.root / name).exists():
-            return DomainCode['DOMAIN_NOT_EXIST']
+            return ERR.DOMAIN_NOT_EXIST
         #
         ori_config = self.getDomainConfig(name)
         if not config:
             config = self.configTui(name, ori_config)
         if not config:
-            return DomainCode['DOMAIN_CONFIG_FAILED']
+            return ERR.DOMAIN_CONFIG_FAILED
         # rename the domain if necessary
         if config['name']!=name:
             shutil.move( POSIX(self.root/name), POSIX(self.root/config['name']) )
@@ -113,7 +113,7 @@ class DomainManager():
     def delete_domain(self, name):
         # check if domain open
         if self.stat.getStat()==name:
-            return DomainCode['DOMAIN_IS_OPEN']
+            return ERR.DOMAIN_IS_OPEN
         #
         shutil.rmtree( POSIX(self.root/name) )
         return True
@@ -182,7 +182,9 @@ if __name__ == "__main__":
         #
         args = parser.parse_args()
         dm = DomainManager()
-        execute(dm, args.command, args)
+        ret = execute(dm, args.command, args)
+        if isinstance(ret, ERR):
+            raise Exception(ret.name)
     except Exception as e:
         raise e#pass
     finally:
