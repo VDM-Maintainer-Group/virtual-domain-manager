@@ -41,8 +41,6 @@ class PluginWrapper():
         if name.startswith('on'):
             try:
                 _func = getattr(self.obj, name)
-                if self.type=='python':
-                    _func = partial(_func, self.obj)
                 _func = self.wrap_call_in_workspace(_func)
                 return _func
             except:

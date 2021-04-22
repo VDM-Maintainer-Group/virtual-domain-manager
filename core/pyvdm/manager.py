@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # fix relative path import
-from core.pyvdm.errcode import ErrorCode
 import sys
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
