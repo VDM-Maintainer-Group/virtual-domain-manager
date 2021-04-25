@@ -1,12 +1,12 @@
 # Virtual Domain Manager
 
-Virtual Domain Manager (VDM) is a *Plan B* to take snapshot of the running status of operating system, by *archive, restore and synchronize* your applications, for fast arranging your workloads.
+<!-- Virtual Domain Manager (VDM) is a *Plan B* to take snapshot of the running status of operating system, by *archive, restore and synchronize* your applications, for fast arranging your workloads. -->
 
 > *NEED A DEMO GIF HERE.*
 
 ## Introduction
 
-How to take a snapshot of a running operating system, and somehow restore from it?
+<!-- How to take a snapshot of a running operating system, and somehow restore from it?
 
 - **Plan A**: request status of *hardwares* (CPU, Memory, Storage) and record them all.
 - **Plan B**: request status of *softwares* (users' applications) and record them all.
@@ -23,7 +23,7 @@ In the open working domain, VDM would request all the support applications to re
 
 > VDM is now dedicated developed on GNU/Linux platform and highly coupled with Linux kernel.
 >
-> Currently, we are seeking for help on: plugin development, capability library contribution, and any suggestions. If you want to join the maintainer team, please [contact us](mailto:sudofree_at_163_com).
+> Currently, we are seeking for help on: plugin development, capability library contribution, and any suggestions. If you want to join the maintainer team, please [contact us](mailto:sudofree_at_163_com). -->
 
 ## Installation
 
