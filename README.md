@@ -5,7 +5,7 @@
 > *NEED A DEMO GIF HERE.*
 
 ## Introduction
-
+[中文简介 - deepin论坛](https://bbs.deepin.org/zh/post/219493)
 <!-- How to take a snapshot of a running operating system, and somehow restore from it?
 
 - **Plan A**: request status of *hardwares* (CPU, Memory, Storage) and record them all.
