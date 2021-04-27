@@ -82,12 +82,8 @@ class CapabilityHandle:
 
 class RPCWrapper:
     def __init__(self, remote_addr=''):
-        if remote_addr:
-            self.remote_addr = remote_addr
-            self.type = 'rpc'
-        else:
-            self.remote_addr = ''
-            self.type = 'pipe'
+        self.remote_addr = ''
+        self.type = 'pipe'
         #
         random.seed( time.time() )
         self.id = GET_RANDOM_ID()
