@@ -97,10 +97,10 @@ class TrayIcon(QSystemTrayIcon):
         self.title_bar.setEnabled(False)
         menu.addSeparator()
         # add 'save', 'close' and 'switch' acts
-        act_save = menu.addAction('Save Current Domain')
-        act_save.triggered.connect(self.save_domain)
-        act_close = menu.addAction('Close Current Domain')
-        act_close.triggered.connect(self.close_domain)
+        self.act_save = menu.addAction('Save')
+        self.act_save.triggered.connect(self.save_domain)
+        self.act_close = menu.addAction('Close')
+        self.act_close.triggered.connect(self.close_domain)
         self.switch_menu = menu.addMenu('Switch to') #leave empty for default
         self.switch_menu.aboutToShow.connect( self.onActivation )
         self.switch_menu.triggered.connect( self.switch_domain )
@@ -140,7 +140,9 @@ class TrayIcon(QSystemTrayIcon):
             print(ret)
             print('... save shi te na i.')
         else:
-            self.title_bar.setText( self.getCurrentDomain() )
+            self.title_bar.setText( self.getCurrentDomain() ) #expect "<None>"
+            self.act_save.setEnabled(False)
+            self.act_close.setEnabled(False)
         pass
 
     def switch_domain(self, e):
@@ -151,7 +153,9 @@ class TrayIcon(QSystemTrayIcon):
         #
         ret = self.cm.switch_domain(_name)
         if ret is True:
-            self.title_bar.setText( self.getCurrentDomain() )
+            self.title_bar.setText( self.getCurrentDomain() ) #expect not "<None>"
+            self.act_save.setEnabled(True)
+            self.act_close.setEnabled(True)
         else:
             print(ret)
         # end animation playing (with sound effect)
