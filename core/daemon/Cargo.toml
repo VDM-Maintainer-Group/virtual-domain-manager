@@ -1,0 +1,6 @@
+[package]
+name = "vdm-daemon"
+version = "0.1.0"
+authors = ["iamhyc <sudofree@163.com>"]
+edition = "2018"
+
