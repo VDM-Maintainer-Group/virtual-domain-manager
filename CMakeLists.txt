@@ -13,6 +13,9 @@ set(VDM_INSTALL_DIR "/opt/vdm")
 # vdm capability build
 add_subdirectory(capability)
 
+# vdm daemon build
+#TODO: build external project
+
 # vdm core build
 include_directories(assets)
 include_directories(interface)
