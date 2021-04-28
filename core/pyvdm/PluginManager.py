@@ -67,11 +67,11 @@ class PluginWrapper():
         return _wrap
 
     def load_python(self, entry):
-        obj = None
+        self.obj = None
         _module = __import__( Path(entry).stem )
         for _,obj in inspect.getmembers(_module):
             if inspect.isclass(obj) and issubclass(obj, SRC_API) and (obj is not SRC_API):
-                self.obj = obj
+                self.obj = obj() #instantiate the abstract class
                 break
             pass
         pass
