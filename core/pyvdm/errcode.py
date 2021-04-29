@@ -33,6 +33,8 @@ class DomainCode(ErrorCode):
     DOMAIN_STOP_FAILED      = 0x10B0
     pass
 
+class CapabilityCode(ErrorCode):
+    pass
 
 ## Bare Code Section
 # for plugin use
