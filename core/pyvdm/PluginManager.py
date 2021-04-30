@@ -38,15 +38,12 @@ class PluginWrapper():
         pass
 
     def __getattribute__(self, name):
-        if name.startswith('on'):
-            try:
-                _func = getattr(self.obj, name)
-                _func = self.wrap_call_in_workspace(_func)
-                return _func
-            except:
-                print('%s is an illegal function name.'%name)
-                return super().__getattribute__(name)
-        else:
+        try:
+            _func = getattr(self.obj, name)
+            _func = self.wrap_call_in_workspace(_func)
+            return _func
+        except:
+            print('%s is an illegal function name.'%name)
             return super().__getattribute__(name)
         pass
 
