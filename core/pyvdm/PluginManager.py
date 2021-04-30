@@ -7,6 +7,7 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 import os, argparse, re
 import tempfile, shutil
 import ctypes
+import multiprocessing as mp
 # from importlib.machinery import SourceFileLoader
 from distutils.version import LooseVersion
 from functools import partial, wraps
@@ -40,6 +41,7 @@ class PluginWrapper():
     def __getattribute__(self, name):
         try:
             _func = getattr(self.obj, name)
+            _func = self.wrap_call_in_process(_func)
             _func = self.wrap_call_in_workspace(_func)
             return _func
         except:
@@ -55,11 +57,20 @@ class PluginWrapper():
             return func( *args )
         return _wrap
 
+    @staticmethod
+    def wrap_call_in_process(func):
+        @wraps(func)
+        def _wrap(*args, **kwargs):
+            with mp.Pool() as pool:
+                handle = pool.apply_async(func, args=args, kwargs=kwargs)
+                return handle.get(timeout=None)
+        return _wrap
+
     def wrap_call_in_workspace(self, func):
         @wraps(func)
-        def _wrap(*args, **kargs):
+        def _wrap(*args, **kwargs):
             with WorkSpace( POSIX(self.root) ):
-                ret = func(*args, **kargs)
+                ret = func(*args, **kwargs)
             return ret
         return _wrap
 
