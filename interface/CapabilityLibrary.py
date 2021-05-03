@@ -85,9 +85,8 @@ class ShmManager:
         while True:
             command, data = q_in.get()
             data = bytearray( data.encode() )
-            with seq.get_lock():
-                seq.value += 1
-            buffer = req_header.pack(__STATUS.CLIENT_ON, seq.value, command, len(data))
+            with seq.get_lock(): #read
+                buffer = req_header.pack(__STATUS.CLIENT_ON, seq.value, command, len(data))
             buffer += data
             #
             while shm_req.buf[0]!=__STATUS.SERVER_DONE:
@@ -197,8 +196,9 @@ class ShmManager:
                 json.dumps({'sig_func_args_table':sig_func_args_table})
             )
         }
-        with self.seq.get_lock():
+        with self.seq.get_lock(): #read-and-write
             _seq = self.seq.value + 1
+            self.seq.value = _seq
         self.q_in.put( request_format[command](*args, **kwargs) )
         return _seq
 
@@ -245,15 +245,12 @@ class CapabilityHandle:
         _spec = super().__getattribute__('_spec')
         if name in _spec.keys():
             args_spec = _spec[name]['args']
-            #
-            # return a wrapper:
-            #   - wrap request method
+
             @wraps(name)
             def _wrapper(*args, **kwargs):
                 _sig_func_args_table = list()
                 # check spec validation with *args and **kwargs
                 for i,x in enumerate(args_spec):
-                    #
                     _name, _type = x.keys()[0], x.values()[0]
                     if i < len(args):
                         _arg = args[i]
@@ -279,6 +276,7 @@ class CapabilityHandle:
                 else:
                     res = self._server.request(__COMMAND.CALL, *_sig_func_args_table[0])
                 return res
+            
             return _wrapper
         else:
             return super().__getattribute__(name)
@@ -341,16 +339,13 @@ class CapabilityLibrary:
     def disconnect(self) -> None:
         if self.__server is None:
             return
-        if not self.__server.is_alive():
+        if not self.__server.is_alive(): #abnormal server exit
+            self.__server.close()
             return
         #
         for _item in self.capability.values():
             _item.drop()
-        #
-        try:
-            self.__server.close()
-        except:
-            print('broken pipe, closed anyway.')
+        self.__server.close()
         pass
 
     def getCapability(self, name:str, mode=None) -> CapabilityHandle:
