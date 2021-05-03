@@ -146,14 +146,14 @@ class ShmManager:
             __COMMAND.UNREGISTER:   lambda name:(__COMMAND.UNREGISTER,
                 json.dumps({'name': name})
             ),
-            __COMMAND.CALL:         lambda cid, func, args:(__COMMAND.CALL,
-                json.dumps({'cid':cid, 'func':func, 'args':args})
+            __COMMAND.CALL:         lambda sig, func, args:(__COMMAND.CALL,
+                json.dumps({'sig':sig, 'func':func, 'args':args})
             ),
-            __COMMAND.ONE_WAY:      lambda cid, func, args:(__COMMAND.ONE_WAY,
-                json.dumps({'cid':cid, 'func':func, 'args':args})
+            __COMMAND.ONE_WAY:      lambda sig, func, args:(__COMMAND.ONE_WAY,
+                json.dumps({'sig':sig, 'func':func, 'args':args})
             ),
-            __COMMAND.CHAIN_CALL:   lambda cid_func_list, args_list:(__COMMAND.CHAIN_CALL,
-                json.dumps({'cid_func_list':cid_func_list, 'args_list':args_list})
+            __COMMAND.CHAIN_CALL:   lambda sig_func_list, args_list:(__COMMAND.CHAIN_CALL,
+                json.dumps({'sig_func_list':sig_func_list, 'args_list':args_list})
             )
         }
         with self.seq.get_lock():
