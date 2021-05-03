@@ -123,7 +123,7 @@ class ShmManager:
         self.sync_response()
         return self.responses(seq, None)
 
-    def request_async(self, command:__COMMAND, *args, **kwargs) -> int:
+    def request_async(self, command, *args, **kwargs) -> int:
         request_format = {
             __COMMAND.ALIVE:        lambda :(__COMMAND.ALIVE, ''),
             __COMMAND.REGISTER:     lambda name:(__COMMAND.REGISTER, 
@@ -144,7 +144,7 @@ class ShmManager:
         }
         with self.seq.get_lock():
             _seq = self.seq.value + 1
-        self.q_in.put( request_format[__COMMAND](*args, **kwargs) )
+        self.q_in.put( request_format[command](*args, **kwargs) )
         return _seq
 
     def get_response(self, seq, timeout=-1):
@@ -157,7 +157,7 @@ class ShmManager:
                 break
         return self.responses.pop(seq, None)
 
-    def request(self, command:__COMMAND, *args, **kwargs):
+    def request(self, command, *args, **kwargs):
         _seq = self.request_async(command, *args, **kwargs)
         if 'timeout' in kwargs:
             self.get_response(_seq, timeout=kwargs['timeout'])
