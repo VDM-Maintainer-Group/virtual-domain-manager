@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import random, time, string
-import os, socket, struct
+import os, re, socket, struct
 import json, base64
 from enum import Enum
 from functools import wraps
@@ -29,6 +29,41 @@ class __STATUS(Enum): #1-byte
     CLIENT_ON   = 0b0010
     CLIENT_DONE = 0b0011
     pass
+
+class AnyType(str):
+    def __new__(cls, value):
+        _regex = re.compile('restype_(.*?)_(.*)')
+        _tmp = _regex.split(value)
+        if len(_tmp)==4:
+            obj = str.__new__(cls, value)
+            obj.sig, obj.func = _tmp[1], _tmp[2]
+            return obj
+        else:
+            raise Exception('Invalid value for AnyType')
+    pass
+
+def __validate(_type, x):
+    _map = {
+        'Null':   lambda x:x is None,
+        'Bool':   lambda x:isinstance(x, bool),
+        'Number': lambda x:isinstance(x, int) or isinstance(float),
+        'String': lambda x:isinstance(x, str) or isinstance(bytes),
+        'Array':  lambda x:isinstance(x, list),
+        'Object': lambda x:isinstance(x, dict)
+    }
+    _regex = re.compile('\<(.*)\>')
+    #
+    _nested = _regex.search(_type)
+    if len(_nested)==3:
+        if _nested[0]=='Array' and _map[_type](x):
+            return __validate(_nested[1], x[0])
+        elif _nested[0]=='Object' and _map[_type](x):
+            key_type, val_type = _nested[1].replace(' ','').split(',')
+            return key_type=='String' and __validate(key_type, x.keys()[0]) and __validate(val_type, x.values()[0])
+        else:
+            return False
+    else:
+        return _map[_type](x) or isinstance(x, AnyType)
 
 class ShmManager:
     def __init__(self, _id) -> None:
@@ -187,25 +222,45 @@ class ShmManager:
     pass
 
 class CapabilityHandle:
-    def __init__(self, server: ShmManager, name) -> None:
-        res = server.request(__COMMAND.REGISTER, name)
+    def __init__(self, server: ShmManager, name, mode) -> None:
+        res = server.request(__COMMAND.REGISTER, name, mode)
         if 'sig' not in res:
             raise Exception('Invalid Capability.')
         #
         self.server = server
+        self.mode = mode
         self.sig = res['sig']
         self.spec = res['spec']
+        #
+        self.
         pass
 
     def __getattribute__(self, name: str):
         _spec = super().__getattribute__('spec')
         if name in _spec.keys():
+            args_spec = _spec[name]['args']
+            #
             # return a wrapper:
-            #   - check spec validation
-            #   - validate *args and **kargs
             #   - wrap request method
             @wraps(name)
-            def _wrapper(*args, **kargs):
+            def _wrapper(*args, **kwargs):
+                # check spec validation with *args and **kwargs
+                for i,x in enumerate(args_spec):
+                    _name, _type = x.keys()[0], x.values()[0]
+                    if i < len(args):
+                        _arg = args[i]
+                    elif _name in kwargs:
+                        _arg = kwargs[_name]
+                    else:
+                        raise Exception('Input arguments missing.')
+                    #
+                    if __validate(_type, _arg):
+                        args_spec[i][_name] = _arg
+                    else:
+                        raise Exception('Input type mismatch: "%r" for type "%s".'%(_arg, _type))
+                    pass
+                # 
+
                 pass
             return _wrapper
         else:
@@ -217,6 +272,7 @@ class CapabilityHandle:
             self.server.request(__COMMAND.UNREGISTER, self.spec['name'])
         del self.spec
         self.spec = dict()
+        self.sig = None
         pass
 
     pass
