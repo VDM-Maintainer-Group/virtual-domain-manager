@@ -146,14 +146,14 @@ class ShmManager:
             __COMMAND.UNREGISTER:   lambda name:(__COMMAND.UNREGISTER,
                 json.dumps({'name': name})
             ),
-            __COMMAND.CALL:         lambda capability, func, args:(__COMMAND.CALL,
-                json.dumps({'capability':capability, 'func':func, 'args':args})
+            __COMMAND.CALL:         lambda cid, func, args:(__COMMAND.CALL,
+                json.dumps({'cid':cid, 'func':func, 'args':args})
             ),
-            __COMMAND.ONE_WAY:      lambda capability, func, args:(__COMMAND.ONE_WAY,
-                json.dumps({'capability':capability, 'func':func, 'args':args})
+            __COMMAND.ONE_WAY:      lambda cid, func, args:(__COMMAND.ONE_WAY,
+                json.dumps({'cid':cid, 'func':func, 'args':args})
             ),
-            __COMMAND.CHAIN_CALL:   lambda capability_func_list, args_list:(__COMMAND.CHAIN_CALL,
-                json.dumps({'capability_func_list':capability_func_list, 'args_list':args_list})
+            __COMMAND.CHAIN_CALL:   lambda cid_func_list, args_list:(__COMMAND.CHAIN_CALL,
+                json.dumps({'cid_func_list':cid_func_list, 'args_list':args_list})
             )
         }
         with self.seq.get_lock():
@@ -188,12 +188,13 @@ class ShmManager:
 
 class CapabilityHandle:
     def __init__(self, server: ShmManager, name) -> None:
-        spec = server.request(__COMMAND.REGISTER, name)
-        if spec is None:
+        res = server.request(__COMMAND.REGISTER, name)
+        if 'cid' not in res:
             raise Exception('Invalid Capability.')
         #
         self.server = server
-        self.spec = spec
+        self.cid = res['cid']
+        self.spec = res['spec']
         pass
 
     def __getattribute__(self, name: str):
