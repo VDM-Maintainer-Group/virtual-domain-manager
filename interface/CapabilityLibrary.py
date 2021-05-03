@@ -123,6 +123,16 @@ class ShmManager:
         self.sync_response()
         return self.responses(seq, None)
 
+    def get_response(self, seq, timeout=-1):
+        _start_time = time.time()
+        _ddl = _start_time + timeout if timeout>=0 else 1E3
+        #
+        while seq not in self.responses:
+            self.sync_response()
+            if time.time() > _ddl:
+                break
+        return self.responses.pop(seq, None)
+
     def request_async(self, command, *args, **kwargs) -> int:
         request_format = {
             __COMMAND.ALIVE:        lambda :(__COMMAND.ALIVE, ''),
@@ -146,16 +156,6 @@ class ShmManager:
             _seq = self.seq.value + 1
         self.q_in.put( request_format[command](*args, **kwargs) )
         return _seq
-
-    def get_response(self, seq, timeout=-1):
-        _start_time = time.time()
-        _ddl = _start_time + timeout if timeout>=0 else 1E3
-        #
-        while seq not in self.responses:
-            self.sync_response()
-            if time.time() > _ddl:
-                break
-        return self.responses.pop(seq, None)
 
     def request(self, command, *args, **kwargs):
         _seq = self.request_async(command, *args, **kwargs)
