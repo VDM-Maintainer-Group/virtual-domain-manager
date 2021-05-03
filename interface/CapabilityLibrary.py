@@ -189,11 +189,11 @@ class ShmManager:
 class CapabilityHandle:
     def __init__(self, server: ShmManager, name) -> None:
         res = server.request(__COMMAND.REGISTER, name)
-        if 'cid' not in res:
+        if 'sig' not in res:
             raise Exception('Invalid Capability.')
         #
         self.server = server
-        self.cid = res['cid']
+        self.sig = res['sig']
         self.spec = res['spec']
         pass
 
