@@ -273,7 +273,7 @@ class CapabilityHandle:
                 # wrap request method, async or not
                 if len(_sig_func_args_table) > 0 or self._mode=='async':
                     self._sig_func_args_table = _sig_func_args_table
-                    res = None
+                    res = AnyType( 'restype_%s_%s'%(self._sig, name), _sig_func_args_table )
                 elif self._mode=='one-way':
                     res = self._server.request(__COMMAND.ONE_WAY, *_sig_func_args_table[0])
                 else:
