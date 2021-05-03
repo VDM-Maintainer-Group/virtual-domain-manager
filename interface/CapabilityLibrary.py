@@ -6,6 +6,7 @@ from enum import Enum
 from functools import wraps
 from multiprocessing import (Process, Value, Queue)
 from multiprocessing.shared_memory import SharedMemory
+from typing import Any
 
 SHM_REQ_MAX_SIZE = 10*1024   #10KB
 SHM_RES_MAX_SIZE = 1024*1024 #1MB
@@ -31,18 +32,19 @@ class __STATUS(Enum): #1-byte
     pass
 
 class AnyType(str):
-    def __new__(cls, value):
+    def __new__(cls, value, sig_func_args_table):
         _regex = re.compile('restype_(.*?)_(.*)')
         _tmp = _regex.split(value)
         if len(_tmp)==4:
             obj = str.__new__(cls, value)
             obj.sig, obj.func = _tmp[1], _tmp[2]
+            obj.table = sig_func_args_table
             return obj
         else:
             raise Exception('Invalid value for AnyType')
     pass
 
-def __validate(_type, x):
+def __validate(_type, x) -> bool:
     _map = {
         'Null':   lambda x:x is None,
         'Bool':   lambda x:isinstance(x, bool),
@@ -54,16 +56,20 @@ def __validate(_type, x):
     _regex = re.compile('\<(.*)\>')
     #
     _nested = _regex.search(_type)
-    if len(_nested)==3:
-        if _nested[0]=='Array' and _map[_type](x):
-            return __validate(_nested[1], x[0])
-        elif _nested[0]=='Object' and _map[_type](x):
-            key_type, val_type = _nested[1].replace(' ','').split(',')
-            return key_type=='String' and __validate(key_type, x.keys()[0]) and __validate(val_type, x.values()[0])
-        else:
-            return False
+    if isinstance(x, AnyType): #only for top-level type
+        return True
     else:
-        return _map[_type](x) or isinstance(x, AnyType)
+        if len(_nested)==3:
+            if _nested[0]=='Array' and _map[_type](x):
+                return __validate(_nested[1], x[0])
+            elif _nested[0]=='Object' and _map[_type](x):
+                key_type, val_type = _nested[1].replace(' ','').split(',')
+                return key_type=='String' and __validate(key_type, x.keys()[0]) and __validate(val_type, x.values()[0])
+            else:
+                return False
+        else:
+            return _map[_type](x)
+    pass
 
 class ShmManager:
     def __init__(self, _id) -> None:
@@ -187,8 +193,8 @@ class ShmManager:
             __COMMAND.ONE_WAY:      lambda sig, func, args:(__COMMAND.ONE_WAY,
                 json.dumps({'sig':sig, 'func':func, 'args':args})
             ),
-            __COMMAND.CHAIN_CALL:   lambda sig_func_list, args_list:(__COMMAND.CHAIN_CALL,
-                json.dumps({'sig_func_list':sig_func_list, 'args_list':args_list})
+            __COMMAND.CHAIN_CALL:   lambda sig_func_args_table:(__COMMAND.CHAIN_CALL,
+                json.dumps({'sig_func_args_table':sig_func_args_table})
             )
         }
         with self.seq.get_lock():
@@ -227,16 +233,16 @@ class CapabilityHandle:
         if 'sig' not in res:
             raise Exception('Invalid Capability.')
         #
-        self.server = server
-        self.mode = mode
-        self.sig = res['sig']
-        self.spec = res['spec']
+        self._server = server
+        self._mode = mode
+        self._sig = res['sig']
+        self._spec = res['spec']
         #
-        self.
+        self._sig_func_args_table = None #for lazy response
         pass
 
     def __getattribute__(self, name: str):
-        _spec = super().__getattribute__('spec')
+        _spec = super().__getattribute__('_spec')
         if name in _spec.keys():
             args_spec = _spec[name]['args']
             #
@@ -244,8 +250,10 @@ class CapabilityHandle:
             #   - wrap request method
             @wraps(name)
             def _wrapper(*args, **kwargs):
+                _sig_func_args_table = list()
                 # check spec validation with *args and **kwargs
                 for i,x in enumerate(args_spec):
+                    #
                     _name, _type = x.keys()[0], x.values()[0]
                     if i < len(args):
                         _arg = args[i]
@@ -256,23 +264,44 @@ class CapabilityHandle:
                     #
                     if __validate(_type, _arg):
                         args_spec[i][_name] = _arg
+                        if isinstance(_arg, AnyType):
+                            _sig_func_args_table.extend(_arg.table)
                     else:
                         raise Exception('Input type mismatch: "%r" for type "%s".'%(_arg, _type))
                     pass
-                # 
-
-                pass
+                _sig_func_args_table.extend( [self._sig, name, args_spec] )
+                # wrap request method, async or not
+                if len(_sig_func_args_table) > 0 or self._mode=='async':
+                    self._sig_func_args_table = _sig_func_args_table
+                    res = None
+                elif self._mode=='one-way':
+                    res = self._server.request(__COMMAND.ONE_WAY, *_sig_func_args_table[0])
+                else:
+                    res = self._server.request(__COMMAND.CALL, *_sig_func_args_table[0])
+                return res
             return _wrapper
         else:
             return super().__getattribute__(name)
         pass
 
+    def execute(self, blocking=True): #not support non-blocking now
+        if self._sig_func_args_table is not None:
+            if len(self._sig_func_args_table) > 0:
+                res = self._server.request(__COMMAND.CHAIN_CALL, self._sig_func_args_table)
+            else:
+                res = self._server.request(__COMMAND.CHAIN_CALL, *self._sig_func_args_table[0])
+            self._sig_func_args_table = None
+            return res
+        else:
+            raise Exception('No available function call table.')
+        pass
+
     def drop(self):
-        if len(self.spec):
-            self.server.request(__COMMAND.UNREGISTER, self.spec['name'])
-        del self.spec
-        self.spec = dict()
-        self.sig = None
+        if len(self._spec):
+            self._server.request(__COMMAND.UNREGISTER, self._spec['name'])
+        del self._spec
+        self._spec = dict()
+        self._sig = None
         pass
 
     pass
