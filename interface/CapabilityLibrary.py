@@ -121,17 +121,21 @@ class ShmManager:
 
     def get_response_async(self, seq):
         self.sync_response()
-        return self.responses(seq, None)
+        data = self.responses.pop(seq, None)
+        if data is not None:
+            return json.loads( data )
+        return 
 
     def get_response(self, seq, timeout=-1):
         _start_time = time.time()
         _ddl = _start_time + timeout if timeout>=0 else 1E3
         #
-        while seq not in self.responses:
-            self.sync_response()
+        res = None
+        while res is None:
+            res = self.get_response_async(seq)
             if time.time() > _ddl:
                 break
-        return self.responses.pop(seq, None)
+        return res
 
     def request_async(self, command, *args, **kwargs) -> int:
         request_format = {
@@ -159,11 +163,13 @@ class ShmManager:
 
     def request(self, command, *args, **kwargs):
         _seq = self.request_async(command, *args, **kwargs)
+        
+        if command==__COMMAND.ONE_WAY:
+            return None
         if 'timeout' in kwargs:
-            self.get_response(_seq, timeout=kwargs['timeout'])
+            return self.get_response(_seq, timeout=kwargs['timeout'])
         else:
-            self.get_response(_seq, timeout=-1)
-        pass
+            return self.get_response(_seq, timeout=-1)
 
     def is_alive(self) -> bool:
         _proc_alive = self.send_process.is_alive() and self.recv_process.is_alive()
@@ -261,12 +267,13 @@ class CapabilityLibrary:
             print('broken pipe, closed anyway.')
         pass
 
-    def getCapability(self, name:str) -> CapabilityHandle:
+    def getCapability(self, name:str, mode=None) -> CapabilityHandle:
         if name in self.capability.keys():
             return self.capability[name]
         #
         try:
-            _item = CapabilityHandle(self.__server, name)
+            assert(mode in [None, 'one-way', 'async'])
+            _item = CapabilityHandle(self.__server, name, mode)
         except:
             return None
         else:
