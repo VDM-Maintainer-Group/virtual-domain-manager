@@ -205,7 +205,7 @@ class ShmManager:
     def request(self, command, *args, **kwargs):
         _seq = self.request_async(command, *args, **kwargs)
         
-        if command==__COMMAND.ONE_WAY:
+        if command==__COMMAND.ONE_WAY or command==__COMMAND.UNREGISTER:
             return None
         if 'timeout' in kwargs:
             return self.get_response(_seq, timeout=kwargs['timeout'])
