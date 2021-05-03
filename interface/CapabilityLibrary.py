@@ -289,7 +289,7 @@ class CapabilityHandle:
             if len(self._sig_func_args_table) > 0:
                 res = self._server.request(__COMMAND.CHAIN_CALL, self._sig_func_args_table)
             else:
-                res = self._server.request(__COMMAND.CHAIN_CALL, *self._sig_func_args_table[0])
+                res = self._server.request(__COMMAND.CALL, *self._sig_func_args_table[0])
             self._sig_func_args_table = None
             return res
         else:
