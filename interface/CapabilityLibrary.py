@@ -32,12 +32,13 @@ class __STATUS(Enum): #1-byte
     pass
 
 class AnyType(str):
-    def __new__(cls, value, sig_func_args_table):
+    def __new__(cls, value, restype, sig_func_args_table):
         _regex = re.compile('restype_(.*?)_(.*)')
         _tmp = _regex.split(value)
         if len(_tmp)==4:
             obj = str.__new__(cls, value)
             obj.sig, obj.func = _tmp[1], _tmp[2]
+            obj.restype = restype
             obj.table = sig_func_args_table
             return obj
         else:
@@ -57,7 +58,7 @@ def __validate(_type, x) -> bool:
     #
     _nested = _regex.search(_type)
     if isinstance(x, AnyType): #only for top-level type
-        return True
+        return (_type==x.restype)
     else:
         if len(_nested)==3:
             if _nested[0]=='Array' and _map[_type](x):
@@ -245,6 +246,7 @@ class CapabilityHandle:
         _spec = super().__getattribute__('_spec')
         if name in _spec.keys():
             args_spec = _spec[name]['args']
+            _restype  = _spec[name]['restype']
 
             @wraps(name)
             def _wrapper(*args, **kwargs):
@@ -257,7 +259,7 @@ class CapabilityHandle:
                     elif _name in kwargs:
                         _arg = kwargs[_name]
                     else:
-                        raise Exception('Input arguments missing.')
+                        raise Exception('Input argument missing: %s.'%_name)
                     #
                     if __validate(_type, _arg):
                         args_spec[i][_name] = _arg
@@ -270,7 +272,7 @@ class CapabilityHandle:
                 # wrap request method, async or not
                 if len(_sig_func_args_table) > 0 or self._mode=='async':
                     self._sig_func_args_table = _sig_func_args_table
-                    res = AnyType( 'restype_%s_%s'%(self._sig, name), _sig_func_args_table )
+                    res = AnyType( 'restype_%s_%s'%(self._sig, name), _restype, _sig_func_args_table )
                 elif self._mode=='one-way':
                     res = self._server.request(__COMMAND.ONE_WAY, *_sig_func_args_table[0])
                 else:
