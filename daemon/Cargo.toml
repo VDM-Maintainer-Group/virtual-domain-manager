@@ -4,3 +4,5 @@ version = "0.1.0"
 authors = ["iamhyc <sudofree@163.com>"]
 edition = "2018"
 
+[dependencies]
+shared_memory = "0.11.4"
