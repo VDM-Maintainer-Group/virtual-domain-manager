@@ -6,7 +6,7 @@ from enum import Enum
 from functools import wraps
 from multiprocessing import (Process, Value, Queue)
 from multiprocessing.shared_memory import SharedMemory
-from typing import Any
+from posix_ipc import (Semaphore, O_CREX)
 
 SHM_REQ_MAX_SIZE = 10*1024   #10KB
 SHM_RES_MAX_SIZE = 1024*1024 #1MB
@@ -21,14 +21,6 @@ class __COMMAND(Enum): #2-byte
     CALL        = 0x03
     ONE_WAY     = 0x04
     CHAIN_CALL  = 0x05
-    pass
-
-class __STATUS(Enum): #1-byte
-    #loop operation is lockless safe
-    SERVER_ON   = 0b0001
-    SERVER_DONE = 0b0000
-    CLIENT_ON   = 0b0010
-    CLIENT_DONE = 0b0011
     pass
 
 class AnyType(str):
@@ -74,59 +66,59 @@ def __validate(_type, x) -> bool:
 
 class ShmManager:
     def __init__(self, _id) -> None:
-        self.id = _id
+        self.req_id = _id+'_req'
+        self.res_id = _id+'_res'
+        #
         self.shm_req = None
-        self.shm_res = SharedMemory(create=True, size=SHM_RES_MAX_SIZE)
-        self.shm_res.buf[0] = __STATUS.CLIENT_DONE
+        self.sem_req = None
+        self.shm_res = SharedMemory(name=self.res_id, create=True, size=SHM_RES_MAX_SIZE)
+        self.sem_res = Semaphore('/'+self.res_id, flags=O_CREX)
         pass
 
-    def send(self, q_in: Queue, shm_req: SharedMemory, seq: Value) -> None:
-        #req_header: ['status':1B, 'seq':4B, 'command':2B, 'size':2B]
-        req_header = struct.Struct('1B4B2B2B')
+    def send(self, q_in: Queue, shm_req: SharedMemory, sem_req: Semaphore, seq: Value) -> None:
+        #req_header: ['seq':4B, 'command':2B, 'size':2B]
+        req_header = struct.Struct('4B2B2B')
         while True:
             command, data = q_in.get()
             data = bytearray( data.encode() )
             with seq.get_lock(): #read
-                buffer = req_header.pack(__STATUS.CLIENT_ON, seq.value, command, len(data))
-            buffer += data
+                buffer = req_header.pack(seq.value, command, len(data))
+                buffer += data
             #
-            while shm_req.buf[0]!=__STATUS.SERVER_DONE:
-                time.sleep(0) #actual using select
-            shm_req.buf[0] = __STATUS.CLIENT_ON   #assert: atomic operation
+            sem_req.acquire(timeout=15)
             shm_req.buf[:len(buffer)] = buffer
-            shm_req.buf[0] = __STATUS.CLIENT_DONE #assert: atomic operation
+            sem_req.release()
         pass
 
-    def recv(self, q_out: Queue, shm_res: SharedMemory) -> None:
-        #res_header: ['status':1B, 'seq':4B, 'size':3B]
-        res_header = struct.Struct('1B4B3B')
+    def recv(self, q_out: Queue, shm_res: SharedMemory, sem_res: Semaphore) -> None:
+        #res_header: ['seq':4B, 'size':3B]
+        res_header = struct.Struct('4B3B')
         res_header_len = len(res_header)
         while True:
-            while shm_res.buf[0]!=__STATUS.SERVER_DONE:
-                time.sleep(0) #actual using select
-            shm_res.buf[0] = __STATUS.CLIENT_ON   #assert: atomic operation
-            _, seq, _size = res_header.unpack( shm_res.buf[:res_header_len] )
+            sem_res.acquire(timeout=15)
+            seq, _size = res_header.unpack( shm_res.buf[:res_header_len] )
             buffer = shm_res.buf[res_header_len:res_header_len+_size].copy()
-            shm_res.buf[0] = __STATUS.CLIENT_DONE #assert: atomic operation
+            sem_res.release()
             #
             data = bytes(buffer).decode()
             q_out.put( (seq, data) )
         pass
 
     def start(self) -> None:
-        self.shm_req = SharedMemory(name=self.id)
-        assert(self.shm_req.buf[0] == __STATUS.SERVER_DONE)
+        self.shm_req = SharedMemory(name=self.req_id)
+        self.sem_req = Semaphore(name='/'+self.req_id)
         #
         self.responses = dict()
         self.seq = Value('L', 0) #unsigned long, 4B
         self.q_in, self.q_out = Queue(), Queue()
-        self.send_process = Process(target=self.send, args=(self.q_in, self.shm_req, self.seq), daemon=True)
-        self.recv_process = Process(target=self.recv, args=(self.q_out, self.shm_req), daemon=True)
+        self.send_process = Process(target=self.send, args=(self.q_in, self.shm_req, self.sem_req, self.seq), daemon=True)
+        self.recv_process = Process(target=self.recv, args=(self.q_out, self.shm_res, self.sem_res), daemon=True)
         self.send_process.start()
         self.recv_process.start()
         pass
 
     def close(self) -> None:
+        # stop the processes
         try:
             self.send_process.close()
             self.recv_process.close()
@@ -136,18 +128,31 @@ class ShmManager:
             self.q_in = None
             self.q_out = None
             self.responses = None
-        #
+        # shm_res: close and unlink
         try:
             self.shm_res.close()
             self.shm_res.unlink()
         except:
             pass
-        #
+        # sem_res: close and unlink
+        try:
+            self.sem_res.close()
+            self.sem_res.unlink()
+        except:
+            pass
+        # shm_req: close and unlink
         if self.shm_req is not None:
             try:
                 self.shm_req.close()
                 self.shm_req.unlink()
                 self.shm_req = None
+            except:
+                pass
+        # sen_req: close and unlink
+        if self.sem_req is not None:
+            try:
+                self.sem_req.close()
+                self.sem_req.unlink()
             except:
                 pass
         pass
