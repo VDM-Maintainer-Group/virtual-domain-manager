@@ -90,6 +90,7 @@ class ShmManager:
                         buffer += data
                     shm_req.buf[:len(buffer)] = buffer
                     pass
+                time.sleep(0) #transfer to other process
         except:
             self.close()
         pass
@@ -338,15 +339,18 @@ class CapabilityLibrary:
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         __server = ShmManager(self.__id)
         try:
+            # handshake-I
             _sock.connect(_addr)
             _sock.sendall(self.__id)
+            # handshake-II
             _tmp = _sock.recv(VDM_CLIENT_ID_LEN+1) #+1 for '\0'
             if _tmp==self.__id:
                 self.__server = __server
                 self.__server.start()
-                _sock.sendall(self.__id)
             else:
                 raise Exception('Invalid Connection: %s'%_tmp)
+            # handshake-III
+            _sock.sendall(self.__id)
         except Exception as e:
             __server.close()
             raise e
