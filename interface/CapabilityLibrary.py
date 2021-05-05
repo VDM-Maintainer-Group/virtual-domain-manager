@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import random, time, string
-import os, re, socket, struct
+import os, re, socket, struct, signal
 import json, base64
 from enum import Enum
 from functools import wraps
@@ -69,44 +69,52 @@ class ShmManager:
         self.req_id = _id+'_req'
         self.res_id = _id+'_res'
         #
-        self.shm_req = None
-        self.sem_req = None
-        self.shm_res = SharedMemory(name=self.res_id, create=True, size=SHM_RES_MAX_SIZE)
-        self.sem_res = Semaphore('/'+self.res_id, flags=O_CREX)
+        self.shm_req = SharedMemory(name=self.req_id, create=True, size=SHM_REQ_MAX_SIZE)
+        self.sem_req = Semaphore('/'+self.req_id, flags=O_CREX, initial_value=1)
+        self.shm_res = None
+        self.sem_res = None
         pass
 
     def send(self, q_in: Queue, shm_req: SharedMemory, sem_req: Semaphore, seq: Value) -> None:
         #req_header: ['seq':4B, 'command':2B, 'size':2B]
         req_header = struct.Struct('4B2B2B')
-        while True:
-            command, data = q_in.get()
-            data = bytearray( data.encode() )
-            with seq.get_lock(): #read
-                buffer = req_header.pack(seq.value, command, len(data))
-                buffer += data
-            #
-            sem_req.acquire(timeout=15)
-            shm_req.buf[:len(buffer)] = buffer
-            sem_req.release()
+        try:
+            signal.signal(signal.SIGTERM, lambda: (_ for _ in ()).throw(Exception()) )
+            signal.signal(signal.SIGKILL, lambda: (_ for _ in ()).throw(Exception()) )
+            while True:
+                with sem_req as sm: #acquire lock until data is ready (to send)
+                    command, data = q_in.get(timeout=15)
+                    data = bytearray( data.encode() )
+                    with seq.get_lock(): #read
+                        buffer = req_header.pack(seq.value, command, len(data))
+                        buffer += data
+                    shm_req.buf[:len(buffer)] = buffer
+                    pass
+        except:
+            self.close()
         pass
 
     def recv(self, q_out: Queue, shm_res: SharedMemory, sem_res: Semaphore) -> None:
         #res_header: ['seq':4B, 'size':3B]
         res_header = struct.Struct('4B3B')
         res_header_len = len(res_header)
-        while True:
-            sem_res.acquire(timeout=15)
-            seq, _size = res_header.unpack( shm_res.buf[:res_header_len] )
-            buffer = shm_res.buf[res_header_len:res_header_len+_size].copy()
-            sem_res.release()
-            #
-            data = bytes(buffer).decode()
-            q_out.put( (seq, data) )
+        try:
+            signal.signal(signal.SIGTERM, lambda: (_ for _ in ()).throw(Exception()) )
+            signal.signal(signal.SIGKILL, lambda: (_ for _ in ()).throw(Exception()) )
+            while True:
+                with sem_res as sm: #get lock once data is ready (to recv)
+                    seq, _size = res_header.unpack( shm_res.buf[:res_header_len] )
+                    buffer = shm_res.buf[res_header_len:res_header_len+_size].copy()
+                #
+                data = bytes(buffer).decode()
+                q_out.put( (seq, data) )
+        except:
+            self.close()
         pass
 
     def start(self) -> None:
-        self.shm_req = SharedMemory(name=self.req_id)
-        self.sem_req = Semaphore(name='/'+self.req_id)
+        self.shm_res = SharedMemory(name=self.res_id)
+        self.sem_res = Semaphore(name='/'+self.res_id)
         #
         self.responses = dict()
         self.seq = Value('L', 0) #unsigned long, 4B
@@ -115,6 +123,7 @@ class ShmManager:
         self.recv_process = Process(target=self.recv, args=(self.q_out, self.shm_res, self.sem_res), daemon=True)
         self.send_process.start()
         self.recv_process.start()
+        time.sleep(0.1) #promise "send" process starts
         pass
 
     def close(self) -> None:
@@ -335,12 +344,14 @@ class CapabilityLibrary:
             if _tmp==self.__id:
                 self.__server = __server
                 self.__server.start()
+                _sock.sendall(self.__id)
             else:
                 raise Exception('Invalid Connection: %s'%_tmp)
         except Exception as e:
             __server.close()
-            _sock.close()
             raise e
+        finally:
+            _sock.close()
         pass
 
     def disconnect(self) -> None:
