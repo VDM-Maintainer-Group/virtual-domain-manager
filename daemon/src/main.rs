@@ -18,9 +18,12 @@ mod ipc_daemon {
     //      - load from "~/.vdm/capability" using "ffi.rs"
     //      - with "register" command, +1; with "unregister" command, -1
     //      - zero for release
-    const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
+    // const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
+    #[allow(dead_code)] //Rust lint open issue, #47133
     const SHM_RES_MAX_SIZE:usize = 1024*1024; //1MB
+    #[allow(dead_code)] //Rust lint open issue, #47133
     const VDM_SERVER_ADDR:&str = "127.0.0.1:42000";
+    #[allow(dead_code)] //Rust lint open issue, #47133
     const VDM_CLIENT_ID_LEN:usize = 16;
     // ALIVE       = 0x00
     // REGISTER    = 0x01
@@ -43,7 +46,7 @@ mod ipc_daemon {
 
     #[tokio::main]
     pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
-        let mut listener = TcpListener::bind(VDM_SERVER_ADDR).await?;
+        let listener = TcpListener::bind(VDM_SERVER_ADDR).await?;
 
         loop {
             let (mut socket, _) = listener.accept().await?;
@@ -58,26 +61,25 @@ mod ipc_daemon {
                         return;
                     }
                 };
-                let _id = str::from_utf8(&buf[..n]).unwrap();
+                let mut _tmp = Vec::new();
+                _tmp.extend( buf[..n].iter().copied() );
+                let res_id = String::from_utf8(_tmp).unwrap();
+                let req_id = res_id.clone();
                 thread::spawn(move || {
                     let shm_res = match ShmemConf::new().size(SHM_RES_MAX_SIZE)
-                        .flink( format!("{}_res", _id) ).create() {
+                        .flink( format!("{}_res", res_id) ).create() {
                             Ok(m) => m,
                             Err(e) => {
                                 eprintln!("Unable to create or open shmem flink: {}", e);
                                 return;
                             }
                         };
-                    let sem_res = CString::new( format!("/{}_res", _id) )
+                    let sem_res = CString::new( format!("/{}_res", res_id) )
+                        .map_err(|_| format!("CString::new failed"))
                         .and_then(|sem_name| {
                             match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
-                                libc::SEM_FAILED => {
-                                    let e = errno::errno();
-                                    Err(format!("sem_open {}: {}", e.0, e))
-                                },
-                                i if i != libc::SEM_FAILED => {
-                                    Ok(i)
-                                }
+                                i if i != libc::SEM_FAILED => Ok(i),
+                                _ => Err( format!("sem open failed.") )
                             }
                         }).unwrap();
                     send_loop(shm_res, sem_res);
@@ -94,25 +96,20 @@ mod ipc_daemon {
                     eprintln!("hs3: failed to read from socket; err = {:?}", e);
                     return;
                 }
-                let _id = str::from_utf8(&buf[..n]).unwrap();
                 thread::spawn(move || {
-                    let shm_req = match ShmemConf::new().flink(format!("{}_req", _id)).open() {
+                    let shm_req = match ShmemConf::new().flink(format!("{}_req", req_id)).open() {
                         Ok(m) => m,
                         Err(e) => {
                             eprintln!("Unable to create or open shmem flink: {}", e);
                             return;
                         }
                     };
-                    let sem_req = CString::new( format!("/{}_req", _id) )
+                    let sem_req = CString::new( format!("/{}_req", req_id) )
+                        .map_err(|_| format!("CString::new failed"))
                         .and_then(|sem_name| {
                             match unsafe { libc::sem_open(sem_name.as_ptr(), 0, 0o600, 1) } {
-                                libc::SEM_FAILED => {
-                                    let e = errno::errno();
-                                    Err(format!("sem_open {}: {}", e.0, e))
-                                },
-                                i if i != libc::SEM_FAILED => {
-                                    Ok(i)
-                                }
+                                i if i != libc::SEM_FAILED => Ok(i),
+                                _ => Err( format!("sem open failed.") )
                             }
                         }).unwrap();
                     recv_loop(shm_req, sem_req);
