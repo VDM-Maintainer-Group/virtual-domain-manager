@@ -36,16 +36,49 @@ enum Command {
     CHAIN_CALL  = 0x05
 }
 
-fn recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
-    loop {
-        
-    }
+#[repr(C,packed)]
+struct ReqHeader {
+    seq: u32,
+    command: u16,
+    size: u16
 }
 
-fn send_loop(pool: ArcThreadPool, rx: mpsc::Receiver<Message>, shm_res:Shmem, sem_res:*mut libc::sem_t) {
-    loop {
+#[repr(C,packed)]
+struct ResHeader {
+    seq: u32,
+    size: u32
+}
 
-    }
+fn recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
+    let _result = move || -> Result<(), Box<dyn std::error::Error>> {
+        loop {
+            // acquire the lock
+            if unsafe{ libc::sem_wait(sem_req) } != 0 {
+                break Ok(())
+            }
+            // load data from shm_req
+            let slice = unsafe{ shm_req.as_slice() };
+            // slice[..ResHeader.size]
+            // release the lock
+            if unsafe{ libc::sem_post(sem_req) } < 0 {
+                break Ok(());
+            }
+        }
+    };
+    close(shm_req, sem_req);
+}
+
+fn send_loop(rx: mpsc::Receiver<Message>, shm_res:Shmem, sem_res:*mut libc::sem_t) {
+    let _result = move || -> Result<(), Box<dyn std::error::Error>> {
+        loop {
+
+        }
+    };
+    close(shm_res, sem_res);
+}
+
+fn close(shm:Shmem, sem:*mut libc::sem_t) {
+    unsafe{ libc::sem_close(sem) };
 }
 
 #[tokio::main]
@@ -55,7 +88,7 @@ pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         let (mut socket, _) = listener.accept().await?;
-        let (pool_res, pool_req) = ( pool.clone(), pool.clone() );
+        let pool_ref = pool.clone();
 
         tokio::spawn(async move {
             let mut buf = [0; VDM_CLIENT_ID_LEN+1];
@@ -91,7 +124,7 @@ pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
                             _ => Err( format!("sem open failed.") )
                         }
                     }).unwrap();
-                send_loop(pool_res, rx, shm_res, sem_res);
+                send_loop(rx, shm_res, sem_res);
             });
 
             // handshake-II: write back
@@ -121,7 +154,7 @@ pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
                             _ => Err( format!("sem open failed.") )
                         }
                     }).unwrap();
-                recv_loop(pool_req, tx, shm_req, sem_req);
+                recv_loop(pool_ref, tx, shm_req, sem_req);
             });
         });
     }

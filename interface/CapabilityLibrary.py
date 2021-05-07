@@ -96,8 +96,8 @@ class ShmManager:
         pass
 
     def recv(self, q_out: Queue, shm_res: SharedMemory, sem_res: Semaphore) -> None:
-        #res_header: ['seq':4B, 'size':3B]
-        res_header = struct.Struct('4B3B')
+        #res_header: ['seq':4B, 'size':4B]
+        res_header = struct.Struct('4B4B')
         res_header_len = len(res_header)
         try:
             signal.signal(signal.SIGTERM, lambda: (_ for _ in ()).throw(Exception()) )

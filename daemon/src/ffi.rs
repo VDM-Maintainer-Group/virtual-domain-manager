@@ -1,6 +1,5 @@
-mod consts;
 
-use crate::consts::VDM_CAPABILITY_DIR;
+use crate::shared_consts::VDM_CAPABILITY_DIR;
 
 // - On-demand load cdll library with "usage count"
 //      - load from "~/.vdm/capability" using "ffi.rs"
