@@ -2,8 +2,13 @@ extern crate libc;
 
 use std::ffi::CString;
 use std::thread;
+use threadpool::ThreadPool;
+use std::sync::{mpsc, Arc, Mutex};
+//
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+//
+use serde_json as json;
 use shared_memory::{Shmem, ShmemConf};
 use crate::shared_consts::VDM_SERVER_ADDR;
 // - RPC server response to async event
@@ -11,6 +16,9 @@ use crate::shared_consts::VDM_SERVER_ADDR;
 //      - "register/unregister" from client (with error)
 //      - "call/one-way-call/chain-call" from client (with error)
 //      - execute function asynchronously and stateless
+
+type ArcThreadPool = Arc<Mutex<ThreadPool>>;
+type Message = (u32, json::Value);
 
 // const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
 #[allow(dead_code)] //Rust lint open issue, #47133
@@ -28,13 +36,13 @@ enum Command {
     CHAIN_CALL  = 0x05
 }
 
-fn send_loop(shm_res:Shmem, sem_res:*mut libc::sem_t) {
+fn recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
     loop {
-
+        
     }
 }
 
-fn recv_loop(shm_req:Shmem, sem_req:*mut libc::sem_t) {
+fn send_loop(pool: ArcThreadPool, rx: mpsc::Receiver<Message>, shm_res:Shmem, sem_res:*mut libc::sem_t) {
     loop {
 
     }
@@ -43,11 +51,16 @@ fn recv_loop(shm_req:Shmem, sem_req:*mut libc::sem_t) {
 #[tokio::main]
 pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(VDM_SERVER_ADDR).await?;
+    let pool = Arc::new(Mutex::new( ThreadPool::new(num_cpus::get()) ));
 
     loop {
         let (mut socket, _) = listener.accept().await?;
+        let (pool_res, pool_req) = ( pool.clone(), pool.clone() );
+
         tokio::spawn(async move {
             let mut buf = [0; VDM_CLIENT_ID_LEN+1];
+            let (tx, rx) = mpsc::channel::<Message>();
+
             // handshake-I: recv id and start "send" thread
             let n = match socket.read(&mut buf).await {
                 Ok(n) if n==0 => return,
@@ -78,7 +91,7 @@ pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
                             _ => Err( format!("sem open failed.") )
                         }
                     }).unwrap();
-                send_loop(shm_res, sem_res);
+                send_loop(pool_res, rx, shm_res, sem_res);
             });
 
             // handshake-II: write back
@@ -108,7 +121,7 @@ pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
                             _ => Err( format!("sem open failed.") )
                         }
                     }).unwrap();
-                recv_loop(shm_req, sem_req);
+                recv_loop(pool_req, tx, shm_req, sem_req);
             });
         });
     }
