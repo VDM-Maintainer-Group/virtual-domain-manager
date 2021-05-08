@@ -193,7 +193,7 @@ class ShmManager:
                 break
         return res
 
-    def request_async(self, command, *args, **kwargs) -> int:
+    def request_async(self, command: _COMMAND, *args, **kwargs) -> int:
         request_format = {
             _COMMAND.ALIVE:        lambda :(_COMMAND.ALIVE, ''),
             _COMMAND.REGISTER:     lambda name:(_COMMAND.REGISTER, 
