@@ -4,10 +4,13 @@ use std::ffi::CString;
 use std::thread;
 use threadpool::ThreadPool;
 use std::sync::{mpsc, Arc, Mutex};
+use std::mem::{size_of, transmute};
 //
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 //
+use num_enum::TryFromPrimitive;
+use std::convert::TryFrom;
 use serde_json as json;
 use shared_memory::{Shmem, ShmemConf};
 use crate::shared_consts::VDM_SERVER_ADDR;
@@ -18,7 +21,7 @@ use crate::shared_consts::VDM_SERVER_ADDR;
 //      - execute function asynchronously and stateless
 
 type ArcThreadPool = Arc<Mutex<ThreadPool>>;
-type Message = (u32, json::Value);
+type Message = (u32, String);
 
 // const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
 #[allow(dead_code)] //Rust lint open issue, #47133
@@ -27,6 +30,8 @@ const SHM_RES_MAX_SIZE:usize = 1024*1024; //1MB
 const VDM_CLIENT_ID_LEN:usize = 16;
 
 #[allow(non_camel_case_types)]
+#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u16)]
 enum Command {
     ALIVE       = 0x00,
     REGISTER    = 0x01,
@@ -49,7 +54,19 @@ struct ResHeader {
     size: u32
 }
 
-fn recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
+unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
+    let mut result = Vec::with_capacity(len);
+    let mut tmp_ptr = src; //copy
+    loop {
+        result.push( std::ptr::read_volatile(tmp_ptr) );
+        tmp_ptr = tmp_ptr.add(1);
+        if tmp_ptr >= src.add(len) {
+            break result
+        }
+    }
+}
+
+fn _recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
     let _result = || -> Result<(), Box<dyn std::error::Error>> {
         loop {
             // acquire the lock
@@ -57,27 +74,62 @@ fn recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_
                 break Ok(())
             }
             // load data from shm_req
-            let slice = unsafe{ shm_req.as_slice() };
-            // slice[..ResHeader.size]
+            let raw_ptr = shm_req.as_ptr();
+            let req_header_len = std::mem::size_of::<ReqHeader>();
+            let req_header:ReqHeader = unsafe{
+                let _header = volatile_copy(raw_ptr, req_header_len);
+                transmute( &_header.as_ptr() )
+            };
+            let req_data = unsafe{ volatile_copy(raw_ptr.add(req_header_len), req_header.size as usize) };
             // release the lock
             if unsafe{ libc::sem_post(sem_req) } < 0 {
-                break Ok(());
+                break Ok(())
+            }
+            // match command with its response
+            if let Ok(command) = Command::try_from(req_header.command) {
+                match command {
+                    Command::ALIVE => {
+                        tx.send( (req_header.seq, String::new()) )?;
+                    },
+                    Command::REGISTER => {},
+                    Command::UNREGISTER => {},
+                    Command::CALL => {},
+                    Command::ONE_WAY => {},
+                    Command::CHAIN_CALL => {}
+                }
             }
         }
     };
-    close(shm_req, sem_req);
+    _close(sem_req);
 }
 
-fn send_loop(rx: mpsc::Receiver<Message>, shm_res:Shmem, sem_res:*mut libc::sem_t) {
+fn _send_loop(rx: mpsc::Receiver<Message>, shm_res:Shmem, sem_res:*mut libc::sem_t) {
     let _result = || -> Result<(), Box<dyn std::error::Error>> {
-        loop {
-
+        while let Ok(_message) = rx.recv() {
+            // acquire the lock
+            if unsafe{ libc::sem_wait(sem_res) } != 0 {
+                break;
+            }
+            {
+                let (seq, data) = _message;
+                let data = data.as_bytes();
+                let size = data.len() as u32;
+                let buffer = unsafe{
+                    let res_header = ResHeader{seq, size};
+                };
+                //TODO: write volatile to shared memory
+            }
+            // release the lock
+            if unsafe{ libc::sem_post(sem_res) } < 0 {
+                break;
+            }
         }
+        Ok(())
     };
-    close(shm_res, sem_res);
+    _close(sem_res);
 }
 
-fn close(shm:Shmem, sem:*mut libc::sem_t) {
+fn _close(sem:*mut libc::sem_t) {
     unsafe{ libc::sem_close(sem) };
 }
 
@@ -124,7 +176,7 @@ pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
                             _ => Err( format!("sem open failed.") )
                         }
                     }).unwrap();
-                send_loop(rx, shm_res, sem_res);
+                _send_loop(rx, shm_res, sem_res);
             });
 
             // handshake-II: write back
@@ -154,7 +206,7 @@ pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
                             _ => Err( format!("sem open failed.") )
                         }
                     }).unwrap();
-                recv_loop(pool_ref, tx, shm_req, sem_req);
+                _recv_loop(pool_ref, tx, shm_req, sem_req);
             });
         });
     }
