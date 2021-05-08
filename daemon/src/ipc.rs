@@ -50,7 +50,7 @@ struct ResHeader {
 }
 
 fn recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
-    let _result = move || -> Result<(), Box<dyn std::error::Error>> {
+    let _result = || -> Result<(), Box<dyn std::error::Error>> {
         loop {
             // acquire the lock
             if unsafe{ libc::sem_wait(sem_req) } != 0 {
@@ -69,7 +69,7 @@ fn recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_
 }
 
 fn send_loop(rx: mpsc::Receiver<Message>, shm_res:Shmem, sem_res:*mut libc::sem_t) {
-    let _result = move || -> Result<(), Box<dyn std::error::Error>> {
+    let _result = || -> Result<(), Box<dyn std::error::Error>> {
         loop {
 
         }

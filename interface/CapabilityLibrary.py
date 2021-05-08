@@ -14,7 +14,7 @@ VDM_SERVER_PORT = 42000
 VDM_CLIENT_ID_LEN = 16
 GET_RANDOM_ID = lambda: ''.join( random.choices(string.hexdigits, k=VDM_CLIENT_ID_LEN) )
 
-class __COMMAND(Enum): #2-byte
+class _COMMAND(Enum): #2-byte
     ALIVE       = 0x00
     REGISTER    = 0x01
     UNREGISTER  = 0x02
@@ -195,20 +195,20 @@ class ShmManager:
 
     def request_async(self, command, *args, **kwargs) -> int:
         request_format = {
-            __COMMAND.ALIVE:        lambda :(__COMMAND.ALIVE, ''),
-            __COMMAND.REGISTER:     lambda name:(__COMMAND.REGISTER, 
+            _COMMAND.ALIVE:        lambda :(_COMMAND.ALIVE, ''),
+            _COMMAND.REGISTER:     lambda name:(_COMMAND.REGISTER, 
                 json.dumps({'name': name})
             ),
-            __COMMAND.UNREGISTER:   lambda name:(__COMMAND.UNREGISTER,
+            _COMMAND.UNREGISTER:   lambda name:(_COMMAND.UNREGISTER,
                 json.dumps({'name': name})
             ),
-            __COMMAND.CALL:         lambda sig, func, args:(__COMMAND.CALL,
+            _COMMAND.CALL:         lambda sig, func, args:(_COMMAND.CALL,
                 json.dumps({'sig':sig, 'func':func, 'args':args})
             ),
-            __COMMAND.ONE_WAY:      lambda sig, func, args:(__COMMAND.ONE_WAY,
+            _COMMAND.ONE_WAY:      lambda sig, func, args:(_COMMAND.ONE_WAY,
                 json.dumps({'sig':sig, 'func':func, 'args':args})
             ),
-            __COMMAND.CHAIN_CALL:   lambda sig_func_args_table:(__COMMAND.CHAIN_CALL,
+            _COMMAND.CHAIN_CALL:   lambda sig_func_args_table:(_COMMAND.CHAIN_CALL,
                 json.dumps({'sig_func_args_table':sig_func_args_table})
             )
         }
@@ -218,10 +218,10 @@ class ShmManager:
         self.q_in.put( request_format[command](*args, **kwargs) )
         return _seq
 
-    def request(self, command, *args, **kwargs):
+    def request(self, command: _COMMAND, *args, **kwargs):
         _seq = self.request_async(command, *args, **kwargs)
         
-        if command==__COMMAND.ONE_WAY or command==__COMMAND.UNREGISTER:
+        if command==_COMMAND.ONE_WAY or command==_COMMAND.UNREGISTER:
             return None
         if 'timeout' in kwargs:
             return self.get_response(_seq, timeout=kwargs['timeout'])
@@ -234,7 +234,7 @@ class ShmManager:
             return False
         #
         _start = time.time()
-        res = self.request(__COMMAND.ALIVE, timeout=5)
+        res = self.request(_COMMAND.ALIVE, timeout=5)
         if res==None:
             return False
         else:
@@ -245,7 +245,7 @@ class ShmManager:
 
 class CapabilityHandle:
     def __init__(self, server: ShmManager, name, mode) -> None:
-        res = server.request(__COMMAND.REGISTER, name)
+        res = server.request(_COMMAND.REGISTER, name)
         if 'sig' not in res:
             raise Exception('Invalid Capability.')
         #
@@ -290,9 +290,9 @@ class CapabilityHandle:
                     self._sig_func_args_table = _sig_func_args_table
                     res = AnyType( 'restype_%s_%s'%(self._sig, name), _restype, _sig_func_args_table )
                 elif _mode=='one-way':
-                    res = self._server.request(__COMMAND.ONE_WAY, *_sig_func_args_table[0])
+                    res = self._server.request(_COMMAND.ONE_WAY, *_sig_func_args_table[0])
                 else:
-                    res = self._server.request(__COMMAND.CALL, *_sig_func_args_table[0])
+                    res = self._server.request(_COMMAND.CALL, *_sig_func_args_table[0])
                 return res
             
             return _wrapper
@@ -303,9 +303,9 @@ class CapabilityHandle:
     def execute(self, blocking=True): #not support non-blocking now
         if self._sig_func_args_table is not None:
             if len(self._sig_func_args_table) > 0:
-                res = self._server.request(__COMMAND.CHAIN_CALL, self._sig_func_args_table)
+                res = self._server.request(_COMMAND.CHAIN_CALL, self._sig_func_args_table)
             else:
-                res = self._server.request(__COMMAND.CALL, *self._sig_func_args_table[0])
+                res = self._server.request(_COMMAND.CALL, *self._sig_func_args_table[0])
             self._sig_func_args_table = None
             return res
         else:
@@ -314,7 +314,7 @@ class CapabilityHandle:
 
     def drop(self):
         if len(self._spec):
-            self._server.request(__COMMAND.UNREGISTER, self._spec['name'])
+            self._server.request(_COMMAND.UNREGISTER, self._spec['name'])
         del self._spec
         self._spec = dict()
         self._sig = None
