@@ -245,12 +245,12 @@ class ShmManager:
 
 class CapabilityHandle:
     def __init__(self, server: ShmManager, name, mode) -> None:
-        res = server.request(__COMMAND.REGISTER, name, mode)
+        res = server.request(__COMMAND.REGISTER, name)
         if 'sig' not in res:
             raise Exception('Invalid Capability.')
         #
         self._server = server
-        self._mode = mode
+        self.mode = mode
         self._sig = res['sig']
         self._spec = res['spec']
         #
@@ -259,6 +259,7 @@ class CapabilityHandle:
 
     def __getattribute__(self, name: str):
         _spec = super().__getattribute__('_spec')
+        _mode = super().__getattribute__('mode')
         if name in _spec.keys():
             args_spec = _spec[name]['args']
             _restype  = _spec[name]['restype']
@@ -285,10 +286,10 @@ class CapabilityHandle:
                     pass
                 _sig_func_args_table.extend( [self._sig, name, args_spec] )
                 # wrap request method, async or not
-                if len(_sig_func_args_table) > 0 or self._mode=='async':
+                if len(_sig_func_args_table) > 0 or _mode=='async':
                     self._sig_func_args_table = _sig_func_args_table
                     res = AnyType( 'restype_%s_%s'%(self._sig, name), _restype, _sig_func_args_table )
-                elif self._mode=='one-way':
+                elif _mode=='one-way':
                     res = self._server.request(__COMMAND.ONE_WAY, *_sig_func_args_table[0])
                 else:
                     res = self._server.request(__COMMAND.CALL, *_sig_func_args_table[0])
