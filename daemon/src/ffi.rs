@@ -15,6 +15,16 @@ pub struct FFIManager {
 
 impl FFIManager {
     pub fn new() -> FFIManager {
-        FFIManager{ pool: ThreadPool::new(num_cpus::get()) }
+        FFIManager{
+            pool: ThreadPool::new(num_cpus::get())
+        }
+    }
+
+    pub fn register(&mut self, name: &str) -> Option<String> {
+        unimplemented!();
+    }
+
+    pub fn unregister(&mut self, name: &str) {
+        unimplemented!();
     }
 }

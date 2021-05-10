@@ -9,6 +9,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use std::convert::TryFrom;
 use num_enum::TryFromPrimitive;
 use shared_memory::{Shmem, ShmemConf};
+use serde_json::{self, Value};
 //
 use crate::ffi::FFIManager;
 use crate::shared_consts::VDM_SERVER_ADDR;
@@ -80,6 +81,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_
                 std::mem::transmute( &_header.as_ptr() )
             };
             let req_data = unsafe{ volatile_copy(raw_ptr.add(req_header_len), req_header.size as usize) };
+            let req_data = String::from_utf8(req_data).unwrap();
             // release the lock
             if unsafe{ libc::sem_post(sem_req) } < 0 {
                 break Ok(())
@@ -88,10 +90,27 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_
             if let Ok(command) = Command::try_from(req_header.command) {
                 match command {
                     Command::ALIVE => {
+                        //synchronized call
                         tx.send( (req_header.seq, String::new()) )?;
                     },
-                    Command::REGISTER => {},
-                    Command::UNREGISTER => {},
+                    Command::REGISTER => {
+                        //synchronized call
+                        let v: Value = serde_json::from_str(&req_data).unwrap();
+                        if let Value::String(ref name) = v["name"] {
+                            let mut ffi_obj = ffi.lock().unwrap();
+                            if let Some(cid) = ffi_obj.register(name) {
+                                tx.send( (req_header.seq, cid) )?;
+                            }
+                        }
+                    },
+                    Command::UNREGISTER => {
+                        //synchronized call
+                        let v: Value = serde_json::from_str(&req_data).unwrap();
+                        if let Value::String(ref name) = v["name"] {
+                            let mut ffi_obj = ffi.lock().unwrap();
+                            ffi_obj.unregister(name);
+                        }
+                    },
                     Command::CALL => {},
                     Command::ONE_WAY => {},
                     Command::CHAIN_CALL => {}
@@ -135,7 +154,7 @@ fn _close(sem:*mut libc::sem_t) {
 #[tokio::main]
 pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(VDM_SERVER_ADDR).await?;
-    let ffi = Arc::new(Mutex::new( FFIManager::new() ));
+    let ffi = Arc::new(Mutex::new( FFIManager::new() )); //global usage
 
     loop {
         let (mut socket, _) = listener.accept().await?;
