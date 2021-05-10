@@ -20,6 +20,14 @@ impl FFIManager {
         }
     }
 
+    pub fn preload(&mut self) {
+        unimplemented!();
+    }
+
+    pub fn load(&mut self, manifest:&str) {
+        unimplemented!();
+    }
+
     pub fn register(&mut self, name: &str) -> Option<String> {
         unimplemented!();
     }
@@ -28,19 +36,25 @@ impl FFIManager {
         unimplemented!();
     }
 
-    pub fn execute<T>(&mut self, raw_data:String, callback:T)
+    pub fn execute<T>(&self, raw_data:String, callback:T)
     where T: FnOnce(String) -> ()
     {
         let v: Value = serde_json::from_slice(raw_data.as_bytes()).unwrap();
-        let sig  = v["sig"].as_str().unwrap();
-        let func = v["func"].as_str().unwrap();
-        let ref args:Value = v["args"];
-        unimplemented!();
+        self.pool.execute(move || {
+            let sig  = v["sig"].as_str().unwrap();
+            let func = v["func"].as_str().unwrap();
+            let ref args:Value = v["args"];
+            unimplemented!();
+        });
     }
 
-    pub fn chain_execute<T>(&mut self, raw_data:String, callback:T)
+    pub fn chain_execute<T>(&self, raw_data:String, callback:T)
     where T: FnOnce(String) -> ()
     {
-        // sig_func_args_table:&Value
+        let v: Value = serde_json::from_slice(raw_data.as_bytes()).unwrap();
+        self.pool.execute(move || {
+            let ref sig_func_args_table:Value = v["sig_func_args_table"];
+            unimplemented!();
+        });
     }
 }

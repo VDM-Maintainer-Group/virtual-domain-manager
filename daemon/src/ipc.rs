@@ -113,18 +113,18 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_
                     },
                     Command::CALL => {
                         let tx_ref = tx.clone();
-                        let mut ffi_obj = ffi.lock().unwrap();
+                        let ffi_obj = ffi.lock().unwrap();
                         ffi_obj.execute(req_data, move |res| {
                             tx_ref.send( (req_header.seq, res) ).unwrap();
                         });
                     },
                     Command::ONE_WAY => {
-                        let mut ffi_obj = ffi.lock().unwrap();
+                        let ffi_obj = ffi.lock().unwrap();
                         ffi_obj.execute(req_data, |_|{}); //no callback for one-way
                     },
                     Command::CHAIN_CALL => {
                         let tx_ref = tx.clone();
-                        let mut ffi_obj = ffi.lock().unwrap();
+                        let ffi_obj = ffi.lock().unwrap();
                         ffi_obj.chain_execute(req_data, move |res| {
                             tx_ref.send( (req_header.seq, res) ).unwrap();
                         })
