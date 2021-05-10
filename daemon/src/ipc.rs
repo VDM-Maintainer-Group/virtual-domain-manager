@@ -95,7 +95,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_
                     },
                     Command::REGISTER => {
                         //synchronized call
-                        let v: Value = serde_json::from_str(&req_data).unwrap();
+                        let v: Value = serde_json::from_slice(req_data.as_bytes()).unwrap();
                         if let Value::String(ref name) = v["name"] {
                             let mut ffi_obj = ffi.lock().unwrap();
                             if let Some(cid) = ffi_obj.register(name) {
@@ -105,15 +105,30 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_
                     },
                     Command::UNREGISTER => {
                         //synchronized call
-                        let v: Value = serde_json::from_str(&req_data).unwrap();
+                        let v: Value = serde_json::from_slice(req_data.as_bytes()).unwrap();
                         if let Value::String(ref name) = v["name"] {
                             let mut ffi_obj = ffi.lock().unwrap();
                             ffi_obj.unregister(name);
                         }
                     },
-                    Command::CALL => {},
-                    Command::ONE_WAY => {},
-                    Command::CHAIN_CALL => {}
+                    Command::CALL => {
+                        let tx_ref = tx.clone();
+                        let mut ffi_obj = ffi.lock().unwrap();
+                        ffi_obj.execute(req_data, move |res| {
+                            tx_ref.send( (req_header.seq, res) ).unwrap();
+                        });
+                    },
+                    Command::ONE_WAY => {
+                        let mut ffi_obj = ffi.lock().unwrap();
+                        ffi_obj.execute(req_data, |_|{}); //no callback for one-way
+                    },
+                    Command::CHAIN_CALL => {
+                        let tx_ref = tx.clone();
+                        let mut ffi_obj = ffi.lock().unwrap();
+                        ffi_obj.chain_execute(req_data, move |res| {
+                            tx_ref.send( (req_header.seq, res) ).unwrap();
+                        })
+                    }
                 }
             }
         }
