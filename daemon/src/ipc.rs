@@ -17,7 +17,9 @@ use crate::shared_consts::VDM_SERVER_ADDR;
 //      - "register/unregister" from client (with error)
 //      - "call/one-way-call/chain-call" from client (with error)
 
+#[allow(dead_code)] //Rust lint open issue, #47133
 type ArcFFIManager = Arc<Mutex<FFIManager>>;
+#[allow(dead_code)] //Rust lint open issue, #47133
 type Message = (u32, String);
 
 // const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
