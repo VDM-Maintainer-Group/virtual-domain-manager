@@ -2,25 +2,22 @@ extern crate libc;
 
 use std::ffi::CString;
 use std::thread;
-use threadpool::ThreadPool;
 use std::sync::{mpsc, Arc, Mutex};
-use std::mem::{size_of, transmute};
-//
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 //
-use num_enum::TryFromPrimitive;
 use std::convert::TryFrom;
-use serde_json as json;
+use num_enum::TryFromPrimitive;
 use shared_memory::{Shmem, ShmemConf};
+//
+use crate::ffi::FFIManager;
 use crate::shared_consts::VDM_SERVER_ADDR;
 // - RPC server response to async event
 //      - "connect/disconnect" from client
 //      - "register/unregister" from client (with error)
 //      - "call/one-way-call/chain-call" from client (with error)
-//      - execute function asynchronously and stateless
 
-type ArcThreadPool = Arc<Mutex<ThreadPool>>;
+type ArcFFIManager = Arc<Mutex<FFIManager>>;
 type Message = (u32, String);
 
 // const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
@@ -66,7 +63,7 @@ unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
     }
 }
 
-fn _recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
+fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
     let _result = || -> Result<(), Box<dyn std::error::Error>> {
         loop {
             // acquire the lock
@@ -78,7 +75,7 @@ fn _recv_loop(pool: ArcThreadPool, tx: mpsc::Sender<Message>, shm_req:Shmem, sem
             let req_header_len = std::mem::size_of::<ReqHeader>();
             let req_header:ReqHeader = unsafe{
                 let _header = volatile_copy(raw_ptr, req_header_len);
-                transmute( &_header.as_ptr() )
+                std::mem::transmute( &_header.as_ptr() )
             };
             let req_data = unsafe{ volatile_copy(raw_ptr.add(req_header_len), req_header.size as usize) };
             // release the lock
@@ -136,11 +133,11 @@ fn _close(sem:*mut libc::sem_t) {
 #[tokio::main]
 pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(VDM_SERVER_ADDR).await?;
-    let pool = Arc::new(Mutex::new( ThreadPool::new(num_cpus::get()) ));
+    let ffi = Arc::new(Mutex::new( FFIManager::new() ));
 
     loop {
         let (mut socket, _) = listener.accept().await?;
-        let pool_ref = pool.clone();
+        let ffi_ref = ffi.clone();
 
         tokio::spawn(async move {
             let mut buf = [0; VDM_CLIENT_ID_LEN+1];
@@ -206,7 +203,7 @@ pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
                             _ => Err( format!("sem open failed.") )
                         }
                     }).unwrap();
-                _recv_loop(pool_ref, tx, shm_req, sem_req);
+                _recv_loop(ffi_ref, tx, shm_req, sem_req);
             });
         });
     }

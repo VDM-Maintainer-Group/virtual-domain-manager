@@ -1,4 +1,5 @@
 mod ipc;
+mod ffi;
 mod shared_consts;
 
 use pyo3::prelude::*;
