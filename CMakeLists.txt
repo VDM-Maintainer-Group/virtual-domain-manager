@@ -39,7 +39,7 @@ add_subdirectory(gui)
 # pyvdm build: "pyvdm.interface" + "pyvdm.core" + "pyvdm.gui" + "pyvdm.capability" (binding, todo)
 set(PYVDM_DIST_DIR ${CMAKE_CURRENT_BINARY_DIR}/pyvdm)
 file(GLOB PYVDM_API "./interface/*.py")
-file(GLOB PYVDM_WRAPPER "./capability/__wrapper__/python/*.py")
+file(GLOB PYVDM_WRAPPER "./capability/__wrapper__/python/wrapper.py")
 add_custom_target(build-pyvdm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND ${CMAKE_COMMAND} -E rm -rf ${PYVDM_DIST_DIR}
