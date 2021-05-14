@@ -19,7 +19,7 @@ libloading = "0.7"
 
 [dependencies.pyo3]
 version = "0.13.2"
-features = ["extension-module"]
+features = ["extension-module", "auto-initialize"]
 
 [dependencies.tokio]
 version = "1.5.0"
