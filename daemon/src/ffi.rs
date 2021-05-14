@@ -1,5 +1,7 @@
 extern crate libc;
 
+use pyo3::prelude::*;
+use std::ffi::{CStr, CString};
 use threadpool::ThreadPool;
 use serde_json::{self, Value};
 use crate::shared_consts::VDM_CAPABILITY_DIR;
@@ -8,6 +10,24 @@ use crate::shared_consts::VDM_CAPABILITY_DIR;
 //      - load from "~/.vdm/capability" using "ffi.rs"
 //      - with "register" command, +1; with "unregister" command, -1
 //      - zero for release
+
+type PyFunc = String;
+
+// #[repr(u16)]
+enum RawFunc<T,R> {
+    Value0(Box<dyn Fn() -> R>),
+    Value1(Box<dyn Fn(T) -> R>),
+    Value2(Box<dyn Fn(T,T) -> R>),
+    Value3(Box<dyn Fn(T,T,T) -> R>),
+    Value4(Box<dyn Fn(T,T,T,T) -> R>),
+    Value5(Box<dyn Fn(T,T,T,T,T) -> R>)
+}
+
+enum Func {
+    CFunc(RawFunc<CString, *const libc::c_char>),
+    RustFunc(RawFunc<String, String>),
+    PythonFunc(PyFunc)
+}
 
 pub struct FFIManager {
     pool: ThreadPool
