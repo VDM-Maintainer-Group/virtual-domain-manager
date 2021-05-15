@@ -19,7 +19,7 @@ use crate::shared_consts::VDM_SERVER_ADDR;
 //      - "call/one-way-call/chain-call" from client (with error)
 
 #[allow(dead_code)] //Rust lint open issue, #47133
-type ArcFFIManager = Arc<Mutex<FFIManager>>;
+type ArcFFIManager<'a> = Arc<Mutex<FFIManager<'a>>>;
 #[allow(dead_code)] //Rust lint open issue, #47133
 type Message = (u32, String);
 

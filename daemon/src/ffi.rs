@@ -1,12 +1,13 @@
 extern crate libc;
+extern crate libloading;
 
-use std::ops::Deref;
 use std::path::Path;
 use std::collections::HashMap;
-use pyo3::prelude::*;
+use threadpool::ThreadPool;
+//
 use libc::{c_char};
 use std::ffi::{CStr, CString};
-use threadpool::ThreadPool;
+use pyo3::prelude::*;
 use serde_json::{self, Value};
 //
 use crate::shared_consts::VDM_CAPABILITY_DIR;
@@ -16,26 +17,64 @@ use crate::shared_consts::VDM_CAPABILITY_DIR;
 //      - with "register" command, +1; with "unregister" command, -1
 //      - zero for release
 
-type PyFunc = String;
-type Library = HashMap<String, Func>;
+type _PyFunc = String;
+type _PyLibCode = String;
 
-// #[repr(u16)]
-enum RawFunc<T,R>
+// #[repr(u8)]
+enum RawFunc<'a,T,R>
 {
-    Value0(Box<dyn Fn()->R + Send>),
-    Value1(Box<dyn Fn(T)->R + Send>),
-    Value2(Box<dyn Fn(T,T)->R + Send>),
-    Value3(Box<dyn Fn(T,T,T)->R + Send>),
-    Value4(Box<dyn Fn(T,T,T,T)->R + Send>),
-    Value5(Box<dyn Fn(T,T,T,T,T)->R + Send>)
+    Value0(libloading::Symbol<'a, extern fn()->R>),
+    Value1(libloading::Symbol<'a, extern fn(T)->R>),
+    Value2(libloading::Symbol<'a, extern fn(T,T)->R>),
+    Value3(libloading::Symbol<'a, extern fn(T,T,T)->R>),
+    Value4(libloading::Symbol<'a, extern fn(T,T,T,T)->R>),
+    Value5(libloading::Symbol<'a, extern fn(T,T,T,T,T)->R>)
 }
 
-impl<T,R> RawFunc<T,R> {
+impl<'a,T,R> RawFunc<'a,T,R> {
+    pub fn load<'lib>(lib:&'lib libloading::Library, name:&[u8], len:usize) -> Option<RawFunc<'lib,T,R>> {
+        match len {
+            0 => {
+                if let Ok(sym) = unsafe{ lib.get(name) } {
+                    Some(RawFunc::Value0(sym))
+                } else {None}
+            },
+            1 => {
+                if let Ok(sym) = unsafe{ lib.get(name) } {
+                    Some(RawFunc::Value1(sym))
+                } else {None}
+            },
+            2 => {
+                if let Ok(sym) = unsafe{ lib.get(name) } {
+                    Some(RawFunc::Value2(sym))
+                } else {None}
+            },
+            3 => {
+                if let Ok(sym) = unsafe{ lib.get(name) } {
+                    Some(RawFunc::Value3(sym))
+                } else {None}
+            },
+            4 => {
+                if let Ok(sym) = unsafe{ lib.get(name) } {
+                    Some(RawFunc::Value4(sym))
+                } else {None}
+            },
+            5 => {
+                if let Ok(sym) = unsafe{ lib.get(name) } {
+                    Some(RawFunc::Value5(sym))
+                } else {None}
+            },
+            _ => {None}
+        }
+    }
+
     pub fn call(&self, mut args:Vec<T>) -> Result<R, Box<dyn std::error::Error>>{
         let mut iter = args.drain(..);
         match self {
             Self::Value0(func) => {
-                Ok(func())
+                Ok(
+                    func()
+                )
             },
             Self::Value1(func) => {
                 Ok(
@@ -68,13 +107,31 @@ impl<T,R> RawFunc<T,R> {
     }
 }
 
-enum Func {
-    CFunc(RawFunc<*const c_char, *const c_char>),
-    RustFunc(RawFunc<String, String>),
-    PythonFunc(PyFunc)
+enum Func<'a> {
+    CFunc(RawFunc<'a,*const c_char, *const c_char>),
+    RustFunc(RawFunc<'a,String, String>),
+    PythonFunc(_PyFunc)
 }
 
-impl Func {
+impl<'a> Func<'a> {
+    pub fn new<'lib>(lib:&'lib LibraryContext, name:&String, len:usize) -> Option<Func<'lib>> {
+        match lib {
+            LibraryContext::cdll(lib) => {
+                if let Some(func) = RawFunc::load(lib, name.as_bytes(), len) {
+                    Some( Func::CFunc(func) )
+                } else {None}
+            },
+            LibraryContext::rust(lib) => {
+                if let Some(func) = RawFunc::load(lib, name.as_bytes(), len) {
+                    Some( Func::RustFunc(func) )
+                } else {None}
+            }
+            LibraryContext::python(lib) => {
+                Some( Func::PythonFunc(name.clone()) )
+            }
+        }
+    }
+
     pub fn call(&self, args:Vec<Value>) -> String {
         let args: Vec<&Value> = args.iter().map(|arg| {
             let obj = arg.as_object().unwrap();
@@ -102,20 +159,66 @@ impl Func {
                 }
             },
             Self::PythonFunc(func) => {
-                String::new()
+                String::new() //FIXME: not implemented
             }
         }
     }
 }
 
-pub struct FFIManager {
-    root: String,
-    pool: ThreadPool,
-    library: HashMap<String, (u32, Library)>
+enum LibraryContext {
+    cdll(libloading::Library),
+    rust(libloading::Library),
+    python(_PyLibCode)
 }
 
-impl FFIManager {
-    pub fn new() -> FFIManager {
+struct Library<'a> { //'a is lifetime of context
+    context: LibraryContext,
+    functions: HashMap<String, Func<'a>>
+}
+
+impl<'a> Library<'a> {
+    pub fn new(_type:&str, url:&Path) -> Option<Library<'a>> {
+        let context = match _type {
+            "c" | "cpp" => {
+                if let Ok(lib) = unsafe{ libloading::Library::new(url) } {
+                    Some(LibraryContext::cdll(lib))
+                } else { None }
+            },
+            "rust" => {
+                if let Ok(lib) = unsafe{ libloading::Library::new(url) } {
+                    Some(LibraryContext::cdll(lib))
+                } else {None}
+            }
+            "python" => {
+                None //FIXME: load code from file
+            },
+            _ => { None }
+        };
+        if let Some(context) = context {
+            Some(Library{context, functions:HashMap::new()})
+        } else {None}
+    }
+
+    pub fn load(&'a mut self, metadata:&Value) -> &'a Self {
+        for (key,val) in metadata.as_object().unwrap().iter() {
+            let _args = &val.as_object().unwrap()["args"];
+            let _len = _args.as_array().unwrap().len();
+            if let Some(func) = Func::new(&self.context, &key, _len) {
+                self.functions.insert(key.clone(), func);
+            }
+        }
+        self
+    }
+}
+
+pub struct FFIManager<'a> {
+    root: String,
+    pool: ThreadPool,
+    library: HashMap<String, (u32, Library<'a>)>
+}
+
+impl<'a> FFIManager<'a> {
+    pub fn new() -> FFIManager<'a> {
         FFIManager{
             root: shellexpand::tilde(VDM_CAPABILITY_DIR).into_owned(),
             pool: ThreadPool::new(num_cpus::get()),
