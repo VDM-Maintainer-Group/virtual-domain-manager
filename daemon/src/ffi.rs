@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate libc;
 extern crate libloading;
 
@@ -11,11 +13,6 @@ use pyo3::prelude::*;
 use serde_json::{self, Value};
 //
 use crate::shared_consts::VDM_CAPABILITY_DIR;
-
-// - On-demand load cdll library with "usage count"
-//      - load from "~/.vdm/capability" using "ffi.rs"
-//      - with "register" command, +1; with "unregister" command, -1
-//      - zero for release
 
 type _PyFunc = String;
 type _PyLibCode = String;
@@ -116,17 +113,17 @@ enum Func<'a> {
 impl<'a> Func<'a> {
     pub fn new<'lib>(lib:&'lib LibraryContext, name:&String, len:usize) -> Option<Func<'lib>> {
         match lib {
-            LibraryContext::cdll(lib) => {
+            LibraryContext::CDLL(lib) => {
                 if let Some(func) = RawFunc::load(lib, name.as_bytes(), len) {
                     Some( Func::CFunc(func) )
                 } else {None}
             },
-            LibraryContext::rust(lib) => {
+            LibraryContext::Rust(lib) => {
                 if let Some(func) = RawFunc::load(lib, name.as_bytes(), len) {
                     Some( Func::RustFunc(func) )
                 } else {None}
             }
-            LibraryContext::python(lib) => {
+            LibraryContext::Python(lib) => {
                 Some( Func::PythonFunc((&lib, name.clone())) )
             }
         }
@@ -203,9 +200,9 @@ impl<'a> Func<'a> {
 }
 
 enum LibraryContext {
-    cdll(libloading::Library),
-    rust(libloading::Library),
-    python(_PyLibCode)
+    CDLL(libloading::Library),
+    Rust(libloading::Library),
+    Python(_PyLibCode)
 }
 
 struct Library<'a> { //'a is lifetime of context
@@ -218,17 +215,17 @@ impl<'a> Library<'a> {
         let context = match _type {
             "c" | "cpp" => {
                 if let Ok(lib) = unsafe{ libloading::Library::new(url) } {
-                    Some(LibraryContext::cdll(lib))
+                    Some(LibraryContext::CDLL(lib))
                 } else { None }
             },
             "rust" => {
                 if let Ok(lib) = unsafe{ libloading::Library::new(url) } {
-                    Some(LibraryContext::rust(lib))
+                    Some(LibraryContext::Rust(lib))
                 } else { None }
             }
             "python" => {
                 if let Ok(contents) = std::fs::read_to_string(url) {
-                    Some(LibraryContext::python(contents))
+                    Some(LibraryContext::Python(contents))
                 } else { None }
             },
             _ => { None }
@@ -256,6 +253,10 @@ pub struct FFIManager<'a> {
     library: HashMap<String, (u32, Library<'a>)>
 }
 
+// - On-demand load cdll library with "usage count"
+//      - load from "~/.vdm/capability" using "ffi.rs"
+//      - with "register" command, +1; with "unregister" command, -1
+//      - zero for release
 impl<'a> FFIManager<'a> {
     pub fn new() -> FFIManager<'a> {
         FFIManager{
