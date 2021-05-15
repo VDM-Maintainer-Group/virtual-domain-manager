@@ -266,16 +266,36 @@ impl<'a> FFIManager<'a> {
         }
     }
 
-    pub fn preload(&mut self) {
+    fn hash(name: &str) -> String {
+        String::new()
+    }
+
+    fn preload(&mut self) {
         unimplemented!();
     }
 
-    pub fn load(&mut self, manifest:&str) {
+    fn load(&mut self, manifest:&Value) -> Option<String> {
+        let manifest = manifest.as_object().unwrap();
+        let (url, _type, metadata): (&str,&str,&str) = (
+            manifest["build"]["output"][0].as_str().unwrap(),
+            manifest["type"].as_str().unwrap(),
+            manifest["metadata"].as_str().unwrap()
+        );
         unimplemented!();
     }
 
     pub fn register(&mut self, name: &str) -> Option<String> {
-        unimplemented!();
+        let mut res = None;
+        let manifest = Path::new(&self.root).join(name).join("manifest.json");
+        if manifest.exists() {
+            let file = std::fs::File::open(manifest).unwrap();
+            let reader = std::io::BufReader::new(file);
+            let manifest:Value = serde_json::from_reader(reader).unwrap();
+            if let Some(cid) = self.load(&manifest) {
+                res = Some(cid);
+            }
+        }
+        return res;
     }
 
     pub fn unregister(&mut self, name: &str) {
