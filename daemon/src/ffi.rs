@@ -14,8 +14,8 @@ use serde_json::{self, Value};
 //
 use crate::shared_consts::VDM_CAPABILITY_DIR;
 
-type _PyFunc = String;
-type _PyLibCode = String;
+type PyFuncName = String;
+type PyLibCode = String;
 
 // #[repr(u8)]
 enum RawFunc<'a,T,R>
@@ -107,7 +107,7 @@ impl<'a,T,R> RawFunc<'a,T,R> {
 enum Func<'a> {
     CFunc(RawFunc<'a,*const c_char, *const c_char>),
     RustFunc(RawFunc<'a,String, String>),
-    PythonFunc((&'a _PyLibCode, String))
+    PythonFunc((&'a PyLibCode, PyFuncName))
 }
 
 impl<'a> Func<'a> {
@@ -202,7 +202,7 @@ impl<'a> Func<'a> {
 enum LibraryContext {
     CDLL(libloading::Library),
     Rust(libloading::Library),
-    Python(_PyLibCode)
+    Python(PyLibCode)
 }
 
 struct Library<'a> { //'a is lifetime of context

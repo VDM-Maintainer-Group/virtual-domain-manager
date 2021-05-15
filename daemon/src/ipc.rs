@@ -2,6 +2,7 @@ extern crate libc;
 
 use std::ffi::CString;
 use std::thread;
+use std::collections::BTreeSet;
 use std::sync::{mpsc, Arc, Mutex};
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -67,6 +68,7 @@ unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
 }
 
 fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
+    let mut capability_set: BTreeSet<String> = BTreeSet::new();
     let _result = || -> Result<(), Box<dyn std::error::Error>> {
         loop {
             // acquire the lock
@@ -99,6 +101,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_
                         if let Value::String(ref name) = v["name"] {
                             let mut ffi_obj = ffi.lock().unwrap();
                             if let Some(cid) = ffi_obj.register(name) {
+                                capability_set.insert( cid.clone() );
                                 tx.send( (req_header.seq, cid) )?;
                             }
                         }
@@ -107,8 +110,10 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_
                         //synchronized call
                         let v: Value = serde_json::from_slice(req_data.as_bytes()).unwrap();
                         if let Value::String(ref name) = v["name"] {
-                            let mut ffi_obj = ffi.lock().unwrap();
-                            ffi_obj.unregister(name);
+                            if capability_set.contains(name) {
+                                let mut ffi_obj = ffi.lock().unwrap();
+                                ffi_obj.unregister(name);
+                            }
                         }
                     },
                     Command::CALL => {
