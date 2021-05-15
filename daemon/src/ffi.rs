@@ -110,7 +110,7 @@ impl<'a,T,R> RawFunc<'a,T,R> {
 enum Func<'a> {
     CFunc(RawFunc<'a,*const c_char, *const c_char>),
     RustFunc(RawFunc<'a,String, String>),
-    PythonFunc(_PyFunc)
+    PythonFunc((&'a _PyLibCode, String))
 }
 
 impl<'a> Func<'a> {
@@ -127,7 +127,7 @@ impl<'a> Func<'a> {
                 } else {None}
             }
             LibraryContext::python(lib) => {
-                Some( Func::PythonFunc(name.clone()) )
+                Some( Func::PythonFunc((&lib, name.clone())) )
             }
         }
     }
@@ -159,7 +159,44 @@ impl<'a> Func<'a> {
                 }
             },
             Self::PythonFunc(func) => {
-                String::new() //FIXME: not implemented
+                let (lib, func) = func;
+                let args:Vec<String> = args.iter().map(|arg|{
+                    serde_json::to_string(arg).unwrap()
+                }).collect();
+
+                let mut res = String::new();
+                Python::with_gil(|py| {
+                    if let Ok(module) = PyModule::from_code(py, lib, "__internal__.py", "__internal__") {
+                        res = match args.len() {
+                            0 => {
+                                let args = ();
+                                module.call1(func, args).unwrap().extract().unwrap()
+                            }
+                            1 => {
+                                let args = (&args[0], );
+                                module.call1(func, args).unwrap().extract().unwrap()
+                            },
+                            2 => {
+                                let args = (&args[0], &args[1]);
+                                module.call1(func, args).unwrap().extract().unwrap()
+                            },
+                            3 => {
+                                let args = (&args[0], &args[1], &args[2]);
+                                module.call1(func, args).unwrap().extract().unwrap()
+                            },
+                            4 => {
+                                let args = (&args[0], &args[1], &args[2], &args[3]);
+                                module.call1(func, args).unwrap().extract().unwrap()
+                            },
+                            5 => {
+                                let args = (&args[0], &args[1], &args[2], &args[3], &args[4]);
+                                module.call1(func, args).unwrap().extract().unwrap()
+                            },
+                            _ => { String::new() }
+                        };
+                    }
+                });
+                res
             }
         }
     }
@@ -186,11 +223,13 @@ impl<'a> Library<'a> {
             },
             "rust" => {
                 if let Ok(lib) = unsafe{ libloading::Library::new(url) } {
-                    Some(LibraryContext::cdll(lib))
-                } else {None}
+                    Some(LibraryContext::rust(lib))
+                } else { None }
             }
             "python" => {
-                None //FIXME: load code from file
+                if let Ok(contents) = std::fs::read_to_string(url) {
+                    Some(LibraryContext::python(contents))
+                } else { None }
             },
             _ => { None }
         };
