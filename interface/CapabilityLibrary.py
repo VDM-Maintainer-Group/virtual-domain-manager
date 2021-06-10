@@ -285,8 +285,8 @@ class CapabilityHandle:
                         raise Exception('Input type mismatch: "%r" for type "%s".'%(_arg, _type))
                     pass
                 _sig_func_args_table.extend( [self._sig, name, args_spec] )
-                # wrap request method, async or not
-                if len(_sig_func_args_table) > 0 or _mode=='async':
+                # wrap request method, lazy or not
+                if len(_sig_func_args_table) > 0 or _mode=='lazy':
                     self._sig_func_args_table = _sig_func_args_table
                     res = AnyType( 'restype_%s_%s'%(self._sig, name), _restype, _sig_func_args_table )
                 elif _mode=='one-way':
@@ -302,10 +302,11 @@ class CapabilityHandle:
 
     def execute(self, blocking=True): #not support non-blocking now
         if self._sig_func_args_table is not None:
+            _request_method = self._server.request if blocking else self._server.request_async
             if len(self._sig_func_args_table) > 0:
-                res = self._server.request(_COMMAND.CHAIN_CALL, self._sig_func_args_table)
+                res = _request_method(_COMMAND.CHAIN_CALL, self._sig_func_args_table)
             else:
-                res = self._server.request(_COMMAND.CALL, *self._sig_func_args_table[0])
+                res = _request_method(_COMMAND.CALL, *self._sig_func_args_table[0])
             self._sig_func_args_table = None
             return res
         else:
@@ -376,7 +377,7 @@ class CapabilityLibrary:
             return self.capability[name]
         #
         try:
-            assert(mode in [None, 'one-way', 'async'])
+            assert(mode in [None, 'one-way', 'lazy'])
             _item = CapabilityHandle(self.__server, name, mode)
         except:
             return None
