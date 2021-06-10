@@ -167,31 +167,32 @@ class ShmManager:
                 pass
         pass
 
-    def sync_response(self) -> None:
-        res = self.q_out.get_nowait()
-        while res is not None:
-            seq, data = res
-            self.responses.update( {seq:data} )
-            res = self.q_out.get_nowait()
-        pass
-
-    def get_response_async(self, seq):
-        self.sync_response()
+    def get_response(self, seq, blocking=True, timeout=-1):
         data = self.responses.pop(seq, None)
         if data is not None:
-            return json.loads( data )
-        return 
-
-    def get_response(self, seq, timeout=-1):
-        _start_time = time.time()
-        _ddl = _start_time + timeout if timeout>=0 else 1E3
+            return json.loads(data)
         #
-        res = None
-        while res is None:
-            res = self.get_response_async(seq)
-            if time.time() > _ddl:
-                break
-        return res
+        def _process(res):
+            _seq, _data = res
+            result = None
+            if _seq==seq:
+                result = json.loads(_data)
+            else:
+                self.responses.update({_seq:_data})
+            return result
+        #
+        if blocking:
+            _ddl = time.time() + (timeout if timeout>0 else 1E3)
+            exit_bounded = lambda: _ddl - time.time() < 0
+            q_get = lambda: self.q_out.get(timeout=_ddl-time.time())
+        else:
+            exit_bounded = False
+            q_get = lambda: self.q_out.get_nowait()
+        #
+        data = _process( q_get() )
+        while (data is not None) or exit_bounded():
+            data = _process( q_get() )
+        return data
 
     def request_async(self, command: _COMMAND, *args, **kwargs) -> int:
         request_format = {
