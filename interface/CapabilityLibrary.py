@@ -386,3 +386,24 @@ class CapabilityLibrary:
         pass
 
     pass
+
+class CapabilityContext:
+    def __init__(self, name=None, remote=''):
+        self.lib = CapabilityLibrary(remote)
+        self.name = name
+        pass
+
+    def __enter__(self):
+        self.lib.connect()
+        if self.name:
+            self.capability = self.lib.getCapability(self.name)
+            return self.capability
+        else:
+            return self.lib
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.name:
+            self.capability.drop()
+        self.lib.disconnect()
+        pass
+    pass
