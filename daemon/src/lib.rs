@@ -10,6 +10,7 @@ use pyo3::prelude::*;
 fn capability_manager(_py:Python, m:&PyModule) -> PyResult<()> {
     #[pyfn(m, "install")]
     fn install_capability(_py: Python, _url:&str) -> PyResult<()> {
+        //TODO: create soft links in "libs" folder when install
         unimplemented!()
     }
 

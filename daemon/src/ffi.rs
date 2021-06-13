@@ -268,10 +268,9 @@ impl<'a> FFIManager<'a> {
             sig_name_map: BiMap::new(),
             library: HashMap::new()
         };
-        
+        // switch to execution context when creation
         let libs_folder = Path::new(&_new.root).join("libs");
         nix::unistd::chdir( libs_folder.as_path() ).unwrap();
-
         _new
     }
 
