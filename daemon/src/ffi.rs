@@ -302,9 +302,9 @@ impl<'a> FFIManager<'a> {
                     (0, lib)
                 );
             }
-        }
-
-        unimplemented!();
+            
+            Some( String::new() )
+        } else { None }
     }
 
     fn preload(&mut self) {
