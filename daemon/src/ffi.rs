@@ -238,14 +238,15 @@ impl<'a> Library<'a> {
         } else {None}
     }
 
-    pub fn load(&'a mut self, metadata:&Value) {
+    pub fn load(mut self, metadata:&Value) -> Self {
         for (key,val) in metadata.as_object().unwrap().iter() {
             let _args = &val.as_object().unwrap()["args"];
             let _len = _args.as_array().unwrap().len();
-            if let Some(func) = Func::new(&self.context, &key, _len) {
-                self.functions.insert(key.clone(), func);
-            }
+            // if let Some(func) = Func::new(&self.context, &key, _len) {
+            //     self.functions.insert(key.clone(), func);
+            // }
         }
+        self
     }
 }
 
@@ -296,7 +297,7 @@ impl<'a> FFIManager<'a> {
         };
         if let Some(entry) = entry {
             if let Some(mut lib) = Library::new(_type, entry.as_ref()) {
-                lib.load(metadata);
+                lib = lib.load(metadata);
                 self.library.insert(
                     String::from(name),
                     (0, lib)
