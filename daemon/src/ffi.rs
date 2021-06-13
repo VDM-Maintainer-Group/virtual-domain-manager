@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use threadpool::ThreadPool;
 //
 use libc::{c_char};
-use std::ffi::{CStr, CString};
+use std::ffi::{CStr, CString, OsStr};
 use pyo3::prelude::*;
 use serde_json::{self, Value};
 //
@@ -281,12 +281,28 @@ impl<'a> FFIManager<'a> {
 
     fn load(&mut self, manifest:&Value) -> Option<String> {
         let manifest = manifest.as_object().unwrap();
-        let (entry, _type, metadata): (&str,&str,&Value) = (
+        let (name, entry, _type, metadata): (&str,&str,&str,&Value) = (
+            manifest["name"].as_str().unwrap(),
             manifest["build"]["output"][0].as_str().unwrap(),
             manifest["type"].as_str().unwrap(),
             &manifest["metadata"]
         );
 
+        let entry:Vec<&str> = entry.split('@').collect();
+        let entry = match entry.len() {
+            1 => Some( Path::new(entry[0]).file_name().unwrap() ),
+            2 => Some( OsStr::new(entry[1]) ),
+            _ => None
+        };
+        if let Some(entry) = entry {
+            if let Some(mut lib) = Library::new(_type, entry.as_ref()) {
+                lib.load(metadata);
+                self.library.insert(
+                    String::from(name),
+                    (0, lib)
+                );
+            }
+        }
 
         unimplemented!();
     }
