@@ -9,6 +9,9 @@ name = "vdm_daemon"
 crate-type = ["cdylib"]
 
 [dependencies]
+rand = "0.8"
+bimap = "0.6"
+nix = "0.10"
 libc = "0.2"
 shared_memory = "0.11.4"
 num_cpus = "1.0"

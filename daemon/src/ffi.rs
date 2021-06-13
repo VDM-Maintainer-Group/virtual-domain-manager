@@ -1,8 +1,11 @@
 #![allow(dead_code)]
 
+extern crate nix;
 extern crate libc;
 extern crate libloading;
 
+use bimap::BiMap;
+use rand::{Rng, thread_rng, distributions::Alphanumeric};
 use std::path::Path;
 use std::collections::HashMap;
 use threadpool::ThreadPool;
@@ -211,20 +214,20 @@ struct Library<'a> { //'a is lifetime of context
 }
 
 impl<'a> Library<'a> {
-    pub fn new(_type:&str, url:&Path) -> Option<Library<'a>> {
+    pub fn new(_type:&str, entry:&Path) -> Option<Library<'a>> {
         let context = match _type {
             "c" | "cpp" => {
-                if let Ok(lib) = unsafe{ libloading::Library::new(url) } {
+                if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
                     Some(LibraryContext::CDLL(lib))
                 } else { None }
             },
             "rust" => {
-                if let Ok(lib) = unsafe{ libloading::Library::new(url) } {
+                if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
                     Some(LibraryContext::Rust(lib))
                 } else { None }
             }
             "python" => {
-                if let Ok(contents) = std::fs::read_to_string(url) {
+                if let Ok(contents) = std::fs::read_to_string(entry) {
                     Some(LibraryContext::Python(contents))
                 } else { None }
             },
@@ -235,7 +238,7 @@ impl<'a> Library<'a> {
         } else {None}
     }
 
-    pub fn load(&'a mut self, metadata:&Value) -> &'a Self {
+    pub fn load(&'a mut self, metadata:&Value) {
         for (key,val) in metadata.as_object().unwrap().iter() {
             let _args = &val.as_object().unwrap()["args"];
             let _len = _args.as_array().unwrap().len();
@@ -243,14 +246,14 @@ impl<'a> Library<'a> {
                 self.functions.insert(key.clone(), func);
             }
         }
-        self
     }
 }
 
 pub struct FFIManager<'a> {
     root: String,
     pool: ThreadPool,
-    library: HashMap<String, (u32, Library<'a>)>
+    sig_name_map: BiMap<String, String>, //<sig, name>
+    library: HashMap<String, (u32, Library<'a>)> //<name, (counter, _)>
 }
 
 // - On-demand load cdll library with "usage count"
@@ -259,40 +262,55 @@ pub struct FFIManager<'a> {
 //      - zero for release
 impl<'a> FFIManager<'a> {
     pub fn new() -> FFIManager<'a> {
-        FFIManager{
+        let _new = FFIManager{
             root: shellexpand::tilde(VDM_CAPABILITY_DIR).into_owned(),
             pool: ThreadPool::new(num_cpus::get()),
+            sig_name_map: BiMap::new(),
             library: HashMap::new()
-        }
+        };
+        
+        let libs_folder = Path::new(&_new.root).join("libs");
+        nix::unistd::chdir( libs_folder.as_path() ).unwrap();
+
+        _new
     }
 
-    fn hash(name: &str) -> String {
-        String::new()
+    fn gen_sig() -> String {
+        thread_rng().sample_iter(&Alphanumeric).take(16)
+        .map(char::from).collect()
+    }
+
+    fn load(&mut self, manifest:&Value) -> Option<String> {
+        let manifest = manifest.as_object().unwrap();
+        let (entry, _type, metadata): (&str,&str,&Value) = (
+            manifest["build"]["output"][0].as_str().unwrap(),
+            manifest["type"].as_str().unwrap(),
+            &manifest["metadata"]
+        );
+
+
+        unimplemented!();
     }
 
     fn preload(&mut self) {
         unimplemented!();
     }
 
-    fn load(&mut self, manifest:&Value) -> Option<String> {
-        let manifest = manifest.as_object().unwrap();
-        let (url, _type, metadata): (&str,&str,&str) = (
-            manifest["build"]["output"][0].as_str().unwrap(),
-            manifest["type"].as_str().unwrap(),
-            manifest["metadata"].as_str().unwrap()
-        );
-        unimplemented!();
-    }
-
     pub fn register(&mut self, name: &str) -> Option<String> {
         let mut res = None;
         let manifest = Path::new(&self.root).join(name).join("manifest.json");
-        if manifest.exists() {
+
+        if self.library.contains_key(name) {
+            if let Some(sig) = self.sig_name_map.get_by_right(name) {
+                res = Some( sig.clone() );
+            }
+        }
+        else if manifest.exists() {
             let file = std::fs::File::open(manifest).unwrap();
             let reader = std::io::BufReader::new(file);
             let manifest:Value = serde_json::from_reader(reader).unwrap();
-            if let Some(cid) = self.load(&manifest) {
-                res = Some(cid);
+            if let Some(sig) = self.load(&manifest) {
+                res = Some(sig);
             }
         }
         return res;
