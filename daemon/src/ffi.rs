@@ -32,8 +32,8 @@ enum RawFunc<'a,T,R>
 }
 
 impl<'a,T,R> RawFunc<'a,T,R> {
-    pub fn load<'lib>(lib:&'lib libloading::Library, name:&[u8], len:usize) -> Option<RawFunc<'lib,T,R>> {
-        match len {
+    pub fn load<'lib>(lib:&'lib libloading::Library, name:&[u8], argc:usize) -> Option<RawFunc<'lib,T,R>> {
+        match argc {
             0 => {
                 if let Ok(sym) = unsafe{ lib.get(name) } {
                     Some(RawFunc::Value0(sym))
@@ -114,20 +114,20 @@ enum Func<'a> {
 }
 
 impl<'a> Func<'a> {
-    pub fn new<'lib>(lib:&'lib LibraryContext, name:&String, len:usize) -> Option<Func<'lib>> {
+    pub fn new<'lib>(lib:&'lib LibraryContext, name:&String, argc:usize) -> Option<Func<'lib>> {
         match lib {
             LibraryContext::CDLL(lib) => {
-                if let Some(func) = RawFunc::load(lib, name.as_bytes(), len) {
+                if let Some(func) = RawFunc::load(lib, name.as_bytes(), argc) {
                     Some( Func::CFunc(func) )
                 } else {None}
             },
             LibraryContext::Rust(lib) => {
-                if let Some(func) = RawFunc::load(lib, name.as_bytes(), len) {
+                if let Some(func) = RawFunc::load(lib, name.as_bytes(), argc) {
                     Some( Func::RustFunc(func) )
                 } else {None}
             }
             LibraryContext::Python(lib) => {
-                Some( Func::PythonFunc((&lib, name.clone())) )
+                Some( Func::PythonFunc(( &lib, name.clone() )) )
             }
         }
     }
