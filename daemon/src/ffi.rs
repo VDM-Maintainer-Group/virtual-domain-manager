@@ -4,6 +4,7 @@ extern crate nix;
 extern crate libc;
 extern crate libloading;
 
+use std::sync::Arc;
 use bimap::BiMap;
 use rand::{Rng, thread_rng, distributions::Alphanumeric};
 use std::path::Path;
@@ -209,7 +210,7 @@ enum LibraryContext {
 }
 
 struct Library<'a> { //'a is lifetime of context
-    context: LibraryContext,
+    context: Arc<LibraryContext>,
     functions: HashMap<String, Func<'a>>
 }
 
@@ -234,7 +235,10 @@ impl<'a> Library<'a> {
             _ => { None }
         };
         if let Some(context) = context {
-            Some(Library{context, functions:HashMap::new()})
+            Some(Library{
+                context: Arc::new(context),
+                functions:HashMap::new()
+            })
         } else {None}
     }
 
@@ -242,9 +246,11 @@ impl<'a> Library<'a> {
         for (key,val) in metadata.as_object().unwrap().iter() {
             let _args = &val.as_object().unwrap()["args"];
             let _len = _args.as_array().unwrap().len();
-            // if let Some(func) = Func::new(&self.context, &key, _len) {
-            //     self.functions.insert(key.clone(), func);
-            // }
+            //
+            let _ref = self.context.clone();
+            if let Some(func) = Func::new(&_ref, &key, _len) {
+                self.functions.insert(key.clone(), func);
+            }
         }
         self
     }
