@@ -302,6 +302,7 @@ impl<'a> FFIManager<'a> {
         };
         if let Some(entry) = entry {
             if let Some(mut lib) = Library::new(_type, entry.as_ref()) {
+                //reference: https://doc.rust-lang.org/nightly/std/pin/index.html#example-self-referential-struct
                 let _lib = lib.as_mut().load(metadata);
                 // lib = lib.as_mut().load(metadata);
                 self.library.insert(
