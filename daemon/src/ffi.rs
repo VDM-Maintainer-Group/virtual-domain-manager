@@ -4,7 +4,7 @@ extern crate nix;
 extern crate libc;
 extern crate libloading;
 
-use std::sync::Arc;
+use std::pin::Pin;
 use bimap::BiMap;
 use rand::{Rng, thread_rng, distributions::Alphanumeric};
 use std::path::Path;
@@ -210,12 +210,12 @@ enum LibraryContext {
 }
 
 struct Library<'a> { //'a is lifetime of context
-    context: Arc<LibraryContext>,
+    context: LibraryContext,
     functions: HashMap<String, Func<'a>>
 }
 
 impl<'a> Library<'a> {
-    pub fn new(_type:&str, entry:&Path) -> Option<Library<'a>> {
+    pub fn new(_type:&str, entry:&Path) -> Option<Pin<Box<Self>>> {
         let context = match _type {
             "c" | "cpp" => {
                 if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
@@ -235,10 +235,8 @@ impl<'a> Library<'a> {
             _ => { None }
         };
         if let Some(context) = context {
-            Some(Library{
-                context: Arc::new(context),
-                functions:HashMap::new()
-            })
+            let _lib = Library {context, functions:HashMap::new()};
+            Some( Box::pin(_lib) )
         } else {None}
     }
 
@@ -247,9 +245,10 @@ impl<'a> Library<'a> {
             let _args = &val.as_object().unwrap()["args"];
             let _len = _args.as_array().unwrap().len();
             //
-            let _ref = self.context.clone();
-            if let Some(func) = Func::new(&_ref, &key, _len) {
-                self.functions.insert(key.clone(), func);
+            if let Some(func) = Func::new(&self.context, &key, _len) {
+                unsafe {
+                    // self.functions.insert(key.clone(), func);
+                }
             }
         }
         self
@@ -303,10 +302,11 @@ impl<'a> FFIManager<'a> {
         };
         if let Some(entry) = entry {
             if let Some(mut lib) = Library::new(_type, entry.as_ref()) {
-                lib = lib.load(metadata);
+                let _lib = lib.as_mut().load(metadata);
+                // lib = lib.as_mut().load(metadata);
                 self.library.insert(
                     String::from(name),
-                    (0, lib)
+                    (0, _lib)
                 );
             }
             
