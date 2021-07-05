@@ -29,9 +29,9 @@ impl JsonifyIPC {
     /// Start the JsonifyIPC daemon waiting for client connection.
     pub fn start(&self) {
         let server = ipc::IPCServer::new( self.root.clone(), self.server_port );
-        self.rt.spawn(async move {
+        self.rt.block_on(async move {
             server.daemon().await
-        });
+        }).unwrap();
     }
 
     /// Stop the JsonifyIPC daemon by: 1) shutdown all tokio threads; 2) stop IPCServer thread pool.

@@ -365,4 +365,29 @@ impl<'a> FFIManager<'a> {
 }
 
 //======================================================================//
-pub trait Serde {}
+#[derive(Clone)]
+pub struct FFIManager_stub {} //FIXME:
+impl FFIManager_stub {
+    pub fn new() -> Self {
+        FFIManager_stub{}
+    }
+    pub fn register(&mut self, name: &str) -> Option<String> {
+        unimplemented!()
+    }
+    pub fn unregister(&mut self, name: &str) {
+        unimplemented!()
+    }
+    pub fn execute<T>(&self, raw_data:String, callback:T)
+    where T: FnOnce(String) -> ()
+    {
+        unimplemented!()
+    }
+    pub fn chain_execute<T>(&self, raw_data:String, callback:T)
+    where T: FnOnce(String) -> ()
+    {
+        unimplemented!()
+    }
+    pub fn lock(&self) -> Result<Self, ()> {
+        Ok(self.clone())
+    }
+}

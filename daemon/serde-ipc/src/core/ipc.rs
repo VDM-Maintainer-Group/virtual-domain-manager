@@ -3,20 +3,21 @@ extern crate libc;
 //
 use std::path::PathBuf;
 use std::ffi::CString;
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::sync::{mpsc, Arc, Mutex};
 use std::convert::TryFrom;
+use std::net::{SocketAddr,};
 use std::collections::BTreeSet;
 
 // third-party crates
-use tokio::net::TcpListener;
+use tokio::net::{TcpStream, TcpListener};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use shared_memory::{Shmem, ShmemConf};
 use serde_json::{self, Value};
 use num_enum::TryFromPrimitive;
 
 // root crates
-use crate::core::ffi::FFIManager;
+use crate::core::ffi::{FFIManager,FFIManager_stub};
 
 // - RPC server response to async event
 //      - "connect/disconnect" from client
@@ -74,7 +75,7 @@ unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
 pub struct IpcWorker {}
 
 impl IpcWorker {
-    fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
+    fn _recv_loop(ffi: FFIManager_stub, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
         let mut capability_set: BTreeSet<String> = BTreeSet::new();
         let _result = || -> Result<(), Box<dyn std::error::Error>> {
             loop {
@@ -199,89 +200,100 @@ pub struct IPCServer {
 impl IPCServer {
 
     pub fn new(root:PathBuf, server_port:u16) -> Self {
-        IPCServer{ root, server_port }
+        IPCServer{
+            root, server_port
+        }
+    }
+
+    fn spawn_send_thread(res_id:String, rx:mpsc::Receiver<Message>) {
+        let shm_res = match ShmemConf::new().size(SHM_RES_MAX_SIZE)
+            .flink( format!("{}_res", res_id) ).create() {
+                Ok(m) => m,
+                Err(e) => {
+                    eprintln!("Unable to create or open shmem flink: {}", e);
+                    return;
+                }
+            };
+        let sem_res = CString::new( format!("/{}_res", res_id) )
+            .map_err(|_| format!("CString::new failed"))
+            .and_then(|sem_name| {
+                match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
+                    i if i != libc::SEM_FAILED => Ok(i),
+                    _ => Err( format!("sem open failed.") )
+                }
+            }).unwrap();
+        IpcWorker::_send_loop(rx, shm_res, sem_res);
+    }
+
+    fn spawn_recv_thread(req_id:String, tx:mpsc::Sender<Message>, ffi:FFIManager_stub) {
+        let shm_req = match ShmemConf::new().flink(format!("{}_req", req_id)).open() {
+            Ok(m) => m,
+            Err(e) => {
+                eprintln!("Unable to create or open shmem flink: {}", e);
+                return;
+            }
+        };
+        let sem_req = CString::new( format!("/{}_req", req_id) )
+            .map_err(|_| format!("CString::new failed"))
+            .and_then(|sem_name| {
+                match unsafe { libc::sem_open(sem_name.as_ptr(), 0, 0o600, 1) } {
+                    i if i != libc::SEM_FAILED => Ok(i),
+                    _ => Err( format!("sem open failed.") )
+                }
+            }).unwrap();
+        IpcWorker::_recv_loop(ffi, tx, shm_req, sem_req);
+    }
+
+    async fn try_connect(mut socket:TcpStream, root:PathBuf, ffi:FFIManager_stub) {
+        let mut buf = [0; VDM_CLIENT_ID_LEN+1];
+        let (tx, rx) = mpsc::channel::<Message>();
+
+        // handshake-I: recv id, spawn "send" thread
+        let n = match socket.read(&mut buf).await {
+            Ok(n) if n==0 => return,
+            Ok(n) => n,
+            Err(_) => return
+        };
+        let mut _tmp = Vec::new();
+        _tmp.extend( buf[..n].iter().copied() );
+        let res_id = String::from_utf8(_tmp).unwrap();
+        let req_id = res_id.clone();
+        thread::spawn(move || {
+            Self::spawn_send_thread(res_id, rx);
+        });
+
+        // handshake-II: write back
+        if let Err(e) = socket.write_all(&buf).await {
+            eprintln!("hs2: failed to write to socket; err = {:?}", e);
+            return;
+        }
+
+        // handshake-III: spawn "recv" thread
+        if let Err(e) = socket.read(&mut buf).await {
+            eprintln!("hs3: failed to read from socket; err = {:?}", e);
+            return;
+        }
+        thread::spawn(move || {
+            Self::spawn_recv_thread(req_id, tx, ffi);
+        });
     }
 
     pub async fn daemon(&self) -> Result<(), std::io::Error> {
-        let listener = TcpListener::bind("127.0.0.1:42000").await?;
-        let ffi = Arc::new(Mutex::new( FFIManager::new() )); //global usage
+        let sock_addr = SocketAddr::new( "127.0.0.1".parse().unwrap(), self.server_port );
+        let listener = TcpListener::bind(sock_addr).await?;
+        // let ffi = Arc::new(Mutex::new( FFIManager::new() )); //global usage
 
         loop {
-            let (mut socket, _) = listener.accept().await?;
-            let ffi_ref = ffi.clone();
+            let (socket, _) = listener.accept().await?;
+            let _root = self.root.clone();
+            let _ffi = FFIManager_stub{}; //FIXME:
+            // let ffi_ref = ffi.clone();
 
             tokio::spawn(async move {
-                let mut buf = [0; VDM_CLIENT_ID_LEN+1];
-                let (tx, rx) = mpsc::channel::<Message>();
-
-                // handshake-I: recv id and start "send" thread
-                let n = match socket.read(&mut buf).await {
-                    Ok(n) if n==0 => return,
-                    Ok(n) => n,
-                    Err(e) => {
-                        eprintln!("hs1: failed to read from socket; err = {:?}", e);
-                        return;
-                    }
-                };
-                let mut _tmp = Vec::new();
-                _tmp.extend( buf[..n].iter().copied() );
-                let res_id = String::from_utf8(_tmp).unwrap();
-                let req_id = res_id.clone();
-                thread::spawn(move || {
-                    let shm_res = match ShmemConf::new().size(SHM_RES_MAX_SIZE)
-                        .flink( format!("{}_res", res_id) ).create() {
-                            Ok(m) => m,
-                            Err(e) => {
-                                eprintln!("Unable to create or open shmem flink: {}", e);
-                                return;
-                            }
-                        };
-                    let sem_res = CString::new( format!("/{}_res", res_id) )
-                        .map_err(|_| format!("CString::new failed"))
-                        .and_then(|sem_name| {
-                            match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
-                                i if i != libc::SEM_FAILED => Ok(i),
-                                _ => Err( format!("sem open failed.") )
-                            }
-                        }).unwrap();
-                    IpcWorker::_send_loop(rx, shm_res, sem_res);
-                });
-
-                // handshake-II: write back
-                if let Err(e) = socket.write_all(&buf).await {
-                    eprintln!("hs2: failed to write to socket; err = {:?}", e);
-                    return;
-                }
-
-                // handshake-III: start "recv" thread
-                if let Err(e) = socket.read(&mut buf).await {
-                    eprintln!("hs3: failed to read from socket; err = {:?}", e);
-                    return;
-                }
-                thread::spawn(move || {
-                    let shm_req = match ShmemConf::new().flink(format!("{}_req", req_id)).open() {
-                        Ok(m) => m,
-                        Err(e) => {
-                            eprintln!("Unable to create or open shmem flink: {}", e);
-                            return;
-                        }
-                    };
-                    let sem_req = CString::new( format!("/{}_req", req_id) )
-                        .map_err(|_| format!("CString::new failed"))
-                        .and_then(|sem_name| {
-                            match unsafe { libc::sem_open(sem_name.as_ptr(), 0, 0o600, 1) } {
-                                i if i != libc::SEM_FAILED => Ok(i),
-                                _ => Err( format!("sem open failed.") )
-                            }
-                        }).unwrap();
-                    IpcWorker::_recv_loop(ffi_ref, tx, shm_req, sem_req);
-                });
+                Self::try_connect(socket, _root, _ffi).await
             });
         }
 
     }
 
 }
-
-//======================================================================//
-
