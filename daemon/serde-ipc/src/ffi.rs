@@ -15,8 +15,6 @@ use libc::{c_char};
 use std::ffi::{CStr, CString, OsStr};
 use pyo3::prelude::*;
 use serde_json::{self, Value};
-//
-use crate::shared_consts::VDM_CAPABILITY_DIR;
 
 type PyFuncName = String;
 type PyLibCode = String;
@@ -269,7 +267,7 @@ pub struct FFIManager<'a> {
 impl<'a> FFIManager<'a> {
     pub fn new() -> FFIManager<'a> {
         let _new = FFIManager{
-            root: shellexpand::tilde(VDM_CAPABILITY_DIR).into_owned(),
+            root: shellexpand::tilde("~/.vdm").into_owned(),
             pool: ThreadPool::new(num_cpus::get()),
             sig_name_map: BiMap::new(),
             library: HashMap::new()
@@ -301,14 +299,14 @@ impl<'a> FFIManager<'a> {
             _ => None
         };
         if let Some(entry) = entry {
-            if let Some(mut lib) = Library::new(_type, entry.as_ref()) {
+            if let Some(mut lib) = Library::new(_type, entry.as_ref()) { //FIXME: remove self-referential struct
                 //reference: https://doc.rust-lang.org/nightly/std/pin/index.html#example-self-referential-struct
-                let _lib = lib.as_mut().load(metadata);
-                // lib = lib.as_mut().load(metadata);
-                self.library.insert(
-                    String::from(name),
-                    (0, _lib)
-                );
+                // let _lib = lib.as_mut().load(metadata);
+                // // lib = lib.as_mut().load(metadata);
+                // self.library.insert(
+                //     String::from(name),
+                //     (0, _lib)
+                // );
             }
             
             Some( String::new() )

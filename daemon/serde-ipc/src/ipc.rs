@@ -13,7 +13,6 @@ use shared_memory::{Shmem, ShmemConf};
 use serde_json::{self, Value};
 //
 use crate::ffi::FFIManager;
-use crate::shared_consts::VDM_SERVER_ADDR;
 // - RPC server response to async event
 //      - "connect/disconnect" from client
 //      - "register/unregister" from client (with error)
@@ -185,7 +184,7 @@ fn _close(sem:*mut libc::sem_t) {
 
 #[tokio::main]
 pub async fn daemon() -> Result<(), Box<dyn std::error::Error>> {
-    let listener = TcpListener::bind(VDM_SERVER_ADDR).await?;
+    let listener = TcpListener::bind("127.0.0.1:42000").await?;
     let ffi = Arc::new(Mutex::new( FFIManager::new() )); //global usage
 
     loop {

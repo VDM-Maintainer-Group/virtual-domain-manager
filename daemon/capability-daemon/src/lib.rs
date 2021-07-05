@@ -1,10 +1,8 @@
-mod ipc;
-mod ffi;
 mod shared_consts;
 
 use pyo3::prelude::*;
 // use pyo3::wrap_pyfunction;
-// use crate::consts::VDM_CAPABILITY_DIR;
+// use crate::shared_consts::VDM_CAPABILITY_DIR;
 
 #[pymodule]
 fn capability_manager(_py:Python, m:&PyModule) -> PyResult<()> {
