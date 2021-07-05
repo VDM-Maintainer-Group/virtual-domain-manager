@@ -4,17 +4,26 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 project(virtual-domain-manager)
-
 find_package(Python REQUIRED
             COMPONENTS Interpreter Development)
+
 #default configurations
+file(READ "VERSION" ver)
+string(REGEX MATCH "VERSION_MAJOR.+=.+([0-9]+)" _ ${ver})
+set(ver_major ${CMAKE_MATCH_1})
+string(REGEX MATCH "VERSION_MINOR.+=.+([0-9]+)" _ ${ver})
+set(ver_minor ${CMAKE_MATCH_1})
+string(REGEX MATCH "VERSION_PATCH.+=.+([0-9]+)" _ ${ver})
+set(ver_patch ${CMAKE_MATCH_1})
+#
+set(VERSION ${ver_major}.${ver_minor}.${ver_patch})
+set(ENV{CARGO_PKG_VERSION} ${VERSION})
 set(VDM_INSTALL_DIR "/opt/vdm")
 
 # vdm capability build
 add_subdirectory(capability)
 
 # vdm daemon build
-#TODO: build external project
 include(ExternalProject)
 ExternalProject_Add(
         daemon
