@@ -17,7 +17,7 @@ string(REGEX MATCH "VERSION_PATCH.+=.+([0-9]+)" _ ${ver})
 set(ver_patch ${CMAKE_MATCH_1})
 #
 set(VERSION ${ver_major}.${ver_minor}.${ver_patch})
-set(ENV{CARGO_PKG_VERSION} ${VERSION})
+# set(ENV{CARGO_PKG_VERSION} ${VERSION})
 set(VDM_INSTALL_DIR "/opt/vdm")
 
 # vdm capability build
