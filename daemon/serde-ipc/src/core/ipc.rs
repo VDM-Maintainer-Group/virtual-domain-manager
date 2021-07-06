@@ -1,9 +1,8 @@
 extern crate libc;
 
-//
+// standard library
 use std::path::PathBuf;
 use std::ffi::CString;
-use std::thread::{self, JoinHandle};
 use std::sync::{mpsc, Arc, Mutex};
 use std::convert::TryFrom;
 use std::net::{SocketAddr,};
@@ -12,6 +11,8 @@ use std::collections::BTreeSet;
 // third-party crates
 use tokio::net::{TcpStream, TcpListener};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::Mutex as TokioMutex;
+use threadpool::ThreadPool;
 use shared_memory::{Shmem, ShmemConf};
 use serde_json::{self, Value};
 use num_enum::TryFromPrimitive;
@@ -193,16 +194,21 @@ impl IpcWorker {
 }
 
 pub struct IPCServer {
-    root: PathBuf,
-    server_port: u16
+    root:PathBuf,
+    server_port:u16,
+    pool: Arc<TokioMutex<ThreadPool>>
 }
 
 impl IPCServer {
 
-    pub fn new(root:PathBuf, server_port:u16) -> Self {
-        IPCServer{
-            root, server_port
-        }
+    pub fn new(root:PathBuf, server_port:u16) -> Arc<Self> {
+        let pool = Arc::new(TokioMutex::new(
+            ThreadPool::new(num_cpus::get())
+        ));
+
+        Arc::new(IPCServer{
+            root, server_port, pool
+        })
     }
 
     fn spawn_send_thread(res_id:String, rx:mpsc::Receiver<Message>) {
@@ -244,7 +250,7 @@ impl IPCServer {
         IpcWorker::_recv_loop(ffi, tx, shm_req, sem_req);
     }
 
-    async fn try_connect(mut socket:TcpStream, root:PathBuf, ffi:FFIManager_stub) {
+    async fn try_connect(_self: Arc<Self>, mut socket:TcpStream, ffi:FFIManager_stub) {
         let mut buf = [0; VDM_CLIENT_ID_LEN+1];
         let (tx, rx) = mpsc::channel::<Message>();
 
@@ -258,7 +264,8 @@ impl IPCServer {
         _tmp.extend( buf[..n].iter().copied() );
         let res_id = String::from_utf8(_tmp).unwrap();
         let req_id = res_id.clone();
-        thread::spawn(move || {
+        let _pool = _self.pool.lock().await;
+        _pool.execute(move || {
             Self::spawn_send_thread(res_id, rx);
         });
 
@@ -273,24 +280,25 @@ impl IPCServer {
             eprintln!("hs3: failed to read from socket; err = {:?}", e);
             return;
         }
-        thread::spawn(move || {
+        let _pool = _self.pool.lock().await;
+        _pool.execute(move || {
             Self::spawn_recv_thread(req_id, tx, ffi);
         });
     }
 
-    pub async fn daemon(&self) -> Result<(), std::io::Error> {
-        let sock_addr = SocketAddr::new( "127.0.0.1".parse().unwrap(), self.server_port );
-        let listener = TcpListener::bind(sock_addr).await?;
+    pub async fn daemon(_self:Arc<Self>) {
+        let sock_addr = SocketAddr::new( "127.0.0.1".parse().unwrap(), _self.server_port );
+        let listener = TcpListener::bind(sock_addr).await.unwrap();
         // let ffi = Arc::new(Mutex::new( FFIManager::new() )); //global usage
 
         loop {
-            let (socket, _) = listener.accept().await?;
-            let _root = self.root.clone();
-            let _ffi = FFIManager_stub{}; //FIXME:
+            let (socket, _) = listener.accept().await.unwrap();
+            let _self = _self.clone();
+            let _ffi = FFIManager_stub{};
             // let ffi_ref = ffi.clone();
 
             tokio::spawn(async move {
-                Self::try_connect(socket, _root, _ffi).await
+                Self::try_connect(_self, socket, _ffi).await
             });
         }
 
