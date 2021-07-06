@@ -252,20 +252,23 @@ impl IPCServer {
 
     async fn try_connect(_self: Arc<Self>, mut socket:TcpStream, ffi:FFIManager_stub) {
         let mut buf = [0; VDM_CLIENT_ID_LEN+1];
+        let mut id_buf = Vec::<u8>::new();
         let (tx, rx) = mpsc::channel::<Message>();
 
-        // handshake-I: recv id, spawn "send" thread
+        // handshake-I(a): recv id
         let n = match socket.read(&mut buf).await {
-            Ok(n) if n==0 => return,
             Ok(n) => n,
-            Err(_) => return
+            Err(e) => {
+                eprintln!("hs1: failed to write to socket; err = {:?}", e);
+                return
+            }
         };
-        let mut _tmp = Vec::new();
-        _tmp.extend( buf[..n].iter().copied() );
-        let res_id = String::from_utf8(_tmp).unwrap();
-        let req_id = res_id.clone();
-        let _pool = _self.pool.lock().await;
-        _pool.execute(move || {
+        id_buf.extend( buf[..n].iter().copied() );
+        let _id = std::str::from_utf8(&id_buf).unwrap();
+
+        // handshake-I(b): spawn "send" thread
+        let res_id = format!("{}_res", _id);
+        _self.pool.lock().await.execute(move || {
             Self::spawn_send_thread(res_id, rx);
         });
 
@@ -280,8 +283,8 @@ impl IPCServer {
             eprintln!("hs3: failed to read from socket; err = {:?}", e);
             return;
         }
-        let _pool = _self.pool.lock().await;
-        _pool.execute(move || {
+        let req_id = format!("{}_req", _id);
+        _self.pool.lock().await.execute(move || {
             Self::spawn_recv_thread(req_id, tx, ffi);
         });
     }
