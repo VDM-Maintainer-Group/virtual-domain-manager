@@ -1,7 +1,6 @@
 extern crate libc;
 
 // standard library
-use std::path::PathBuf;
 use std::ffi::CString;
 use std::sync::{mpsc, Arc, Mutex};
 use std::convert::TryFrom;
@@ -18,7 +17,7 @@ use serde_json::{self, Value};
 use num_enum::TryFromPrimitive;
 
 // root crates
-use crate::core::ffi::{FFIManager,FFIManager_stub};
+use crate::core::ffi::{FFIManager,FFIManagerStub, ArcFFIManagerStub};
 
 // - RPC server response to async event
 //      - "connect/disconnect" from client
@@ -73,10 +72,19 @@ unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
     }
 }
 
-pub struct IpcWorker {}
+pub struct IpcWorker {
+
+}
 
 impl IpcWorker {
-    fn _recv_loop(ffi: FFIManager_stub, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
+
+    pub fn new() -> Self {
+        IpcWorker{
+
+        }
+    }
+
+    fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
         let mut capability_set: BTreeSet<String> = BTreeSet::new();
         let _result = || -> Result<(), Box<dyn std::error::Error>> {
             loop {
@@ -194,20 +202,19 @@ impl IpcWorker {
 }
 
 pub struct IPCServer {
-    root:PathBuf,
     server_port:u16,
     pool: Arc<TokioMutex<ThreadPool>>
 }
 
 impl IPCServer {
 
-    pub fn new(root:PathBuf, server_port:u16) -> Arc<Self> {
+    pub fn new(server_port:u16) -> Arc<Self> {
         let pool = Arc::new(TokioMutex::new(
             ThreadPool::new(num_cpus::get())
         ));
 
         Arc::new(IPCServer{
-            root, server_port, pool
+            server_port, pool
         })
     }
 
@@ -231,7 +238,7 @@ impl IPCServer {
         IpcWorker::_send_loop(rx, shm_res, sem_res);
     }
 
-    fn spawn_recv_thread(req_id:String, tx:mpsc::Sender<Message>, ffi:FFIManager_stub) {
+    fn spawn_recv_thread(req_id:String, tx:mpsc::Sender<Message>, ffi:ArcFFIManagerStub) {
         let shm_req = match ShmemConf::new().flink(format!("{}_req", req_id)).open() {
             Ok(m) => m,
             Err(e) => {
@@ -250,7 +257,7 @@ impl IPCServer {
         IpcWorker::_recv_loop(ffi, tx, shm_req, sem_req);
     }
 
-    async fn try_connect(_self: Arc<Self>, mut socket:TcpStream, ffi:FFIManager_stub) {
+    async fn try_connect(_self: Arc<Self>, mut socket:TcpStream, ffi:ArcFFIManagerStub) {
         let mut buf = [0; VDM_CLIENT_ID_LEN+1];
         let mut id_buf = Vec::<u8>::new();
         let (tx, rx) = mpsc::channel::<Message>();
@@ -289,16 +296,14 @@ impl IPCServer {
         });
     }
 
-    pub async fn daemon(_self:Arc<Self>) {
+    pub async fn daemon(_self:Arc<Self>, ffi:ArcFFIManagerStub) {
         let sock_addr = SocketAddr::new( "127.0.0.1".parse().unwrap(), _self.server_port );
         let listener = TcpListener::bind(sock_addr).await.unwrap();
-        // let ffi = Arc::new(Mutex::new( FFIManager::new() )); //global usage
 
         loop {
             let (socket, _) = listener.accept().await.unwrap();
             let _self = _self.clone();
-            let _ffi = FFIManager_stub{};
-            // let ffi_ref = ffi.clone();
+            let _ffi = ffi.clone();
 
             tokio::spawn(async move {
                 Self::try_connect(_self, socket, _ffi).await

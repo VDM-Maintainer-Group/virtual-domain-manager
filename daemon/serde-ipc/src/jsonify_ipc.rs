@@ -1,16 +1,18 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 // third-party crates
 use shellexpand::tilde as expand_user;
 use tokio::runtime::Runtime as TokioRuntime;
 // root crates
 use crate::core::ipc;
+use crate::core::ffi;
 use crate::core::traits;
 
 pub struct JsonifyIPC {
-    root: PathBuf,
+    // root: PathBuf,
     server_port: u16,
     rt: TokioRuntime,
+    ffi: ffi::ArcFFIManagerStub,
     server: Option<Arc<ipc::IPCServer>>
 }
 
@@ -28,29 +30,31 @@ impl JsonifyIPC {
         let server_port = server_port.unwrap_or(42000);
 
         let rt = TokioRuntime::new().unwrap();
+        let ffi = Arc::new(Mutex::new(
+            ffi::FFIManagerStub::new(root)
+        ));
         JsonifyIPC {
-            root, server_port, rt, server:None
+            server_port, rt, ffi, server:None
         }
     }
 
     /// Start the JsonifyIPC daemon waiting for client connection.
     pub fn start(&mut self) {
-        self.server = Some( ipc::IPCServer::new(
-            self.root.clone(), self.server_port
-        ) );
+        self.server = Some( ipc::IPCServer::new(self.server_port) );
         let _server = self.server.clone();
+        let _ffi = self.ffi.clone();
 
         self.rt.spawn(async move {
-            ipc::IPCServer::daemon( _server.unwrap() ).await
+            ipc::IPCServer::daemon( _server.unwrap(), _ffi ).await
         });
     }
 
     /// Stop the JsonifyIPC daemon by: 1) shutdown all tokio threads; 2) stop IPCServer thread pool.
     pub fn stop(mut self) {
         self.rt.shutdown_background(); //drop occurs here
-        self.rt = TokioRuntime::new().unwrap();
-        //
         self.server = None; //drop occurs here
+        //
+        self.rt = TokioRuntime::new().unwrap();
     }
 
     /// Add service via an active IPCServer

@@ -365,11 +365,16 @@ impl<'a> FFIManager<'a> {
 }
 
 //======================================================================//
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+pub type ArcFFIManagerStub = Arc<Mutex<FFIManagerStub>>;
 #[derive(Clone)]
-pub struct FFIManager_stub {} //FIXME:
-impl FFIManager_stub {
-    pub fn new() -> Self {
-        FFIManager_stub{}
+pub struct FFIManagerStub {
+    root: PathBuf,
+}
+impl FFIManagerStub {
+    pub fn new(root: PathBuf) -> Self {
+        FFIManagerStub{root}
     }
     pub fn register(&mut self, name: &str) -> Option<String> {
         unimplemented!()
