@@ -12,6 +12,7 @@ use serde_ipc::{ArcFFIManagerStub};
 use serde_ipc::IPCProtocol;
 
 type Message = (u32, String);
+type FFIDescriptor = (String, String, Vec<Value>);
 
 // const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
 #[allow(dead_code)] //Rust lint open issue, #47133
@@ -131,15 +132,15 @@ fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, req_id: String)
                     },
                     Command::ONE_WAY => {
                         if let Ok(ffi_obj) = ffi.lock() {
-                            ffi_obj.execute(req_data, |_|{}); //no callback for one-way
+                            // ffi_obj.execute(req_data, |_|{}); //no callback for one-way
                         }
                     },
                     Command::CHAIN_CALL => {
                         let tx_ref = tx.clone();
                         if let Ok(ffi_obj) = ffi.lock() {
-                            ffi_obj.chain_execute(req_data, move |res| {
-                                tx_ref.send( (req_header.seq, res) ).unwrap_err();
-                            })
+                            // ffi_obj.chain_execute(req_data, move |res| {
+                            //     tx_ref.send( (req_header.seq, res) ).unwrap_err();
+                            // })
                         }
                     }
                 }

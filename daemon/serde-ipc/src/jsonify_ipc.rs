@@ -3,13 +3,14 @@ use std::path::PathBuf;
 // third-party crates
 use shellexpand::tilde as expand_user;
 use tokio::runtime::Runtime as TokioRuntime;
+use serde_json::{self, Value as JsonValue};
 // root crates
 use crate::core::ipc;
 use crate::core::ffi;
 use crate::core::traits::{Serde, IPCProtocol};
 
 pub struct JsonifyIPC<T>
-where T:IPCProtocol
+where T: IPCProtocol
 {
     // root: PathBuf,
     server_port: u16,
@@ -19,10 +20,18 @@ where T:IPCProtocol
     server: Option<Arc<Mutex<ipc::IPCServer<T>>>>
 }
 
-impl<T> Serde for JsonifyIPC<T>
-where T:IPCProtocol
-{
-    //TODO: implement Serde
+// impl<T> Serde for JsonifyIPC<T>
+// where T:IPCProtocol
+impl Serde for ffi::FFIManagerStub {
+    type Value = JsonValue;
+
+    fn to_raw_data(&self, v:&JsonValue) -> String {
+        serde_json::to_string(v).unwrap()
+    }
+
+    fn from_raw_data(&self, r:&str) -> JsonValue {
+        serde_json::from_str(r).unwrap()
+    }
 }
 
 impl<T> JsonifyIPC<T>

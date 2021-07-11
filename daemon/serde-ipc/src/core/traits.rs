@@ -2,7 +2,12 @@ use std::sync::{mpsc,};
 //
 use crate::core::ffi::ArcFFIManagerStub;
 
-pub trait Serde {}
+pub trait Serde {
+    type Value;
+
+    fn from_raw_data(&self, r:&str) -> Self::Value;
+    fn to_raw_data(&self, v:&Self::Value) -> String;
+}
 
 pub trait IPCProtocol: Sync+Send+Clone+'static
 {

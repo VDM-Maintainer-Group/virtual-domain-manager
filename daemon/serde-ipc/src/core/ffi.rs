@@ -367,11 +367,17 @@ impl<'a> FFIManager<'a> {
 //======================================================================//
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+//
+use crate::core::traits::Serde;
+
 pub type ArcFFIManagerStub = Arc<Mutex<FFIManagerStub>>;
+pub type FFIDescriptor<S> = (String, String, Vec<S>);
+
 #[derive(Clone)]
 pub struct FFIManagerStub {
     root: PathBuf,
 }
+
 impl FFIManagerStub {
     pub fn new(root: PathBuf) -> Self {
         FFIManagerStub{root}
@@ -382,12 +388,12 @@ impl FFIManagerStub {
     pub fn unregister(&mut self, name: &str) {
         unimplemented!()
     }
-    pub fn execute<T>(&self, raw_data:String, callback:T)
-    where T: FnOnce(String) -> ()
+    pub fn execute<T>(&self, descriptor:FFIDescriptor<<Self as Serde>::Value>, callback:T)
+    where T: FnOnce(String) -> (),
     {
         unimplemented!()
     }
-    pub fn chain_execute<T>(&self, raw_data:String, callback:T)
+    pub fn chain_execute<T>(&self, descriptor:Vec<FFIDescriptor<<Self as Serde>::Value>>, callback:T)
     where T: FnOnce(String) -> ()
     {
         unimplemented!()
