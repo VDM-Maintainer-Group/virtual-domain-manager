@@ -7,7 +7,7 @@ use num_enum::TryFromPrimitive;
 use shared_memory::{Shmem, ShmemConf};
 use serde_json::{self, Value};
 //
-use serde_ipc::{FFIManagerStub, ArcFFIManagerStub};
+use serde_ipc::{ArcFFIManagerStub};
 use serde_ipc::IPCProtocol;
 
 type Message = (u32, String);
@@ -171,14 +171,15 @@ fn _close(sem:*mut libc::sem_t) {
 #[derive(Clone)]
 pub struct ShMem {
     uid: String,
-    ffi: Option<ArcFFIManagerStub>
+    ffi: Option<ArcFFIManagerStub>,
 }
 
 impl IPCProtocol for ShMem {
     type Message = (u32, String);
 
     fn new(uid:String, ffi:ArcFFIManagerStub) -> Self {
-        Self{ uid, ffi:Some(ffi) }
+        let ffi = Some(ffi);
+        Self{ uid, ffi }
     }
 
     fn spawn_send_thread(&self, rx: mpsc::Receiver<Self::Message>) {

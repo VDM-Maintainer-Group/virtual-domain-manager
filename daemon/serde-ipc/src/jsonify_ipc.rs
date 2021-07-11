@@ -16,7 +16,7 @@ where T:IPCProtocol
     rt: TokioRuntime,
     ffi: ffi::ArcFFIManagerStub,
     _protocol: Option<T>, //used for type inference
-    server: Option<Arc<ipc::IPCServer<T>>>
+    server: Option<Arc<Mutex<ipc::IPCServer<T>>>>
 }
 
 impl<T> Serde for JsonifyIPC<T>

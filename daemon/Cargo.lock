@@ -685,6 +685,7 @@ dependencies = [
  "serde_json",
  "shared_memory",
  "shellexpand",
+ "threadpool",
 ]
 
 [[package]]
