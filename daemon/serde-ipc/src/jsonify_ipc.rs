@@ -6,21 +6,28 @@ use tokio::runtime::Runtime as TokioRuntime;
 // root crates
 use crate::core::ipc;
 use crate::core::ffi;
-use crate::core::traits;
+use crate::core::traits::{Serde, IPCProtocol};
 
-pub struct JsonifyIPC {
+pub struct JsonifyIPC<T>
+where T:IPCProtocol
+{
     // root: PathBuf,
     server_port: u16,
     rt: TokioRuntime,
     ffi: ffi::ArcFFIManagerStub,
-    server: Option<Arc<ipc::IPCServer>>
+    _protocol: Option<T>, //used for type inference
+    server: Option<Arc<ipc::IPCServer<T>>>
 }
 
-impl traits::Serde for JsonifyIPC {
+impl<T> Serde for JsonifyIPC<T>
+where T:IPCProtocol
+{
     //TODO: implement Serde
 }
 
-impl JsonifyIPC {
+impl<T> JsonifyIPC<T>
+where T: IPCProtocol
+{
     /// Return JsonifyIPC handle configured with given:
     /// - (Optional) **path**: the working directory for capability, default is `~/.vdm/libs`
     pub fn new(root:Option<String>, server_port:Option<u16>) -> Self {
@@ -33,19 +40,25 @@ impl JsonifyIPC {
         let ffi = Arc::new(Mutex::new(
             ffi::FFIManagerStub::new(root)
         ));
+        // let protocol = Arc::new(protocol);
         JsonifyIPC {
-            server_port, rt, ffi, server:None
+            server_port, rt, ffi,
+            _protocol:None, server:None
         }
     }
 
     /// Start the JsonifyIPC daemon waiting for client connection.
     pub fn start(&mut self) {
-        self.server = Some( ipc::IPCServer::new(self.server_port) );
+        let ffi = self.ffi.clone();
+        let protocol = self._protocol.clone();
+
+        self.server = Some( ipc::IPCServer::new(
+            self.server_port, ffi, protocol.unwrap()
+        ) );
         let _server = self.server.clone();
-        let _ffi = self.ffi.clone();
 
         self.rt.spawn(async move {
-            ipc::IPCServer::daemon( _server.unwrap(), _ffi ).await
+            ipc::IPCServer::daemon( _server.unwrap() ).await
         });
     }
 

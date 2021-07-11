@@ -1,8 +1,11 @@
+mod shmem;
 mod shared_consts;
-
 use pyo3::prelude::*;
 // use pyo3::wrap_pyfunction;
 // use crate::shared_consts::VDM_CAPABILITY_DIR;
+
+use serde_ipc::JsonifyIPC;
+use shmem::ShMem;
 
 #[pymodule]
 fn capability_manager(_py:Python, m:&PyModule) -> PyResult<()> {
@@ -34,7 +37,11 @@ fn capability_manager(_py:Python, m:&PyModule) -> PyResult<()> {
 
     #[pyfn(m, "start_daemon")]
     fn start_daemon(_py: Python) -> PyResult<()> {
-        unimplemented!()
+        let root = Some( String::from("~/.vdm/lib") );
+        let server_port = Some(42000);
+        let mut daemon = JsonifyIPC::<ShMem>::new(root, server_port);
+        daemon.start();
+        Ok(())
     }
 
     Ok(())
