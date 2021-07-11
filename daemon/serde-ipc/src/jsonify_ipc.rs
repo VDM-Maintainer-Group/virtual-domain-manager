@@ -55,8 +55,8 @@ where T: IPCProtocol
         self.server = Some( ipc::IPCServer::new(
             self.server_port, ffi, protocol.unwrap()
         ) );
-        let _server = self.server.clone();
 
+        let _server = self.server.clone();
         self.rt.spawn(async move {
             ipc::IPCServer::daemon( _server.unwrap() ).await
         });

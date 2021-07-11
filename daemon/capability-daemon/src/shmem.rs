@@ -1,4 +1,4 @@
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, Mutex};
 use std::ffi::CString;
 use std::convert::TryFrom;
 use std::collections::BTreeSet;
@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 use num_enum::TryFromPrimitive;
 use shared_memory::{Shmem, ShmemConf};
 use serde_json::{self, Value};
+use threadpool::ThreadPool;
 //
 use serde_ipc::{ArcFFIManagerStub};
 use serde_ipc::IPCProtocol;
@@ -52,8 +53,24 @@ unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
     }
 }
 
-fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, shm_req:Shmem, sem_req:*mut libc::sem_t) {
+fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, req_id: String) {
     let mut capability_set: BTreeSet<String> = BTreeSet::new();
+    let shm_req = match ShmemConf::new().flink( &req_id ).open() {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("Unable to create or open shmem flink: {}", e);
+            return;
+        }
+    };
+    let sem_req = CString::new( format!("/{}", req_id) )
+        .map_err(|_| format!("CString::new failed"))
+        .and_then(|sem_name| {
+            match unsafe { libc::sem_open(sem_name.as_ptr(), 0, 0o600, 1) } {
+                i if i != libc::SEM_FAILED => Ok(i),
+                _ => Err( format!("sem open failed.") )
+            }
+        }).unwrap();
+
     let _result = || -> Result<(), Box<dyn std::error::Error>> {
         loop {
             // acquire the lock
@@ -138,7 +155,24 @@ fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, shm_req:Shmem, 
     _close(sem_req);
 }
 
-fn _send_loop(rx: mpsc::Receiver<Message>, shm_res:Shmem, sem_res:*mut libc::sem_t) {
+fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
+    let shm_res = match ShmemConf::new().size(SHM_RES_MAX_SIZE).flink( &res_id ).create() {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("Unable to create or open shmem flink: {}", e);
+            return;
+        }
+    };
+
+    let sem_res = CString::new( format!("/{}", res_id) )
+        .map_err(|_| format!("CString::new failed"))
+        .and_then(|sem_name| {
+            match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
+                i if i != libc::SEM_FAILED => Ok(i),
+                _ => Err( format!("sem open failed.") )
+            }
+        }).unwrap();
+
     let _result = || -> Result<(), Box<dyn std::error::Error>> {
         while let Ok(_message) = rx.recv() {
             // acquire the lock
@@ -172,6 +206,7 @@ fn _close(sem:*mut libc::sem_t) {
 pub struct ShMem {
     uid: String,
     ffi: Option<ArcFFIManagerStub>,
+    pool: Arc<Mutex<ThreadPool>>
 }
 
 impl IPCProtocol for ShMem {
@@ -179,50 +214,44 @@ impl IPCProtocol for ShMem {
 
     fn new(uid:String, ffi:ArcFFIManagerStub) -> Self {
         let ffi = Some(ffi);
-        Self{ uid, ffi }
+        let pool = Arc::new(Mutex::new(
+            ThreadPool::new(2)
+        ));
+        Self{ uid, ffi, pool }
     }
 
-    fn spawn_send_thread(&self, rx: mpsc::Receiver<Self::Message>) {
+    fn is_alive(&self) -> bool {
+        if let Ok(pool_obj) = self.pool.lock() {
+            pool_obj.active_count() < 2
+        }
+        else {
+            false
+        }
+    }
+
+    fn stop(&self) {
+        //stop when the pool is dropped.
+    }
+
+    fn spawn_send_thread(&mut self, rx: mpsc::Receiver<Self::Message>) {
         let res_id = format!("{}_res", self.uid);
-
-        let shm_res = match ShmemConf::new().size(SHM_RES_MAX_SIZE).flink( &res_id ).create() {
-                Ok(m) => m,
-                Err(e) => {
-                    eprintln!("Unable to create or open shmem flink: {}", e);
-                    return;
-                }
-            };
-        let sem_res = CString::new( format!("/{}", res_id) )
-            .map_err(|_| format!("CString::new failed"))
-            .and_then(|sem_name| {
-                match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
-                    i if i != libc::SEM_FAILED => Ok(i),
-                    _ => Err( format!("sem open failed.") )
-                }
-            }).unwrap();
-        _send_loop(rx, shm_res, sem_res);
+        
+        if let Ok(pool_obj) = self.pool.lock() {
+            pool_obj.execute(move || {
+                _send_loop(rx, res_id);
+            });
+        }
     }
 
-    fn spawn_recv_thread(&self, tx: mpsc::Sender<Self::Message>) {
+    fn spawn_recv_thread(&mut self, tx: mpsc::Sender<Self::Message>) {
         let ffi = self.ffi.clone();
         let req_id = format!("{}_req", self.uid);
-
-        let shm_req = match ShmemConf::new().flink( &req_id ).open() {
-            Ok(m) => m,
-            Err(e) => {
-                eprintln!("Unable to create or open shmem flink: {}", e);
-                return;
-            }
-        };
-        let sem_req = CString::new( format!("/{}", req_id) )
-            .map_err(|_| format!("CString::new failed"))
-            .and_then(|sem_name| {
-                match unsafe { libc::sem_open(sem_name.as_ptr(), 0, 0o600, 1) } {
-                    i if i != libc::SEM_FAILED => Ok(i),
-                    _ => Err( format!("sem open failed.") )
-                }
-            }).unwrap();
-        _recv_loop(ffi.unwrap(), tx, shm_req, sem_req);
+        
+        if let Ok(pool_obj) = self.pool.lock() {
+            pool_obj.execute(move || {
+                _recv_loop(ffi.unwrap(), tx, req_id);
+            });
+        }
     }
 
 }

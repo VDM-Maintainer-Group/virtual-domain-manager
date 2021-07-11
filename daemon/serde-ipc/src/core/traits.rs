@@ -9,6 +9,9 @@ pub trait IPCProtocol: Sync+Send+Clone+'static
     type Message: Send;
 
     fn new(uid:String, ffi:ArcFFIManagerStub) -> Self;
-    fn spawn_send_thread(&self, rx: mpsc::Receiver<Self::Message>);
-    fn spawn_recv_thread(&self, tx: mpsc::Sender<Self::Message>);
+    //
+    fn is_alive(&self) -> bool;
+    fn spawn_send_thread(&mut self, rx: mpsc::Receiver<Self::Message>);
+    fn spawn_recv_thread(&mut self, tx: mpsc::Sender<Self::Message>);
+    fn stop(&self);
 }

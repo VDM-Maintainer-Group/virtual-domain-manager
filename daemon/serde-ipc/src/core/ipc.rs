@@ -48,13 +48,12 @@ where T:IPCProtocol
         };
         id_buf.extend( buf[..n].iter().copied() );
         let _id = std::str::from_utf8(&id_buf).unwrap();
-        let _protocol = {
+        let mut _protocol = {
             if let Ok(mut _self) = _self.lock() {
                 let ffi = _self.ffi.clone();
                 Some( T::new(format!("{}", _id), ffi) )
             } else {None}
         }.unwrap();
-        
 
         // handshake-I(b): spawn "send" thread
         _protocol.spawn_send_thread(rx);
@@ -91,11 +90,16 @@ where T:IPCProtocol
             let (socket, _) = listener.accept().await.unwrap();
             let _self = _self.clone();
 
+            //cleanup (the first stopped) before connect
+            if let Ok(mut _self) = _self.lock() {
+                let pos = _self.conns.iter().position(|x| !x.is_alive()).unwrap();
+                _self.conns.remove(pos);
+            }
+
             tokio::spawn(async move {
                 Self::try_connect(_self, socket).await
             });
         }
 
     }
-
 }
