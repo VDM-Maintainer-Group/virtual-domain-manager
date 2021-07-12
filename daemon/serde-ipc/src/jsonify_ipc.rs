@@ -79,17 +79,17 @@ where T: IPCProtocol
         self.rt = TokioRuntime::new().unwrap();
     }
 
-    /// Add service via an active IPCServer
+    /// Add service via FFI Manager
     pub fn install_service(&mut self) {
         unimplemented!()
     }
 
-    /// Remove service via an active IPCServer
+    /// Remove service via FFI Manager
     pub fn uninstall_service(&mut self) {
         unimplemented!()
     }
 
-    /// Get service via an active IPCServer
+    /// Get service directly via FFI Manager
     pub fn get_service(&mut self) {
         unimplemented!()
     }
