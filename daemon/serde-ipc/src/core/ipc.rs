@@ -91,8 +91,9 @@ where P:IPCProtocol
 
             //cleanup (the first stopped) before connect
             if let Ok(mut _self) = _self.lock() {
-                let pos = _self.conns.iter().position(|x| !x.is_alive()).unwrap();
-                _self.conns.remove(pos);
+                if let Some(pos) = _self.conns.iter().position(|x| !x.is_alive()) {
+                    _self.conns.remove(pos);
+                }
             }
 
             tokio::spawn(async move {
