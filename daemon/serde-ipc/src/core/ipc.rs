@@ -13,22 +13,21 @@ use crate::core::traits::IPCProtocol;
 
 const VDM_CLIENT_ID_LEN:usize = 16;
 
-pub struct IPCServer<T>
-where T:IPCProtocol
+pub struct IPCServer<P>
+where P:IPCProtocol
 {
     server_port:u16,
     ffi: ArcFFIManagerStub,
-    _protocol: T,
-    conns: Vec<T>
+    conns: Vec<P>
 }
 
-impl<T> IPCServer<T>
-where T:IPCProtocol
+impl<P> IPCServer<P>
+where P:IPCProtocol
 {
-    pub fn new(server_port:u16, ffi: ArcFFIManagerStub, _protocol:T) -> Arc<Mutex<Self>> {
+    pub fn new(server_port:u16, ffi: ArcFFIManagerStub) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(
             IPCServer{
-                server_port, ffi, _protocol, conns:Vec::new()
+                server_port, ffi, conns:Vec::new()
             }
         ))
     }
@@ -36,7 +35,7 @@ where T:IPCProtocol
     async fn try_connect(_self: Arc<Mutex<Self>>, mut socket:TcpStream) {
         let mut buf = [0; VDM_CLIENT_ID_LEN+1];
         let mut id_buf = Vec::<u8>::new();
-        let (tx, rx) = mpsc::channel::< T::Message >();
+        let (tx, rx) = mpsc::channel::< P::Message >();
 
         // handshake-I(a): recv id
         let n = match socket.read(&mut buf).await {
@@ -51,7 +50,7 @@ where T:IPCProtocol
         let mut _protocol = {
             if let Ok(mut _self) = _self.lock() {
                 let ffi = _self.ffi.clone();
-                Some( T::new(format!("{}", _id), ffi) )
+                Some( P::new(format!("{}", _id), ffi) )
             } else {None}
         }.unwrap();
 

@@ -371,7 +371,7 @@ use std::sync::{Arc, Mutex};
 use crate::core::traits::Serde;
 
 pub type ArcFFIManagerStub = Arc<Mutex<FFIManagerStub>>;
-pub type FFIDescriptor<S> = (String, String, Vec<S>);
+pub type FFIDescriptor = (String, String, Vec<String>);
 
 #[derive(Clone)]
 pub struct FFIManagerStub {
@@ -388,12 +388,12 @@ impl FFIManagerStub {
     pub fn unregister(&mut self, name: &str) {
         unimplemented!()
     }
-    pub fn execute<T>(&self, descriptor:FFIDescriptor<<Self as Serde>::Value>, callback:T)
+    pub fn execute<T>(&self, descriptor:FFIDescriptor, callback:T)
     where T: FnOnce(String) -> (),
     {
         unimplemented!()
     }
-    pub fn chain_execute<T>(&self, descriptor:Vec<FFIDescriptor<<Self as Serde>::Value>>, callback:T)
+    pub fn chain_execute<T>(&self, descriptor:Vec<FFIDescriptor>, callback:T)
     where T: FnOnce(String) -> ()
     {
         unimplemented!()
