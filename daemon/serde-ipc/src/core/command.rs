@@ -34,6 +34,18 @@ impl Commander {
         }
     }
 
+    pub fn run_prog(&self, prog: &str, args:Vec<&str>) -> Result<String, ()> {
+        let result = Command::new(prog)
+                    .current_dir( self.root.clone() )
+                    .args(args)
+                    .output();
+        match result {
+            Err(_) => Err(()),
+            Ok(output) => {
+                Ok( String::from_utf8_lossy(&output.stdout).into_owned() )
+            }
+        }
+    }
 }
 
 impl Commander {
@@ -130,10 +142,37 @@ impl Commander {
         self.build_dependency(args)
     }
 
-    //runtime-status: String
-    
+    pub fn runtime_status(&self, arg:&String) -> Option<bool> {
+        if arg.is_empty() {
+            return None;
+        }
+        else {
+            let mut args:Vec<&str> = arg.split(' ').collect();
+            let params:Vec<&str> = args.drain(1..).collect();
+            match self.run_prog(args[0], params) {
+                Ok(_) => Some(true),
+                Err(_) => Some(false)
+            }
+        }
+    }
 
-    //runtime-enable: Vec<String>
+    pub fn runtime_enable(&self, args:Vec<String>) -> ExecResult {
+        let mut ret = Ok(());
 
-    //runtime-disable: Vec<String>
+        for arg in args.iter() {
+            match self.runtime_status(arg) {
+                Some(true) => {},
+                Some(false) | None => {
+                    ret = Err( format!("Enable failed for '{}'", arg) );
+                    break
+                }
+            }
+        }
+
+        ret
+    }
+
+    pub fn runtime_disable(&self, args:Vec<String>) -> ExecResult {
+        self.runtime_enable(args)
+    }
 }
