@@ -369,12 +369,35 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 //
 use serde::{Serialize,Deserialize};
+use confy;
 //
 use crate::core::traits::Serde;
-use crate::core::command;
+use crate::core::command::*;
 
 pub type ArcFFIManagerStub = Arc<Mutex<FFIManagerStub>>;
 pub type FFIDescriptor = (String, String, Vec<String>);
+
+#[derive(Serialize, Deserialize)]
+pub struct BuildTemplate {
+    dependency: DepMap,
+    script: Vec<String>,
+    output: Vec<String>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RuntimeTemplate {
+    dependency: DepMap,
+    status: String,
+    enable: Vec<String>,
+    disable: Vec<String>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Metadata {
+    name: String,
+    restype: String,
+    args: Vec<HashMap<String, String>>
+}
 
 #[derive(Clone)]
 pub struct FFIManagerStub {
@@ -384,6 +407,21 @@ pub struct FFIManagerStub {
 impl FFIManagerStub {
     pub fn new(root: PathBuf) -> Self {
         FFIManagerStub{root}
+    }
+
+    pub fn install(&self, directory:PathBuf, build:BuildTemplate, metadata:Vec<Metadata>) -> ExecResult {
+        let commander = Commander::new(self.root.clone(), directory);
+        commander.build_dependency(build.dependency)?;
+        commander.build_script(build.script)?;
+        match commander.build_output(build.output) {
+            Some(files) => {
+                //TODO: generate config file
+                Ok(())
+            },
+            None => {
+                Err( String::from("Installation failed.") )
+            }
+        }
     }
 
     pub fn register(&mut self, name: &str) -> Option<String> {

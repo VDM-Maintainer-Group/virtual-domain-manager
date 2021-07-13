@@ -96,10 +96,10 @@ impl Commander {
         ret
     }
 
-    pub fn build_output(&self, args:Vec<String>) -> Option<String> {
-        let mut ret = None;
+    pub fn build_output(&self, args:Vec<String>) -> Option<Vec<String>> {
+        let mut ret = Some( Vec::new() );
 
-        for (i, val) in args.iter().enumerate() {
+        for val in args.iter() {
             let filename:Vec<&str> = val.split('@').collect();
             let dest_path = {
                 match filename.len() {
@@ -120,8 +120,9 @@ impl Commander {
             };
 
             if let Some(dest_path) = dest_path {
-                if i==0 { //the first entry is main entry
-                    ret = Some( String::from(filename[1]) );
+
+                if let Some(ret) = ret.as_mut() {
+                    ret.push( String::from(filename[1]) );
                 }
                 let _command = format!("cp -rf {} {}", filename[0], dest_path.display());
                 if let Err(_) = self.run(&_command) {
