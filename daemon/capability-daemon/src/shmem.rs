@@ -12,7 +12,7 @@ use serde_ipc::{ArcFFIManagerStub};
 use serde_ipc::IPCProtocol;
 
 type Message = (u32, String);
-type FFIDescriptor = (String, String, Vec<String>);
+type FFIDescriptor = (String, String, Vec<String>); //(sig, func, [args])
 
 // const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
 #[allow(dead_code)] //Rust lint open issue, #47133

@@ -368,7 +368,10 @@ impl<'a> FFIManager<'a> {
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 //
+use serde::{Serialize,Deserialize};
+//
 use crate::core::traits::Serde;
+use crate::core::command;
 
 pub type ArcFFIManagerStub = Arc<Mutex<FFIManagerStub>>;
 pub type FFIDescriptor = (String, String, Vec<String>);
@@ -382,22 +385,27 @@ impl FFIManagerStub {
     pub fn new(root: PathBuf) -> Self {
         FFIManagerStub{root}
     }
+
     pub fn register(&mut self, name: &str) -> Option<String> {
         unimplemented!()
     }
+    
     pub fn unregister(&mut self, name: &str) {
         unimplemented!()
     }
+    
     pub fn execute<T>(&self, descriptor:FFIDescriptor, callback:T)
     where T: FnOnce(String) -> (),
     {
         unimplemented!()
     }
-    pub fn chain_execute<T>(&self, descriptor:Vec<FFIDescriptor>, callback:T)
+    
+    pub fn chain_execute<T>(&self, descriptors:Vec<FFIDescriptor>, callback:T)
     where T: FnOnce(String) -> ()
     {
         unimplemented!()
     }
+    
     pub fn lock(&self) -> Result<Self, ()> {
         Ok(self.clone())
     }
