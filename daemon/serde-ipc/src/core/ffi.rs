@@ -8,7 +8,6 @@ use std::pin::Pin;
 use bimap::BiMap;
 use rand::{Rng, thread_rng, distributions::Alphanumeric};
 use std::path::Path;
-use std::collections::HashMap;
 use threadpool::ThreadPool;
 //
 use libc::{c_char};
@@ -367,6 +366,7 @@ impl<'a> FFIManager<'a> {
 //======================================================================//
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 //
 use serde::{Serialize,Deserialize};
 use confy;
@@ -393,10 +393,18 @@ pub struct RuntimeTemplate {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Metadata {
+pub struct MetaFunc {
     name: String,
     restype: String,
     args: Vec<HashMap<String, String>>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Metadata {
+    name: String,
+    class: String,
+    version: String,
+    func: Vec<MetaFunc>
 }
 
 #[derive(Clone)]
@@ -409,13 +417,29 @@ impl FFIManagerStub {
         FFIManagerStub{root}
     }
 
-    pub fn install(&self, directory:PathBuf, build:BuildTemplate, metadata:Vec<Metadata>) -> ExecResult {
+    fn write_config_file(&self) {
+        unimplemented!()
+    }
+
+    fn load_config_file(&self) {
+        unimplemented!()
+    }
+
+    fn prepare_runtime(&self, files:Vec<String>, metadata:Metadata, runtime:RuntimeTemplate) -> ExecResult
+    {
+        //TODO: generate config file
+        unimplemented!()
+    }
+
+    pub fn install(&self, directory:PathBuf, 
+                metadata:Metadata, build:BuildTemplate, runtime:RuntimeTemplate) -> ExecResult 
+    {
         let commander = Commander::new(self.root.clone(), directory);
         commander.build_dependency(build.dependency)?;
         commander.build_script(build.script)?;
         match commander.build_output(build.output) {
             Some(files) => {
-                //TODO: generate config file
+                self.prepare_runtime(files, metadata, runtime)?;
                 Ok(())
             },
             None => {
@@ -424,11 +448,15 @@ impl FFIManagerStub {
         }
     }
 
-    pub fn register(&mut self, name: &str) -> Option<String> {
+    pub fn uninstall(&self, name:&String) -> ExecResult {
+        unimplemented!()
+    }
+
+    pub fn register(&mut self, name: &String) -> Option<String> {
         unimplemented!()
     }
     
-    pub fn unregister(&mut self, name: &str) {
+    pub fn unregister(&mut self, name: &String) {
         unimplemented!()
     }
     
