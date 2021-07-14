@@ -1,15 +1,10 @@
-extern crate nix;
-extern crate libc;
-extern crate libloading;
 
-use std::pin::Pin;
 use bimap::BiMap;
-use rand::{thread_rng, distributions::Alphanumeric};
 use std::path::Path;
 use threadpool::ThreadPool;
 //
 use libc::{c_char};
-use std::ffi::{CStr, CString, OsStr};
+use std::ffi::{CStr, CString};
 use pyo3::prelude::*;
 use serde_json::{self, Value};
 
@@ -204,31 +199,6 @@ struct Library<'a> { //'a is lifetime of context
 }
 
 impl<'a> Library<'a> {
-    pub fn new(_type:&str, entry:&Path) -> Option<Pin<Box<Self>>> {
-        let context = match _type {
-            "c" | "cpp" => {
-                if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
-                    Some(LibraryContext::CDLL(lib))
-                } else { None }
-            },
-            "rust" => {
-                if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
-                    Some(LibraryContext::Rust(lib))
-                } else { None }
-            }
-            "python" => {
-                if let Ok(contents) = std::fs::read_to_string(entry) {
-                    Some(LibraryContext::Python(contents))
-                } else { None }
-            },
-            _ => { None }
-        };
-        if let Some(context) = context {
-            let _lib = Library {context, functions:HashMap::new()};
-            Some( Box::pin(_lib) )
-        } else {None}
-    }
-
     pub fn load(mut self, metadata:&Value) -> Self {
         for (key,val) in metadata.as_object().unwrap().iter() {
             let _args = &val.as_object().unwrap()["args"];
@@ -244,55 +214,19 @@ impl<'a> Library<'a> {
     }
 }
 
-pub struct FFIManager<'a> {
+pub struct FFIManager {
     root: String,
     pool: ThreadPool,
-    sig_name_map: BiMap<String, String>, //<sig, name>
-    library: HashMap<String, (u32, Library<'a>)> //<name, (counter, _)>
 }
 
-impl<'a> FFIManager<'a> {
-    pub fn new() -> FFIManager<'a> {
+impl FFIManager {
+    pub fn new() -> FFIManager {
         let _new = FFIManager{
             root: shellexpand::tilde("~/.vdm").into_owned(),
             pool: ThreadPool::new(num_cpus::get()),
-            sig_name_map: BiMap::new(),
-            library: HashMap::new()
         };
         // switch to execution context when creation
-        let libs_folder = Path::new(&_new.root).join("libs");
-        nix::unistd::chdir( libs_folder.as_path() ).unwrap();
         _new
-    }
-
-    fn load(&mut self, manifest:&Value) -> Option<String> {
-        let manifest = manifest.as_object().unwrap();
-        let (name, entry, _type, metadata): (&str,&str,&str,&Value) = (
-            manifest["name"].as_str().unwrap(),
-            manifest["build"]["output"][0].as_str().unwrap(),
-            manifest["type"].as_str().unwrap(),
-            &manifest["metadata"]
-        );
-
-        let entry:Vec<&str> = entry.split('@').collect();
-        let entry = match entry.len() {
-            1 => Some( Path::new(entry[0]).file_name().unwrap() ),
-            2 => Some( OsStr::new(entry[1]) ),
-            _ => None
-        };
-        if let Some(entry) = entry {
-            if let Some(mut lib) = Library::new(_type, entry.as_ref()) { //FIXME: remove self-referential struct
-                //reference: https://doc.rust-lang.org/nightly/std/pin/index.html#example-self-referential-struct
-                // let _lib = lib.as_mut().load(metadata);
-                // // lib = lib.as_mut().load(metadata);
-                // self.library.insert(
-                //     String::from(name),
-                //     (0, _lib)
-                // );
-            }
-            
-            Some( String::new() )
-        } else { None }
     }
 
     pub fn execute<T>(&self, raw_data:String, callback:T)
@@ -320,6 +254,9 @@ impl<'a> FFIManager<'a> {
 
 
 //======================================================================//
+extern crate libc;
+extern crate libloading;
+
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::collections::{HashMap, BTreeMap, BTreeSet};
@@ -388,7 +325,36 @@ enum LibraryContext {
 }
 
 struct Service {
-    library: LibraryContext
+    context: LibraryContext
+}
+
+impl Service {
+    pub fn load(entry:&String, metadata:&Metadata) -> Option<Self> {
+        let context = match &metadata.class[..] {
+            "c" | "cpp" => {
+                if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
+                    Some( LibraryContext::CDLL(lib) )
+                } else { None }
+            },
+            "rust" => {
+                if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
+                    Some( LibraryContext::Rust(lib) )
+                } else { None }
+            }
+            "python" => {
+                if let Ok(contents) = std::fs::read_to_string(entry) {
+                    Some( LibraryContext::Python(contents) )
+                } else { None }
+            },
+            _ => { None }
+        };
+
+        if let Some(context) = context {
+            Some(Service{
+                context
+            })
+        } else {None}
+    }
 }
 
 type ServiceSig = u32;
@@ -452,7 +418,7 @@ impl FFIManagerStub {
     }
 }
 
-// internal load/unload functions
+// internal load / unload functions
 impl FFIManagerStub {
     fn gen_sig() -> u32 {
         // thread_rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect()
@@ -484,8 +450,20 @@ impl FFIManagerStub {
         Some( usage_sig )
     }
 
-    fn load_service(&mut self, cfg: ServiceConfig) -> Option<()> {
+    fn insert_service(&mut self, sig:ServiceSig, cfg: ServiceConfig) -> Option<()> {
+        let service = Service::load( &cfg.entry, &cfg.metadata.unwrap() )?;
+        self.services.insert(sig, service);
         Some(())
+    }
+
+    fn cleanup(&mut self, srv_name:&String, srv_sig:&ServiceSig) {
+        if let Some(srv_usage) = self.usage_map.get(srv_sig) {
+            if srv_usage.is_empty() {
+                self.usage_map.remove(srv_sig);
+                self.service_map.remove(srv_name);
+                self.services.remove(srv_sig);
+            }
+        }
     }
 }
 
@@ -525,16 +503,6 @@ impl FFIManagerStub {
 
 // service register / unregister
 impl FFIManagerStub {
-    fn cleanup(&mut self, srv_name:&String, srv_sig:&ServiceSig) {
-        if let Some(srv_usage) = self.usage_map.get(srv_sig) {
-            if srv_usage.is_empty() {
-                self.usage_map.remove(srv_sig);
-                self.service_map.remove(srv_name);
-                self.services.remove(srv_sig);
-            }
-        }
-    }
-
     pub fn register(&mut self, name: &String) -> Option<String> {
         let service_sig = {
             if let Some(sig) = self.service_map.get(name) {
@@ -542,8 +510,15 @@ impl FFIManagerStub {
             }
             else {
                 let cfg = self.load_config_file(name)?;
-                self.load_service(cfg)?;
-                self.insert_service_map(name)
+                let srv_sig = self.insert_service_map(name)?; //"None" is always impossible
+                // try insert service; cleanup if failed.
+                if let Some(_) = self.insert_service(srv_sig, cfg) {
+                    Some(srv_sig)
+                }
+                else {
+                    self.cleanup(name, &srv_sig);
+                    None
+                }
             }
         }?;
 
