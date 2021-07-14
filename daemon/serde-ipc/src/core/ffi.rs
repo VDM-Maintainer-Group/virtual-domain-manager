@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 extern crate nix;
 extern crate libc;
 extern crate libloading;
@@ -407,6 +405,23 @@ pub struct Metadata {
     func: Vec<MetaFunc>
 }
 
+#[derive(Serialize, Deserialize)]
+struct ServiceConfig {
+    entry: String,
+    files: Vec<String>,
+    metadata: Option<Metadata>,
+    runtime: Option<RuntimeTemplate>
+}
+
+impl Default for ServiceConfig {
+    fn default() -> Self {
+        Self{
+            entry: String::new(), files: Vec::new(),
+            metadata: None, runtime: None
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct FFIManagerStub {
     root: PathBuf,
@@ -417,19 +432,45 @@ impl FFIManagerStub {
         FFIManagerStub{root}
     }
 
-    fn write_config_file(&self) {
-        unimplemented!()
+    fn write_config_file(&self, cfg: ServiceConfig) -> ExecResult {
+        let name = {
+            if let Some(ref metadata) = cfg.metadata {
+                PathBuf::from(&metadata.name)
+            } else { PathBuf::new() }
+        };
+        let service_path:PathBuf =
+                [&self.root, &name].iter().collect();
+        std::fs::create_dir_all(&service_path).unwrap_or(());
+        match confy::store_path(&service_path, cfg) {
+            Ok(_) => Ok(()),
+            Err(_) => Err( format!("Config file store failed for service '{}'.", name.display()) )
+        }
     }
 
-    fn load_config_file(&self) {
-        unimplemented!()
+    fn load_config_file(&self, name:&String) -> Option<ServiceConfig> {
+        let name = PathBuf::from(name);
+        let service_path:PathBuf =
+                [&self.root, &name].iter().collect();
+        match confy::load_path(&service_path) {
+            Ok(cfg) => Some(cfg),
+            Err(_) => None
+        }
     }
 
     fn prepare_runtime(&self, files:Vec<String>, metadata:Metadata, runtime:RuntimeTemplate) -> ExecResult
     {
-        //TODO: generate config file
-        unimplemented!()
+        let commander = Commander::new(self.root.clone(), self.root.clone());
+        commander.runtime_dependency( runtime.dependency.clone() )?;
+        //
+        let cfg = ServiceConfig{
+            entry: String::from(&files[0]), files,
+            metadata:Some(metadata), runtime:Some(runtime)
+        };
+        self.write_config_file(cfg)?;
+        Ok(())
     }
+
+    //----------------------------------------------------------------------//
 
     pub fn install(&self, directory:PathBuf, 
                 metadata:Metadata, build:BuildTemplate, runtime:RuntimeTemplate) -> ExecResult 
@@ -449,8 +490,20 @@ impl FFIManagerStub {
     }
 
     pub fn uninstall(&self, name:&String) -> ExecResult {
-        unimplemented!()
+        let command = Commander::new(self.root.clone(), self.root.clone());
+        if let Some(cfg) = self.load_config_file(name) {
+            if let Some(ref runtime) = cfg.runtime {
+                command.runtime_disable(&runtime.disable)?;
+            }
+            if let Some(ref metadata) = cfg.metadata {
+                let name = &metadata.name;
+                command.remove_output(name, &cfg.files);
+            }
+        }
+        Ok(())
     }
+
+    //----------------------------------------------------------------------//
 
     pub fn register(&mut self, name: &String) -> Option<String> {
         unimplemented!()

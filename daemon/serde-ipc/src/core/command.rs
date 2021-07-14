@@ -120,7 +120,6 @@ impl Commander {
             };
 
             if let Some(dest_path) = dest_path {
-
                 if let Some(ret) = ret.as_mut() {
                     ret.push( String::from(filename[1]) );
                 }
@@ -137,6 +136,14 @@ impl Commander {
         }
 
         ret
+    }
+
+    pub fn remove_output(&self, name:&String, files:&Vec<String>) {
+        for filename in files.iter() {
+            let _file = self.root.join(filename);
+            fs::remove_file(_file).unwrap_or(());
+        }
+        fs::remove_dir_all( self.root.join(name) ).unwrap_or(());
     }
 
     pub fn runtime_dependency(&self, args:DepMap) -> ExecResult {
@@ -157,7 +164,7 @@ impl Commander {
         }
     }
 
-    pub fn runtime_enable(&self, args:Vec<String>) -> ExecResult {
+    pub fn runtime_enable(&self, args:&Vec<String>) -> ExecResult {
         let mut ret = Ok(());
 
         for arg in args.iter() {
@@ -173,7 +180,7 @@ impl Commander {
         ret
     }
 
-    pub fn runtime_disable(&self, args:Vec<String>) -> ExecResult {
+    pub fn runtime_disable(&self, args:&Vec<String>) -> ExecResult {
         self.runtime_enable(args)
     }
 }
