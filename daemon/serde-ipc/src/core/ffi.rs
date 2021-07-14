@@ -456,16 +456,38 @@ impl FFIManagerStub {
 
 // internal load/unload functions
 impl FFIManagerStub {
+    fn gen_sig() -> u32 {
+        // thread_rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect()
+        rand::thread_rng().gen()
+    }
+
+    fn insert_service_map(&mut self, name: &String) -> Option<u32> {
+        let service_sig = loop { //dead loop
+            let sig = Self::gen_sig();
+            if !self.usage_map.contains_key(&sig) {
+                break sig
+            }
+        };
+
+        self.service_map.insert( name.into(), service_sig )?;
+        Some( service_sig )
+    }
+
+    fn insert_usage_map(&mut self, service_sig: &u32) -> Option<u32> {
+        let usage_set = self.usage_map.get_mut(service_sig)?;
+        let usage_sig = loop { //dead loop
+            let sig = Self::gen_sig();
+            if !usage_set.contains(&sig) {
+                break sig
+            }
+        };
+
+        usage_set.insert( usage_sig );
+        Some( usage_sig )
+    }
+
     fn load_service(&mut self, cfg: ServiceConfig) -> Option<()> {
         Some(())
-    }
-
-    fn insert_service_map(&mut self, name:&String) -> Option<u32> {
-        None
-    }
-
-    fn insert_usage_map(&mut self, service_sig: u32) -> Option<u32> {
-        None
     }
 }
 
@@ -515,15 +537,15 @@ impl FFIManagerStub {
                 self.load_service(cfg)?;
                 self.insert_service_map(name)
             }
-        };
+        }?;
 
-        match service_sig {
-            Some(sig) => Some( sig.to_string() ),
-            None => None
-        }
+        let usage_sig = self.insert_usage_map(&service_sig)?; //"None" is always impossible
+        let srv_use_sig:u64 = ((service_sig as u64) << 32) + (usage_sig as u64);
+        Some( srv_use_sig.to_string() )
     }
     
-    pub fn unregister(&mut self, name:&String, srv_use_sig: u64) {
+    pub fn unregister(&mut self, name:&String, srv_use_sig: &String) {
+        let srv_use_sig:u64 = srv_use_sig.parse().unwrap_or(0);
         let service_sig = (srv_use_sig >> 32) as u32;   //high u32
         let usage_sig   = srv_use_sig as u32;           //low u32
         
@@ -532,7 +554,7 @@ impl FFIManagerStub {
                 if let Some(srv_usage) = self.usage_map.get_mut(&service_sig) {
                     srv_usage.remove(&usage_sig);
                     // cleanup if all usages gone
-                    if srv_usage.len() == 0 {
+                    if srv_usage.is_empty() {
                         self.usage_map.remove(&service_sig);
                         self.service_map.remove(name);
                     }

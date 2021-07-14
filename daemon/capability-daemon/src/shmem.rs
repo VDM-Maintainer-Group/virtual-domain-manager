@@ -150,7 +150,7 @@ fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, req_id: String)
     // finalization after connection drop
     if let Ok(mut ffi_obj) = ffi.lock() {
         for name in &capability_set {
-            ffi_obj.unregister(name);
+            ffi_obj.unregister(name, 0 as u64); //FIXME:
         }
     }
     _close(sem_req);
