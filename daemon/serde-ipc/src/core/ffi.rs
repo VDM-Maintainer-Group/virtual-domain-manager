@@ -198,12 +198,6 @@ impl<'a> Func<'a> {
     }
 }
 
-enum LibraryContext {
-    CDLL(libloading::Library),
-    Rust(libloading::Library),
-    Python(PyLibCode)
-}
-
 struct Library<'a> { //'a is lifetime of context
     context: LibraryContext,
     functions: HashMap<String, Func<'a>>
@@ -257,10 +251,6 @@ pub struct FFIManager<'a> {
     library: HashMap<String, (u32, Library<'a>)> //<name, (counter, _)>
 }
 
-// - On-demand load cdll library with "usage count"
-//      - load from "~/.vdm/capability" using "ffi.rs"
-//      - with "register" command, +1; with "unregister" command, -1
-//      - zero for release
 impl<'a> FFIManager<'a> {
     pub fn new() -> FFIManager<'a> {
         let _new = FFIManager{
@@ -273,11 +263,6 @@ impl<'a> FFIManager<'a> {
         let libs_folder = Path::new(&_new.root).join("libs");
         nix::unistd::chdir( libs_folder.as_path() ).unwrap();
         _new
-    }
-
-    fn gen_sig() -> String {
-        thread_rng().sample_iter(&Alphanumeric).take(16)
-        .map(char::from).collect()
     }
 
     fn load(&mut self, manifest:&Value) -> Option<String> {
@@ -396,12 +381,24 @@ impl Default for ServiceConfig {
     }
 }
 
-type ServiceMap = BTreeMap<String, u32>;
-type UsageMap   = BTreeMap<u32, BTreeSet<u32>>;
+enum LibraryContext {
+    CDLL(libloading::Library),
+    Rust(libloading::Library),
+    Python(PyLibCode)
+}
 
-#[derive(Clone)]
+struct Service {
+    library: LibraryContext
+}
+
+type ServiceSig = u32;
+type UsageSig   = u32;
+type ServiceMap = BTreeMap<String, ServiceSig>;
+type UsageMap   = BTreeMap<ServiceSig, BTreeSet<UsageSig>>;
+
 pub struct FFIManagerStub {
     root: PathBuf,
+    services: BTreeMap<ServiceSig, Service>,
     service_map: ServiceMap,
     usage_map: UsageMap
 }
@@ -409,10 +406,11 @@ pub struct FFIManagerStub {
 // internal basic functions
 impl FFIManagerStub {
     pub fn new(root: PathBuf) -> Self {
+        let services = BTreeMap::new();
         let service_map = BTreeMap::new();
         let usage_map   = BTreeMap::new();
         std::env::set_current_dir(&root).unwrap(); //panic as you like
-        FFIManagerStub{ root, service_map, usage_map }
+        FFIManagerStub{ root, services, service_map, usage_map }
     }
 
     fn write_config_file(&self, cfg: ServiceConfig) -> ExecResult {
@@ -461,7 +459,7 @@ impl FFIManagerStub {
         rand::thread_rng().gen()
     }
 
-    fn insert_service_map(&mut self, name: &String) -> Option<u32> {
+    fn insert_service_map(&mut self, name: &String) -> Option<ServiceSig> {
         let service_sig = loop { //dead loop
             let sig = Self::gen_sig();
             if !self.usage_map.contains_key(&sig) {
@@ -473,16 +471,16 @@ impl FFIManagerStub {
         Some( service_sig )
     }
 
-    fn insert_usage_map(&mut self, service_sig: &u32) -> Option<u32> {
-        let usage_set = self.usage_map.get_mut(service_sig)?;
+    fn insert_usage_map(&mut self, service_sig: &ServiceSig) -> Option<UsageSig> {
+        let srv_usage = self.usage_map.get_mut(service_sig)?;
         let usage_sig = loop { //dead loop
             let sig = Self::gen_sig();
-            if !usage_set.contains(&sig) {
+            if !srv_usage.contains(&sig) {
                 break sig
             }
         };
 
-        usage_set.insert( usage_sig );
+        srv_usage.insert( usage_sig );
         Some( usage_sig )
     }
 
@@ -525,8 +523,18 @@ impl FFIManagerStub {
     }
 }
 
-// service register / unregister / execute / chain_execute
+// service register / unregister
 impl FFIManagerStub {
+    fn cleanup(&mut self, srv_name:&String, srv_sig:&ServiceSig) {
+        if let Some(srv_usage) = self.usage_map.get(srv_sig) {
+            if srv_usage.is_empty() {
+                self.usage_map.remove(srv_sig);
+                self.service_map.remove(srv_name);
+                self.services.remove(srv_sig);
+            }
+        }
+    }
+
     pub fn register(&mut self, name: &String) -> Option<String> {
         let service_sig = {
             if let Some(sig) = self.service_map.get(name) {
@@ -553,16 +561,16 @@ impl FFIManagerStub {
             if *sig==service_sig {
                 if let Some(srv_usage) = self.usage_map.get_mut(&service_sig) {
                     srv_usage.remove(&usage_sig);
-                    // cleanup if all usages gone
-                    if srv_usage.is_empty() {
-                        self.usage_map.remove(&service_sig);
-                        self.service_map.remove(name);
-                    }
                 }
+                // cleanup if all usages gone
+                self.cleanup(name, &service_sig);
             }
         }
     }
-    
+}
+
+// service execute / chain_execute
+impl FFIManagerStub {
     pub fn execute<T>(&self, descriptor:FFIDescriptor, callback:T)
     where T: FnOnce(String) -> (),
     {
