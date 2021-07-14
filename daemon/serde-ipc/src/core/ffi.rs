@@ -4,7 +4,7 @@ extern crate libloading;
 
 use std::pin::Pin;
 use bimap::BiMap;
-use rand::{Rng, thread_rng, distributions::Alphanumeric};
+use rand::{thread_rng, distributions::Alphanumeric};
 use std::path::Path;
 use threadpool::ThreadPool;
 //
@@ -310,34 +310,6 @@ impl<'a> FFIManager<'a> {
         } else { None }
     }
 
-    fn preload(&mut self) {
-        unimplemented!();
-    }
-
-    pub fn register(&mut self, name: &str) -> Option<String> {
-        let mut res = None;
-        let manifest = Path::new(&self.root).join(name).join("manifest.json");
-
-        if self.library.contains_key(name) {
-            if let Some(sig) = self.sig_name_map.get_by_right(name) {
-                res = Some( sig.clone() );
-            }
-        }
-        else if manifest.exists() {
-            let file = std::fs::File::open(manifest).unwrap();
-            let reader = std::io::BufReader::new(file);
-            let manifest:Value = serde_json::from_reader(reader).unwrap();
-            if let Some(sig) = self.load(&manifest) {
-                res = Some(sig);
-            }
-        }
-        return res;
-    }
-
-    pub fn unregister(&mut self, name: &str) {
-        unimplemented!();
-    }
-
     pub fn execute<T>(&self, raw_data:String, callback:T)
     where T: FnOnce(String) -> ()
     {
@@ -361,11 +333,13 @@ impl<'a> FFIManager<'a> {
     }
 }
 
+
 //======================================================================//
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap, BTreeSet};
 //
+use rand::{self, Rng};
 use serde::{Serialize,Deserialize};
 use confy;
 //
@@ -422,15 +396,22 @@ impl Default for ServiceConfig {
     }
 }
 
+type ServiceMap = BTreeMap<String, u32>;
+type UsageMap   = BTreeMap<u32, BTreeSet<u32>>;
+
 #[derive(Clone)]
 pub struct FFIManagerStub {
     root: PathBuf,
+    service_map: ServiceMap,
+    usage_map: UsageMap
 }
 
-// internal functions
+// internal basic functions
 impl FFIManagerStub {
     pub fn new(root: PathBuf) -> Self {
-        FFIManagerStub{root}
+        let service_map = BTreeMap::new();
+        let usage_map   = BTreeMap::new();
+        FFIManagerStub{ root, service_map, usage_map }
     }
 
     fn write_config_file(&self, cfg: ServiceConfig) -> ExecResult {
@@ -472,6 +453,21 @@ impl FFIManagerStub {
     }
 }
 
+// internal load/unload functions
+impl FFIManagerStub {
+    fn load_service(&mut self, cfg: ServiceConfig) -> Option<()> {
+        Some(())
+    }
+
+    fn insert_service_map(&mut self, name:&String) -> Option<u32> {
+        None
+    }
+
+    fn insert_usage_map(&mut self, service_sig: u32) -> Option<u32> {
+        None
+    }
+}
+
 // service install / uninstall
 impl FFIManagerStub {
     pub fn install(&self, directory:PathBuf, 
@@ -509,11 +505,39 @@ impl FFIManagerStub {
 // service register / unregister / execute / chain_execute
 impl FFIManagerStub {
     pub fn register(&mut self, name: &String) -> Option<String> {
-        unimplemented!()
+        let service_sig = {
+            if let Some(sig) = self.service_map.get(name) {
+                Some(*sig)
+            }
+            else {
+                let cfg = self.load_config_file(name)?;
+                self.load_service(cfg)?;
+                self.insert_service_map(name)
+            }
+        };
+
+        match service_sig {
+            Some(sig) => Some( sig.to_string() ),
+            None => None
+        }
     }
     
-    pub fn unregister(&mut self, name: &String) {
-        unimplemented!()
+    pub fn unregister(&mut self, name:&String, srv_use_sig: u64) {
+        let service_sig = (srv_use_sig >> 32) as u32;   //high u32
+        let usage_sig   = srv_use_sig as u32;           //low u32
+        
+        if let Some(sig) = self.service_map.get(name) {
+            if *sig==service_sig {
+                if let Some(srv_usage) = self.usage_map.get_mut(&service_sig) {
+                    srv_usage.remove(&usage_sig);
+                    // cleanup if all usages gone
+                    if srv_usage.len() == 0 {
+                        self.usage_map.remove(&service_sig);
+                        self.service_map.remove(name);
+                    }
+                }
+            }
+        }
     }
     
     pub fn execute<T>(&self, descriptor:FFIDescriptor, callback:T)

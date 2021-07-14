@@ -116,7 +116,7 @@ fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, req_id: String)
                         if let Value::String(ref name) = v["name"] {
                             if capability_set.contains(name) {
                                 if let Ok(mut ffi_obj) = ffi.lock() {
-                                    ffi_obj.unregister(name);
+                                    ffi_obj.unregister( name, 0 as u64 ); //FIXME:
                                     capability_set.remove(name);
                                 }
                             }

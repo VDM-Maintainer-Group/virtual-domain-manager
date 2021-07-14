@@ -16,7 +16,7 @@ impl Commander {
         Self{ root, work }
     }
 
-    pub fn run(&self, command:&String) -> Result<(),Option<i32>> {
+    fn run(&self, command:&String) -> Result<(),Option<i32>> {
         let result = Command::new("bash")
                     .current_dir( self.work.clone() )
                     .args(&["-c", &command])
@@ -34,7 +34,7 @@ impl Commander {
         }
     }
 
-    pub fn run_prog(&self, prog: &str, args:Vec<&str>) -> Result<String, ()> {
+    fn run_prog(&self, prog: &str, args:Vec<&str>) -> Result<String, ()> {
         let result = Command::new(prog)
                     .current_dir( self.root.clone() )
                     .args(args)
