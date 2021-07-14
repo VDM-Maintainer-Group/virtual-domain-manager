@@ -411,6 +411,7 @@ impl FFIManagerStub {
     pub fn new(root: PathBuf) -> Self {
         let service_map = BTreeMap::new();
         let usage_map   = BTreeMap::new();
+        std::env::set_current_dir(&root).unwrap(); //panic as you like
         FFIManagerStub{ root, service_map, usage_map }
     }
 
