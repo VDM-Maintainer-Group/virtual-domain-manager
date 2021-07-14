@@ -427,6 +427,7 @@ pub struct FFIManagerStub {
     root: PathBuf,
 }
 
+// internal functions
 impl FFIManagerStub {
     pub fn new(root: PathBuf) -> Self {
         FFIManagerStub{root}
@@ -469,11 +470,12 @@ impl FFIManagerStub {
         self.write_config_file(cfg)?;
         Ok(())
     }
+}
 
-    //----------------------------------------------------------------------//
-
+// service install / uninstall
+impl FFIManagerStub {
     pub fn install(&self, directory:PathBuf, 
-                metadata:Metadata, build:BuildTemplate, runtime:RuntimeTemplate) -> ExecResult 
+        metadata:Metadata, build:BuildTemplate, runtime:RuntimeTemplate) -> ExecResult 
     {
         let commander = Commander::new(self.root.clone(), directory);
         commander.build_dependency(build.dependency)?;
@@ -502,9 +504,10 @@ impl FFIManagerStub {
         }
         Ok(())
     }
+}
 
-    //----------------------------------------------------------------------//
-
+// service register / unregister / execute / chain_execute
+impl FFIManagerStub {
     pub fn register(&mut self, name: &String) -> Option<String> {
         unimplemented!()
     }
@@ -523,9 +526,5 @@ impl FFIManagerStub {
     where T: FnOnce(String) -> ()
     {
         unimplemented!()
-    }
-    
-    pub fn lock(&self) -> Result<Self, ()> {
-        Ok(self.clone())
     }
 }
