@@ -9,7 +9,6 @@ name = "serde_ipc"
 
 [dependencies]
 rand = "0.8"
-bimap = "0.6"
 nix = "0.10"
 libc = "0.2"
 num_cpus = "1.0"

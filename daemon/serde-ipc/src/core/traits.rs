@@ -2,11 +2,14 @@ use std::sync::{mpsc,};
 //
 use crate::core::ffi::ArcFFIManagerStub;
 
-pub trait Serde {
-    type Value;
-
-    fn from_raw_data(&self, r:&str) -> Self::Value;
-    fn to_raw_data(&self, v:&Self::Value) -> String;
+pub trait Serde
+// where T: Into<Self::Value> + Clone
+{
+    type Value: Into<Self::Value> + Clone;
+    
+    fn to_raw_data(v:&Self::Value) -> Option<String>;
+    fn from_raw_data<T>(r:&T) -> Option<Self::Value>
+    where T: Into<Self::Value> + Clone;
 }
 
 pub trait IPCProtocol: Sync+Send+Clone+'static

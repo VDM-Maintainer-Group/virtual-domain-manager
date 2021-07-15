@@ -19,15 +19,19 @@ where P: IPCProtocol
     server: Option<Arc<Mutex<ipc::IPCServer<P>>>>
 }
 
-impl Serde for ffi::FFIManagerStub {
+impl Serde for ffi::FFIManagerStub
+{
     type Value = JsonValue;
 
-    fn to_raw_data(&self, v:&JsonValue) -> String {
-        serde_json::to_string(v).unwrap()
+    fn to_raw_data(v:&JsonValue) -> Option<String> {
+        serde_json::to_string(v).ok()
     }
 
-    fn from_raw_data(&self, r:&str) -> JsonValue {
-        serde_json::from_str(r).unwrap()
+    fn from_raw_data<T>(r:&T) -> Option<JsonValue> 
+    where T: Into<JsonValue> + Clone
+    {
+        Some( r.clone().into() )
+        // serde_json::from_str(r).ok()
     }
 }
 

@@ -116,7 +116,7 @@ fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, req_id: String)
                         if let Value::String(ref name) = v["name"] {
                             if capability_set.contains(name) {
                                 if let Ok(mut ffi_obj) = ffi.lock() {
-                                    ffi_obj.unregister( name, 0 as u64 ); //FIXME:
+                                    ffi_obj.unregister( name, name ); //FIXME:
                                     capability_set.remove(name);
                                 }
                             }
@@ -150,7 +150,7 @@ fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, req_id: String)
     // finalization after connection drop
     if let Ok(mut ffi_obj) = ffi.lock() {
         for name in &capability_set {
-            ffi_obj.unregister(name, 0 as u64); //FIXME:
+            ffi_obj.unregister(name, name); //FIXME:
         }
     }
     _close(sem_req);
