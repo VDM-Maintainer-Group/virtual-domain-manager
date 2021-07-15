@@ -279,7 +279,7 @@ class CapabilityHandle:
                         raise Exception('Input argument missing: %s.'%_name)
                     #
                     if __validate(_type, _arg):
-                        args_spec[i][_name] = _arg
+                        args_spec[i] = _arg #feed in: dict -> arg
                         if isinstance(_arg, AnyType):
                             _sig_func_args_table.extend(_arg.table)
                     else:
