@@ -284,6 +284,17 @@ impl FFIManager
     pub fn chain_execute<CB>(&self, descriptors:Vec<FFIDescriptor>, callback:CB)
     where CB: FnOnce(String) -> () + Send + 'static
     {
+        descriptors.into_iter().map(|descriptor| {
+            let (sig, func, args) = descriptor;
+            let service = self.get_service_by_sig(&sig);
+            let dep:Vec<_> = args.iter().enumerate().filter_map(|(i, arg)| {
+                if arg.starts_with("restype") {
+                    Some( (i, arg) )
+                } else { None }
+            }).collect();
+
+            
+        }).collect();
         unimplemented!()
     }
 }
