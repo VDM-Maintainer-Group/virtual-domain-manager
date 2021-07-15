@@ -8,7 +8,7 @@ use tokio::net::{TcpStream, TcpListener};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 // root crates
-use crate::core::ffi::ArcFFIManagerStub;
+use crate::core::ffi::ArcFFIManager;
 use crate::core::traits::IPCProtocol;
 
 const VDM_CLIENT_ID_LEN:usize = 16;
@@ -17,14 +17,14 @@ pub struct IPCServer<P>
 where P:IPCProtocol
 {
     server_port:u16,
-    ffi: ArcFFIManagerStub,
+    ffi: ArcFFIManager,
     conns: Vec<P>
 }
 
 impl<P> IPCServer<P>
 where P:IPCProtocol
 {
-    pub fn new(server_port:u16, ffi: ArcFFIManagerStub) -> Arc<Mutex<Self>> {
+    pub fn new(server_port:u16, ffi: ArcFFIManager) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(
             IPCServer{
                 server_port, ffi, conns:Vec::new()

@@ -8,7 +8,7 @@ use shared_memory::{Shmem, ShmemConf};
 use serde_json::{self, Value};
 use threadpool::ThreadPool;
 //
-use serde_ipc::{ArcFFIManagerStub};
+use serde_ipc::{ArcFFIManager};
 use serde_ipc::IPCProtocol;
 
 type Message = (u32, String);
@@ -54,7 +54,7 @@ unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
     }
 }
 
-fn _recv_loop(ffi: ArcFFIManagerStub, tx: mpsc::Sender<Message>, req_id: String) {
+fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
     let mut capability_set: BTreeSet<String> = BTreeSet::new();
     let shm_req = match ShmemConf::new().flink( &req_id ).open() {
         Ok(m) => m,
@@ -206,14 +206,14 @@ fn _close(sem:*mut libc::sem_t) {
 #[derive(Clone)]
 pub struct ShMem {
     uid: String,
-    ffi: Option<ArcFFIManagerStub>,
+    ffi: Option<ArcFFIManager>,
     pool: Arc<Mutex<ThreadPool>>
 }
 
 impl IPCProtocol for ShMem {
     type Message = (u32, String);
 
-    fn new(uid:String, ffi:ArcFFIManagerStub) -> Self {
+    fn new(uid:String, ffi:ArcFFIManager) -> Self {
         let ffi = Some(ffi);
         let pool = Arc::new(Mutex::new(
             ThreadPool::new(2)

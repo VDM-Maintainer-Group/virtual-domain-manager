@@ -15,11 +15,11 @@ where P: IPCProtocol
     // root: PathBuf,
     server_port: u16,
     rt: TokioRuntime,
-    ffi: ffi::ArcFFIManagerStub,
+    ffi: ffi::ArcFFIManager,
     server: Option<Arc<Mutex<ipc::IPCServer<P>>>>
 }
 
-impl Serde for ffi::FFIManagerStub
+impl Serde for ffi::FFIManager
 {
     type Value = JsonValue;
 
@@ -48,7 +48,7 @@ where P: IPCProtocol
 
         let rt = TokioRuntime::new().unwrap();
         let ffi = Arc::new(Mutex::new(
-            ffi::FFIManagerStub::new(root)
+            ffi::FFIManager::new(root)
         ));
         
         JsonifyIPC {

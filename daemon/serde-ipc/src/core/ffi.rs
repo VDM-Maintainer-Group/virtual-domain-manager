@@ -11,7 +11,7 @@ use threadpool::ThreadPool;
 use crate::core::command::*;
 use crate::core::service::*;
 
-pub type ArcFFIManagerStub = Arc<Mutex<FFIManagerStub>>;
+pub type ArcFFIManager = Arc<Mutex<FFIManager>>;
 pub type FFIDescriptor = (String, String, Vec<String>);
 
 #[derive(Serialize, Deserialize)]
@@ -67,7 +67,7 @@ type UsageSig   = u32;
 type ServiceMap = BTreeMap<String, ServiceSig>;
 type UsageMap   = BTreeMap<ServiceSig, BTreeSet<UsageSig>>;
 
-pub struct FFIManagerStub {
+pub struct FFIManager {
     root: PathBuf,
     services: BTreeMap<ServiceSig, Service>,
     service_map: ServiceMap,
@@ -76,14 +76,14 @@ pub struct FFIManagerStub {
 }
 
 // internal basic functions
-impl FFIManagerStub {
+impl FFIManager {
     pub fn new(root: PathBuf) -> Self {
         let services = BTreeMap::new();
         let service_map = BTreeMap::new();
         let usage_map   = BTreeMap::new();
         let pool = ThreadPool::new(num_cpus::get());
         std::env::set_current_dir(&root).unwrap(); //panic as you like
-        FFIManagerStub{ root, services, service_map, usage_map, pool }
+        FFIManager{ root, services, service_map, usage_map, pool }
     }
 
     fn write_config_file(&self, cfg: ServiceConfig) -> ExecResult {
@@ -126,7 +126,7 @@ impl FFIManagerStub {
 }
 
 // internal load / unload functions
-impl FFIManagerStub {
+impl FFIManager {
     fn gen_sig() -> u32 {
         // thread_rng().sample_iter(&Alphanumeric).take(16).map(char::from).collect()
         rand::thread_rng().gen()
@@ -175,7 +175,7 @@ impl FFIManagerStub {
 }
 
 // service install / uninstall
-impl FFIManagerStub {
+impl FFIManager {
     pub fn install(&self, directory:PathBuf, 
         metadata:Metadata, build:BuildTemplate, runtime:RuntimeTemplate) -> ExecResult 
     {
@@ -209,7 +209,7 @@ impl FFIManagerStub {
 }
 
 // service register / unregister
-impl FFIManagerStub {
+impl FFIManager {
     pub fn register(&mut self, name: &String) -> Option<String> {
         let service_sig = {
             if let Some(sig) = self.service_map.get(name) {
@@ -252,7 +252,7 @@ impl FFIManagerStub {
 }
 
 // service execute / chain_execute
-impl FFIManagerStub
+impl FFIManager
 {
     fn get_service_by_sig(&self, srv_use_sig: &String) -> Option<&Service> {
         let srv_use_sig:u64 = srv_use_sig.parse().unwrap_or(0);
