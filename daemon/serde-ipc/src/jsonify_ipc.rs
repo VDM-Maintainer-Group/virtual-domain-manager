@@ -1,5 +1,7 @@
-use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
+use std::{io, fs};
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 // third-party crates
 use shellexpand::tilde as expand_user;
 use tokio::runtime::Runtime as TokioRuntime;
@@ -8,6 +10,7 @@ use serde_json::{self, Value as JsonValue};
 use crate::core::ipc;
 use crate::core::ffi;
 use crate::core::traits::{Serde, IPCProtocol};
+use crate::core::command::ExecResult;
 
 pub struct JsonifyIPC<P>
 where P: IPCProtocol
@@ -79,17 +82,54 @@ where P: IPCProtocol
     }
 
     /// Add service via FFI Manager
-    pub fn install_service(&mut self) {
-        unimplemented!()
+    pub fn install_service(&self, src_path:String) -> ExecResult {
+        let directory = PathBuf::from(src_path);
+        let manifest = fs::File::open( directory.join("manifest.json") )
+                        .or( Err(format!("'manifest.json' file not found.")) )?;
+        let manifest:JsonValue = serde_json::from_reader( io::BufReader::new(manifest) )
+                        .or( Err(format!("manifest file load failed.")) )?;
+        
+        
+        let build: ffi::BuildTemplate = manifest.get("build").and_then(|val|{
+                serde_json::from_value( val.clone() ).ok()
+        }).ok_or( format!("'build' section missing in manifest file.") )?;
+
+        let runtime: ffi::RuntimeTemplate = manifest.get("runtime").and_then(|val|{
+                serde_json::from_value( val.clone() ).ok()
+        }).ok_or( format!("'runtime' section missing in manifest file.") )?;
+
+        let mut metadata = ffi::Metadata {
+            name: manifest.get("name").and_then( |val|{val.as_str()} )
+                    .ok_or( format!("'name' section missing ins manifest file.") )?.into(),
+            class: manifest.get("type").and_then( |val|{val.as_str()} )
+                    .ok_or( format!("'type' section missing ins manifest file.") )?.into(),
+            version: manifest.get("version").and_then( |val|{val.as_str()} )
+                    .ok_or( format!("'version' section missing ins manifest file.") )?.into(),
+            func: HashMap::new()
+        };
+
+        //TODO: feed in MetaFunc
+        
+
+        let _ffi = self.ffi.lock().unwrap();
+        _ffi.install(directory, metadata, build, runtime)
     }
 
     /// Remove service via FFI Manager
-    pub fn uninstall_service(&mut self) {
-        unimplemented!()
+    pub fn uninstall_service(&self, name:String) -> ExecResult {
+        let _ffi = self.ffi.lock().unwrap();
+        _ffi.uninstall(&name)
     }
 
     /// Get service directly via FFI Manager
-    pub fn get_service(&mut self) {
-        unimplemented!()
+    pub fn get_service(&mut self, name:String) -> Option<String> {
+        let mut _ffi = self.ffi.lock().ok()?;
+        _ffi.register(&name)
+    }
+
+    /// Destroy service directly via FFI Manager
+    pub fn put_service(&mut self, name:String, srv_use_sig: String) {
+        let mut _ffi = self.ffi.lock().unwrap();
+        _ffi.unregister(&name, &srv_use_sig);
     }
 }

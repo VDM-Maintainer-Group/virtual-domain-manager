@@ -38,9 +38,9 @@ pub struct MetaFunc {
 
 #[derive(Serialize, Deserialize)]
 pub struct Metadata {
-    name: String,
+    pub name: String,
     pub class: String,
-    version: String,
+    pub version: String,
     pub func: HashMap<String, MetaFunc>
 }
 
