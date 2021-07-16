@@ -69,7 +69,7 @@ type UsageMap   = BTreeMap<ServiceSig, BTreeSet<UsageSig>>;
 
 pub struct FFIManager {
     root: PathBuf,
-    services: BTreeMap<ServiceSig, Service>,
+    services: BTreeMap<ServiceSig, Arc<Service>>,
     service_map: ServiceMap,
     usage_map: UsageMap,
     pool: ThreadPool
@@ -159,6 +159,7 @@ impl FFIManager {
 
     fn insert_service(&mut self, sig:ServiceSig, cfg: ServiceConfig) -> Option<()> {
         let service = Service::load( &cfg.entry, cfg.metadata.unwrap() )?;
+        let service = Arc::new(service);
         self.services.insert(sig, service);
         Some(())
     }
@@ -254,18 +255,20 @@ impl FFIManager {
 // service execute / chain_execute
 impl FFIManager
 {
-    fn get_service_by_sig(&self, srv_use_sig: &String) -> Option<&Service> {
+    fn get_service_by_sig(&self, srv_use_sig: &String) -> Option<Arc<Service>> {
         let srv_use_sig:u64 = srv_use_sig.parse().unwrap_or(0);
         let service_sig = (srv_use_sig >> 32) as u32;   //high u32
         let usage_sig   = srv_use_sig as u32;           //low u32
 
         let srv_usage = self.usage_map.get(&service_sig)?;
         if srv_usage.contains(&usage_sig) {
-            self.services.get(&service_sig)
+            Some(Arc::clone(
+                self.services.get(&service_sig)?
+            ))
         } else { None }
     }
 
-    pub fn execute<CB>(&'static self, descriptor:FFIDescriptor, callback:CB)
+    pub fn execute<CB>(&self, descriptor:FFIDescriptor, callback:CB)
     where CB: FnOnce(String) -> () + Send + 'static,
     {
         let (sig, func, args) = descriptor;
@@ -281,20 +284,20 @@ impl FFIManager
         });
     }
     
-    pub fn chain_execute<CB>(&self, descriptors:Vec<FFIDescriptor>, callback:CB)
+    pub fn chain_execute<CB>(&'static self, descriptors:Vec<FFIDescriptor>, callback:CB)
     where CB: FnOnce(String) -> () + Send + 'static
     {
-        descriptors.into_iter().map(|descriptor| {
-            let (sig, func, args) = descriptor;
-            let service = self.get_service_by_sig(&sig);
-            let dep:Vec<_> = args.iter().enumerate().filter_map(|(i, arg)| {
-                if arg.starts_with("restype") {
-                    Some( (i, arg) )
-                } else { None }
-            }).collect();
+        // descriptors.into_iter().map(|descriptor| {
+        //     let (sig, func, args) = descriptor;
+        //     let service = self.get_service_by_sig(&sig);
+        //     let dep:Vec<_> = args.iter().enumerate().filter_map(|(i, arg)| {
+        //         if arg.starts_with("restype") {
+        //             Some( (i, arg) )
+        //         } else { None }
+        //     }).collect();
 
             
-        }).collect();
+        // }).collect();
         unimplemented!()
     }
 }

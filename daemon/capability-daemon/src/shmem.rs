@@ -8,11 +8,10 @@ use shared_memory::{Shmem, ShmemConf};
 use serde_json::{self, Value};
 use threadpool::ThreadPool;
 //
-use serde_ipc::{ArcFFIManager};
+use serde_ipc::{FFIDescriptor, ArcFFIManager};
 use serde_ipc::IPCProtocol;
 
 type Message = (u32, String);
-type FFIDescriptor = (String, String, Vec<String>); //(sig, func, [args])
 
 // const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
 #[allow(dead_code)] //Rust lint open issue, #47133
@@ -125,9 +124,10 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                     Command::CALL => {
                         let tx_ref = tx.clone();
                         if let Ok(ffi_obj) = ffi.lock() {
-                            // ffi_obj.execute(req_data, move |res| {
-                            //     tx_ref.send( (req_header.seq, res) ).unwrap_err();
-                            // });
+                            let req_data: FFIDescriptor = ("".into(), "".into(), Vec::new()); //FIXME:
+                            ffi_obj.execute(req_data, move |res| {
+                                tx_ref.send( (req_header.seq, res) ).unwrap_err();
+                            });
                         }                        
                     },
                     Command::ONE_WAY => {
