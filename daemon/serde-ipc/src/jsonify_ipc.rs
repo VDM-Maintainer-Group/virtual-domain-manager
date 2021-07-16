@@ -80,7 +80,11 @@ where P: IPCProtocol
         //
         self.rt = TokioRuntime::new().unwrap();
     }
+}
 
+impl<P> JsonifyIPC<P>
+where P: IPCProtocol
+{
     /// Add service via FFI Manager
     pub fn install_service(&self, src_path:String) -> ExecResult {
         let directory = PathBuf::from(src_path);
@@ -108,8 +112,22 @@ where P: IPCProtocol
             func: HashMap::new()
         };
 
-        //TODO: feed in MetaFunc
-        
+        manifest.get("metadata").and_then(|val|{
+            let metafuncs = val.as_object()?;
+            for (name, info) in metafuncs.iter() {
+                let info = info.as_object()?;
+                let restype:String = serde_json::from_value( info.get("restype")?.clone() ).ok()?;
+                let args: Vec<HashMap<String,String>> = serde_json::from_value( info.get("args")?.clone() ).ok()?;
+                let args: Option<Vec<_>> = args.iter().map(|x|{
+                    let (k,v) = x.iter().next()?;
+                    Some( (k.clone(), v.clone()) )
+                }).collect();
+
+                let metafunc = ffi::MetaFunc{ restype, args:args? };
+                metadata.func.insert( name.into(), metafunc );
+            }
+            Some(())
+        }).ok_or( format!("metadata format error.") )?;
 
         let _ffi = self.ffi.lock().unwrap();
         _ffi.install(directory, metadata, build, runtime)
