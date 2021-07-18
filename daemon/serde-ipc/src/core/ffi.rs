@@ -318,11 +318,12 @@ impl FFIManager
                 if dep_map.is_empty() {
                     let result = {
                         if let Some(ref service) = service {
-                            service.call(&func, args.clone())
+                            service.call(&func, args)
                         } else { None }
                     }.unwrap_or( String::new() );
                     let mut _results = shared_results.lock().unwrap(); //panic as you like
                     _results[i] = Some( result );
+                    break;
                 } else { thread::sleep(time::Duration::from_millis(10)); }
             });
         }
