@@ -3,7 +3,6 @@ use std::{io, fs};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 // third-party crates
-use shellexpand::tilde as expand_user;
 use tokio::runtime::Runtime as TokioRuntime;
 use serde_json::{self, Value as JsonValue};
 // root crates
@@ -44,9 +43,8 @@ where P: IPCProtocol
     /// Return JsonifyIPC handle configured with given:
     /// - (Optional) **path**: the working directory for capability, default is `~/.vdm/libs`
     pub fn new(root:Option<String>, server_port:Option<u16>) -> Self {
-        let root = PathBuf::from(
-            root.unwrap_or( expand_user("~/.serde_ipc").into_owned() )
-        );
+        let root = root.unwrap_or( "~/.serde_ipc".into() );
+        let root = PathBuf::from( shellexpand::tilde(&root).into_owned() );
         let server_port = server_port.unwrap_or(42000);
 
         let rt = TokioRuntime::new().unwrap();
@@ -138,7 +136,11 @@ where P: IPCProtocol
         let _ffi = self.ffi.lock().unwrap();
         _ffi.uninstall(&name)
     }
+}
 
+impl<P> JsonifyIPC<P>
+where P: IPCProtocol
+{
     /// Get service directly via FFI Manager
     pub fn get_service(&mut self, name:String) -> Option<String> {
         let mut _ffi = self.ffi.lock().ok()?;
@@ -149,5 +151,20 @@ where P: IPCProtocol
     pub fn put_service(&mut self, name:String, srv_use_sig: String) {
         let mut _ffi = self.ffi.lock().unwrap();
         _ffi.unregister(&name, &srv_use_sig);
+    }
+
+    pub fn enable_service(&self, name:String) -> ExecResult {
+        let mut _ffi = self.ffi.lock().unwrap();
+        _ffi.switch(&name, true)
+    }
+
+    pub fn disable_service(&self, name:String) -> ExecResult {
+        let mut _ffi = self.ffi.lock().unwrap();
+        _ffi.switch(&name, false)
+    }
+
+    pub fn service_status(&self, name:String) -> Option<bool> {
+        let mut _ffi = self.ffi.lock().unwrap();
+        _ffi.report(&name)
     }
 }

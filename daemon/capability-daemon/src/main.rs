@@ -1,4 +1,4 @@
-mod shared_consts;
+mod consts;
 
 fn main() {
     println!("Hello, world!");

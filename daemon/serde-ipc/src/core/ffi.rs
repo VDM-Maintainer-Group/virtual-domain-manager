@@ -116,6 +116,7 @@ impl FFIManager {
     {
         let commander = Commander::new(self.root.clone(), self.root.clone());
         commander.runtime_dependency( runtime.dependency.clone() )?;
+        commander.runtime_enable( &runtime.enable )?;
         //
         let cfg = ServiceConfig{
             entry: String::from(&files[0]), files,
@@ -176,7 +177,7 @@ impl FFIManager {
     }
 }
 
-// service install / uninstall
+// service install / uninstall / report / switch
 impl FFIManager {
     pub fn install(&self, directory:PathBuf, 
         metadata:Metadata, build:BuildTemplate, runtime:RuntimeTemplate) -> ExecResult 
@@ -207,6 +208,24 @@ impl FFIManager {
             }
         }
         Ok(())
+    }
+
+    pub fn report(&self, name:&String) -> Option<bool> {
+        let command = Commander::new(self.root.clone(), self.root.clone());
+        let cfg = self.load_config_file(name)?;
+        command.runtime_status( & cfg.runtime?.status )
+    }
+
+    pub fn switch(&self, name:&String, enable:bool) -> ExecResult {
+        let command = Commander::new(self.root.clone(), self.root.clone());
+        let cfg = self.load_config_file(name)
+                .ok_or( format!("failed to load config file.") )?;
+        let runtime = cfg.runtime
+                .ok_or( format!("failed to load runtime script.") )?;
+        match enable {
+            true => command.runtime_enable( &runtime.enable ),
+            false => command.runtime_disable( &runtime.disable )
+        }
     }
 }
 
