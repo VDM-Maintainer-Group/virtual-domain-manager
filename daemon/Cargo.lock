@@ -711,6 +711,7 @@ dependencies = [
  "libc",
  "num_enum",
  "pyo3",
+ "serde",
  "serde-ipc",
  "serde_json",
  "shared_memory",

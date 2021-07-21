@@ -1,11 +1,12 @@
 use std::sync::{mpsc, Arc, Mutex};
 use std::ffi::CString;
 use std::convert::TryFrom;
-use std::collections::BTreeSet;
+use std::collections::HashMap;
 //
 use num_enum::TryFromPrimitive;
 use shared_memory::{Shmem, ShmemConf};
-use serde_json::{self, Value};
+use serde::{Serialize,Deserialize};
+use serde_json::{self, Value as JsonValue};
 use threadpool::ThreadPool;
 //
 use serde_ipc::{FFIDescriptor, ArcFFIManager};
@@ -41,6 +42,23 @@ struct ResHeader {
     size: u32
 }
 
+#[derive(Serialize,Deserialize)]
+struct NameCall {
+    name: String
+}
+
+#[derive(Serialize,Deserialize)]
+struct FuncCall {
+    sig: String,
+    func: String,
+    args: Vec<String>
+}
+
+#[derive(Serialize,Deserialize)]
+struct ChainCall {
+    sig_func_args_table: Vec<FuncCall>
+}
+
 unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
     let mut result = Vec::with_capacity(len);
     let mut tmp_ptr = src; //copy
@@ -54,14 +72,6 @@ unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
 }
 
 fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
-    let mut capability_set: BTreeSet<String> = BTreeSet::new();
-    let shm_req = match ShmemConf::new().flink( &req_id ).open() {
-        Ok(m) => m,
-        Err(e) => {
-            eprintln!("Unable to create or open shmem flink: {}", e);
-            return;
-        }
-    };
     let sem_req = CString::new( format!("/{}", req_id) )
         .map_err(|_| format!("CString::new failed"))
         .and_then(|sem_name| {
@@ -69,7 +79,9 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 i if i != libc::SEM_FAILED => Ok(i),
                 _ => Err( format!("sem open failed.") )
             }
-        }).unwrap();
+        }).unwrap(); //panic as you like
+    let req_header_len = std::mem::size_of::<ReqHeader>();
+    let mut register_records = HashMap::<String, String>::new();
 
     let _result = || -> Result<(), Box<dyn std::error::Error>> {
         loop {
@@ -78,80 +90,77 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 break Ok(()) //connection drop happened
             }
             // load data from shm_req
-            let raw_ptr = shm_req.as_ptr(); //FIXME: check alive before use
-            let req_header_len = std::mem::size_of::<ReqHeader>();
+            let shm_ptr = ShmemConf::new().flink(&req_id).open()?.as_ptr();
             let req_header:ReqHeader = unsafe{
-                let _header = volatile_copy(raw_ptr, req_header_len);
+                let _header = volatile_copy(shm_ptr, req_header_len);
                 std::mem::transmute( &_header.as_ptr() )
             };
-            let req_data = unsafe{ volatile_copy(raw_ptr.add(req_header_len), req_header.size as usize) };
-            let req_data = String::from_utf8(req_data).unwrap(); //panic as you like
+            let req_data = unsafe{
+                let _data = volatile_copy(shm_ptr.add(req_header_len), req_header.size as usize);
+                String::from_utf8(_data)?
+            };
             // release the lock
             if unsafe{ libc::sem_post(sem_req) } < 0 {
                 break Ok(()) //connection drop happened
             }
+
             // match command with its response
-            if let Ok(command) = Command::try_from(req_header.command) {
-                match command {
-                    Command::ALIVE => {
-                        //synchronized call
-                        tx.send( (req_header.seq, String::new()) )?;
-                    },
-                    Command::REGISTER => {
-                        //synchronized call
-                        let v: Value = serde_json::from_slice(req_data.as_bytes()).unwrap(); //panic as you like
-                        if let Value::String(ref name) = v["name"] {
-                            if let Ok(mut ffi_obj) = ffi.lock() {
-                                if let Some(cid) = ffi_obj.register(name) {
-                                    capability_set.insert( cid.clone() );
-                                    tx.send( (req_header.seq, cid) )?;
-                                }
-                            }
-                        }
-                    },
-                    Command::UNREGISTER => {
-                        //synchronized call
-                        let v: Value = serde_json::from_slice(req_data.as_bytes()).unwrap(); //panic as you like
-                        if let Value::String(ref name) = v["name"] {
-                            if capability_set.contains(name) {
-                                if let Ok(mut ffi_obj) = ffi.lock() {
-                                    ffi_obj.unregister( name, name ); //FIXME:
-                                    capability_set.remove(name);
-                                }
-                            }
-                        }
-                    },
-                    Command::CALL => {
-                        let tx_ref = tx.clone();
-                        if let Ok(ffi_obj) = ffi.lock() {
-                            let req_data: FFIDescriptor = ("".into(), "".into(), Vec::new()); //FIXME:
-                            ffi_obj.execute(req_data, move |res| {
-                                tx_ref.send( (req_header.seq, res) ).unwrap_err();
-                            });
-                        }                        
-                    },
-                    Command::ONE_WAY => {
-                        if let Ok(ffi_obj) = ffi.lock() {
-                            // ffi_obj.execute(req_data, |_|{}); //no callback for one-way
-                        }
-                    },
-                    Command::CHAIN_CALL => {
-                        let tx_ref = tx.clone();
-                        if let Ok(ffi_obj) = ffi.lock() {
-                            // ffi_obj.chain_execute(req_data, move |res| {
-                            //     tx_ref.send( (req_header.seq, res) ).unwrap_err();
-                            // })
-                        }
+            let command = Command::try_from(req_header.command)?;
+            match command {
+                Command::ALIVE => { //synchronized call
+                    tx.send( (req_header.seq, String::new()) )?;
+                },
+                Command::REGISTER => { //synchronized call
+                    let args: NameCall = serde_json::from_str(&req_data)?;
+                    let mut ffi_obj = ffi.lock()?;
+                    if let Some(cid) = ffi_obj.register(&args.name) {
+                        register_records.insert( args.name, cid.clone() );
+                        tx.send( (req_header.seq, cid) )?;
                     }
+                },
+                Command::UNREGISTER => { //synchronized call
+                    let args: NameCall = serde_json::from_str(&req_data)?;
+                    let mut ffi_obj = ffi.lock()?;
+                    if let Some(cid) = register_records.get(&args.name) {
+                        ffi_obj.unregister( &args.name, cid );
+                        register_records.remove(&args.name);
+                    }
+                },
+                Command::CALL => {
+                    let tx_ref = tx.clone();
+                    let args: FuncCall = serde_json::from_str(&req_data)?;
+                    let desc: FFIDescriptor = (args.sig, args.func, args.args);
+                    let ffi_obj = ffi.lock()?;
+                    ffi_obj.execute(desc, move |res|{
+                        tx_ref.send( (req_header.seq, res) ).unwrap_or(());
+                    });                    
+                },
+                Command::ONE_WAY => {
+                    let args: FuncCall = serde_json::from_str(&req_data)?;
+                    let desc: FFIDescriptor = (args.sig, args.func, args.args);
+                    let ffi_obj = ffi.lock()?;
+                    ffi_obj.execute(desc, |_|{}); //no callback for one-way
+                },
+                Command::CHAIN_CALL => {
+                    let tx_ref = tx.clone();
+                    let args: ChainCall = serde_json::from_str(&req_data)?;
+                    let descs: Vec<FFIDescriptor> = args.sig_func_args_table.into_iter().map(|args| {
+                        (args.sig, args.func, args.args)
+                    }).collect();
+                    let ffi_obj = ffi.lock()?;
+                    ffi_obj.chain_execute(descs, move |res|{
+                        tx_ref.send( (req_header.seq, res) ).unwrap_or(());
+                    });
                 }
             }
         }
     };
+
     // finalization after connection drop
     if let Ok(mut ffi_obj) = ffi.lock() {
-        for name in &capability_set {
-            ffi_obj.unregister(name, name); //FIXME:
-        }
+        register_records.iter().for_each(|(k,v)|{
+            ffi_obj.unregister(k, v);
+        })
     }
     _close(sem_req);
 }
@@ -164,7 +173,6 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
             return;
         }
     };
-
     let sem_res = CString::new( format!("/{}", res_id) )
         .map_err(|_| format!("CString::new failed"))
         .and_then(|sem_name| {
@@ -196,6 +204,8 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
         }
         Ok(())
     };
+
+    // finalization after connection drop
     _close(sem_res);
 }
 
