@@ -1,10 +1,9 @@
-mod shmem;
 mod consts;
 use pyo3::prelude::*;
 use crate::consts::*;
 
 use serde_ipc::JsonifyIPC;
-use shmem::ShMem;
+use serde_ipc::protocol::shmem::ShMem;
 
 fn _init() -> JsonifyIPC<ShMem> {
     let root = Some( String::from(VDM_CAPABILITY_DIR) );

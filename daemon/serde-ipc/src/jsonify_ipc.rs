@@ -85,21 +85,13 @@ where P: IPCProtocol
 {
     /// Add service via FFI Manager
     pub fn install_service(&self, src_path:String) -> ExecResult {
-        let directory = PathBuf::from(src_path);
+        let directory = PathBuf::from( shellexpand::tilde(&src_path).into_owned() );
         let manifest = fs::File::open( directory.join("manifest.json") )
                         .or( Err(format!("'manifest.json' file not found.")) )?;
         let manifest:JsonValue = serde_json::from_reader( io::BufReader::new(manifest) )
                         .or( Err(format!("manifest file load failed.")) )?;
         
-        
-        let build: ffi::BuildTemplate = manifest.get("build").and_then(|val|{
-                serde_json::from_value( val.clone() ).ok()
-        }).ok_or( format!("'build' section missing in manifest file.") )?;
-
-        let runtime: ffi::RuntimeTemplate = manifest.get("runtime").and_then(|val|{
-                serde_json::from_value( val.clone() ).ok()
-        }).ok_or( format!("'runtime' section missing in manifest file.") )?;
-
+        // 1. check basic information
         let mut metadata = ffi::Metadata {
             name: manifest.get("name").and_then( |val|{val.as_str()} )
                     .ok_or( format!("'name' section missing ins manifest file.") )?.into(),
@@ -109,23 +101,19 @@ where P: IPCProtocol
                     .ok_or( format!("'version' section missing ins manifest file.") )?.into(),
             func: HashMap::new()
         };
-
-        manifest.get("metadata").and_then(|val|{
-            let metafuncs = val.as_object()?;
-            for (name, info) in metafuncs.iter() {
-                let info = info.as_object()?;
-                let restype:String = serde_json::from_value( info.get("restype")?.clone() ).ok()?;
-                let args: Vec<HashMap<String,String>> = serde_json::from_value( info.get("args")?.clone() ).ok()?;
-                // let args: Option<Vec<_>> = args.iter().map(|x|{
-                //     let (k,v) = x.iter().next()?;
-                //     Some( (k.clone(), v.clone()) )
-                // }).collect();
-
-                let metafunc = ffi::MetaFunc{ restype, args };
-                metadata.func.insert( name.into(), metafunc );
-            }
-            Some(())
-        }).ok_or( format!("metadata format error.") )?;
+        // 2. check "build" information
+        let build: ffi::BuildTemplate = manifest.get("build").and_then(|val|{
+                serde_json::from_value( val.clone() ).ok()
+        }).ok_or( format!("'build' section missing in manifest file.") )?;
+        // 3. check "runtime" information
+        let runtime: ffi::RuntimeTemplate = manifest.get("runtime").and_then(|val|{
+                serde_json::from_value( val.clone() ).ok()
+        }).ok_or( format!("'runtime' section missing in manifest file.") )?;
+        // 4. load "metadata" section
+        let metafunc: HashMap<String,ffi::MetaFunc> = manifest.get("metadata").and_then(|val|{
+                serde_json::from_value( val.clone() ).ok()
+        }).ok_or( format!("'metadata' format error.") )?;
+        metadata.func.extend(metafunc);
 
         let _ffi = self.ffi.lock().unwrap();
         _ffi.install(directory, metadata, build, runtime)
@@ -167,4 +155,13 @@ where P: IPCProtocol
         let mut _ffi = self.ffi.lock().unwrap();
         _ffi.report(&name)
     }
+}
+
+#[test]
+fn install_and_uninstall() {
+    use crate::protocol::shmem;
+    let server = JsonifyIPC::<shmem::ShMem>::new(None, None);
+    let src_path:String = "~/build/demo/python".into();
+    server.install_service(src_path).unwrap();
+    server.uninstall_service("test".into()).unwrap();
 }

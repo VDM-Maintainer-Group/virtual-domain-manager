@@ -14,29 +14,30 @@ use crate::core::service::*;
 
 pub type ArcFFIManager = Arc<Mutex<FFIManager>>;
 pub type FFIDescriptor = (String, String, Vec<String>);
+pub type DepMap = HashMap<String, Vec<String>>;
 
 #[derive(Serialize, Deserialize)]
 pub struct BuildTemplate {
-    dependency: DepMap,
-    script: Vec<String>,
+    dependency: Option<DepMap>,
+    script: Option<Vec<String>>,
     output: Vec<String>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RuntimeTemplate {
-    dependency: DepMap,
+    dependency: Option<DepMap>,
     status: String,
     enable: Vec<String>,
     disable: Vec<String>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct MetaFunc {
     pub restype: String,
     pub args: Vec<HashMap<String, String>>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Metadata {
     pub name: String,
     pub class: String,
@@ -44,19 +45,26 @@ pub struct Metadata {
     pub func: HashMap<String, MetaFunc>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct ServiceConfig {
     entry: String,
     files: Vec<String>,
-    metadata: Option<Metadata>,
-    runtime: Option<RuntimeTemplate>
+    metadata: Metadata,
+    runtime: RuntimeTemplate
 }
 
 impl Default for ServiceConfig {
     fn default() -> Self {
         Self{
-            entry: String::new(), files: Vec::new(),
-            metadata: None, runtime: None
+            entry: "".into(), files: Vec::new(),
+            metadata: Metadata {
+                name: "".into(), class: "".into(), version: "".into(),
+                func: HashMap::new()
+            },
+            runtime: RuntimeTemplate {
+                dependency:None, status:"".into(),
+                enable: Vec::new(), disable: Vec::new()
+            }
         }
     }
 }
@@ -83,47 +91,58 @@ impl FFIManager {
         let service_map = BTreeMap::new();
         let usage_map   = BTreeMap::new();
         let pool = ThreadPool::new(num_cpus::get());
-        std::env::set_current_dir(&root).unwrap(); //panic as you like
+        { // change working directory (panic as you like)
+            std::fs::create_dir_all(&root).unwrap();
+            std::env::set_current_dir(&root).unwrap(); 
+        }
         FFIManager{ root, services, service_map, usage_map, pool }
     }
 
     fn write_config_file(&self, cfg: ServiceConfig) -> ExecResult {
-        let name = {
-            if let Some(ref metadata) = cfg.metadata {
-                PathBuf::from(&metadata.name)
-            } else { PathBuf::new() }
-        };
-        let service_path:PathBuf =
-                [&self.root, &name].iter().collect();
+        let name = String::from( &cfg.metadata.name );
+        let service_path = self.root.join( &name );
+        let cfg_name = format!("{}.conf", "");
         std::fs::create_dir_all(&service_path).unwrap_or(());
-        match confy::store_path(&service_path, cfg) {
+        match confy::store_path(&service_path.join(cfg_name), cfg) {
             Ok(_) => Ok(()),
-            Err(_) => Err( format!("Config file store failed for service '{}'.", name.display()) )
+            Err(_) => {
+                Err( format!("Config file store failed for service '{}'.", name) )
+            }
         }
     }
 
     fn load_config_file(&self, name:&String) -> Option<ServiceConfig> {
-        let name = PathBuf::from(name);
-        let service_path:PathBuf =
-                [&self.root, &name].iter().collect();
-        match confy::load_path(&service_path) {
-            Ok(cfg) => Some(cfg),
-            Err(_) => None
-        }
+        let cfg_file = self.root.join(&name).join(".conf");
+        confy::load_path(&cfg_file).ok().and_then(|cfg:ServiceConfig|{
+            if !cfg.entry.is_empty() {
+                Some(cfg)
+            } else { None }
+        })
     }
 
     fn prepare_runtime(&self, files:Vec<String>, metadata:Metadata, runtime:RuntimeTemplate) -> ExecResult
     {
         let commander = Commander::new(self.root.clone(), self.root.clone());
-        commander.runtime_dependency( runtime.dependency.clone() )?;
-        commander.runtime_enable( &runtime.enable )?;
-        //
-        let cfg = ServiceConfig{
-            entry: String::from(&files[0]), files,
-            metadata:Some(metadata), runtime:Some(runtime)
+        let results = || -> ExecResult {
+            commander.runtime_dependency( runtime.dependency.clone() )?;
+            commander.runtime_enable( &runtime.enable )?;
+            Ok(())
         };
-        self.write_config_file(cfg)?;
-        Ok(())
+
+        match results() {
+            Ok(_) => {
+                let cfg = ServiceConfig{
+                    entry: String::from(&files[0]), files,
+                    metadata:metadata, runtime:runtime
+                };
+                self.write_config_file(cfg)?;
+                Ok(())
+            },
+            Err(msg) => {
+                commander.remove_output(&metadata.name, &files);
+                Err(msg)
+            }
+        }
     }
 }
 
@@ -160,7 +179,7 @@ impl FFIManager {
     }
 
     fn insert_service(&mut self, sig:ServiceSig, cfg: ServiceConfig) -> Option<()> {
-        let service = Service::load( &cfg.entry, cfg.metadata.unwrap() )?;
+        let service = Service::load( &cfg.entry, cfg.metadata )?;
         let service = Arc::new(service);
         self.services.insert(sig, service);
         Some(())
@@ -191,40 +210,35 @@ impl FFIManager {
                 Ok(())
             },
             None => {
-                Err( String::from("Installation failed.") )
+                Err( format!("No output files specified.") )
             }
         }
     }
 
     pub fn uninstall(&self, name:&String) -> ExecResult {
-        let command = Commander::new(self.root.clone(), self.root.clone());
+        let commander = Commander::new(self.root.clone(), self.root.clone());
         if let Some(cfg) = self.load_config_file(name) {
-            if let Some(ref runtime) = cfg.runtime {
-                command.runtime_disable(&runtime.disable)?;
-            }
-            if let Some(ref metadata) = cfg.metadata {
-                let name = &metadata.name;
-                command.remove_output(name, &cfg.files);
-            }
+            commander.runtime_disable(&cfg.runtime.disable)?;
+            commander.remove_output(&cfg.metadata.name, &cfg.files);
+            Ok(())
+        } else {
+            Err( format!("Service '{}' not found.", name) )
         }
-        Ok(())
     }
 
     pub fn report(&self, name:&String) -> Option<bool> {
         let command = Commander::new(self.root.clone(), self.root.clone());
         let cfg = self.load_config_file(name)?;
-        command.runtime_status( & cfg.runtime?.status )
+        command.runtime_status( &cfg.runtime.status )
     }
 
     pub fn switch(&self, name:&String, enable:bool) -> ExecResult {
         let command = Commander::new(self.root.clone(), self.root.clone());
         let cfg = self.load_config_file(name)
                 .ok_or( format!("failed to load config file.") )?;
-        let runtime = cfg.runtime
-                .ok_or( format!("failed to load runtime script.") )?;
         match enable {
-            true => command.runtime_enable( &runtime.enable ),
-            false => command.runtime_disable( &runtime.disable )
+            true => command.runtime_enable( &cfg.runtime.enable ),
+            false => command.runtime_disable( &cfg.runtime.disable )
         }
     }
 }
@@ -239,7 +253,7 @@ impl FFIManager {
             else {
                 let cfg = self.load_config_file(name)?;
                 let srv_sig = self.insert_service_map(name)?; //"None" is always impossible
-                let spec = serde_json::to_string( &cfg.metadata.as_ref()?.func ).ok()?;
+                let spec = serde_json::to_string( &cfg.metadata.func ).ok()?;
                 // try insert service; cleanup if failed.
                 if let Some(_) = self.insert_service(srv_sig, cfg) {
                     Some( (srv_sig, spec) )

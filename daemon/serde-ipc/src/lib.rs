@@ -1,8 +1,11 @@
-mod core;
 
 // export core interface
+mod core;
 pub use crate::core::traits::{IPCProtocol,};
 pub use crate::core::ffi::{FFIDescriptor, FFIManager, ArcFFIManager};
+
+// export default protocols
+pub mod protocol;
 
 // export JsonifyIPC implementation
 mod jsonify_ipc;

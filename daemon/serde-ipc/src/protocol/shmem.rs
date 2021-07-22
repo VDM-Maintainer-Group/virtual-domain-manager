@@ -8,8 +8,8 @@ use shared_memory::{ShmemConf};
 use serde::{Serialize,Deserialize};
 use threadpool::ThreadPool;
 //
-use serde_ipc::{FFIDescriptor, ArcFFIManager};
-use serde_ipc::IPCProtocol;
+use crate::core::ffi::{FFIDescriptor, ArcFFIManager};
+use crate::core::traits::IPCProtocol;
 
 type Message = (u32, String);
 
@@ -90,7 +90,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
         }).unwrap(); //panic as you like
     let mut register_records = HashMap::<String, String>::new();
 
-    let _result = || -> Result<(), Box<dyn std::error::Error>> {
+    let mut loop_result = || -> Result<(), Box<dyn std::error::Error>> {
         loop {
             // acquire the lock
             if unsafe{ libc::sem_wait(sem_req) } != 0 {
@@ -163,8 +163,9 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
             }
         }
     };
-
+    
     // finalization after connection drop
+    loop_result().unwrap_or(());
     if let Ok(mut ffi_obj) = ffi.lock() {
         register_records.iter().for_each(|(k,v)|{
             ffi_obj.unregister(k, v);
@@ -190,7 +191,7 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
             }
         }).unwrap();
 
-    let _result = || -> Result<(), Box<dyn std::error::Error>> {
+    let loop_result = || -> Result<(), Box<dyn std::error::Error>> {
         while let Ok(message) = rx.recv() {
             let mut shm_res = ShmemConf::new().flink(&res_id).open()?;
             // format the message
@@ -218,8 +219,9 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
         }
         Ok(())
     };
-
+    
     // finalization after connection drop
+    loop_result().unwrap_or(());
     _close(sem_res);
 }
 

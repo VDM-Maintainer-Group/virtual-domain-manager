@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::process::Command;
 use std::fs;
 use std::collections::HashMap;
@@ -49,8 +49,12 @@ impl Commander {
 }
 
 impl Commander {
-    pub fn build_dependency(&self, args:DepMap) -> ExecResult {
+    pub fn build_dependency(&self, args:Option<DepMap>) -> ExecResult {
         let mut ret = Ok(());
+        let args = match args {
+            Some(args) => args,
+            None => return Ok(())
+        };
 
         for (key, values) in args.iter() {
             match key.as_ref() {
@@ -83,8 +87,12 @@ impl Commander {
         ret
     }
 
-    pub fn build_script(&self, args:Vec<String>) -> ExecResult {
+    pub fn build_script(&self, args:Option<Vec<String>>) -> ExecResult {
         let mut ret = Ok(());
+        let args = match args {
+            Some(args) => args,
+            None => return Ok(())
+        };
 
         for command in args.iter() {
             if let Err(_) = self.run(command) {
@@ -97,45 +105,25 @@ impl Commander {
     }
 
     pub fn build_output(&self, args:Vec<String>) -> Option<Vec<String>> {
-        let mut ret = Some( Vec::new() );
-
-        for val in args.iter() {
-            let filename:Vec<&str> = val.split('@').collect();
-            let dest_path = {
-                match filename.len() {
-                    1 => {
-                        Some( PathBuf::from(filename[0]) )
-                    },
-                    2 => {
-                        let dest:PathBuf = [self.root.as_path(), Path::new(filename[1])].iter().collect();
-                        if let Some(parent) = dest.parent() {
-                            if !parent.exists() {
-                                fs::create_dir_all(parent).unwrap_or(());
-                            }
-                            Some( dest )
-                        } else { None }
-                    },
-                    _ => None
-                }
-            };
-
-            if let Some(dest_path) = dest_path {
-                if let Some(ret) = ret.as_mut() {
-                    ret.push( String::from(filename[1]) );
-                }
-                let _command = format!("cp -rf {} {}", filename[0], dest_path.display());
-                if let Err(_) = self.run(&_command) {
-                    ret = None;
-                    break
-                }
-            }
-            else {
-                ret = None;
-                break
-            }
-        }
-
-        ret
+        // collection of Option<String> --> Option<Vec<String>>
+        args.iter().map(|arg| {
+            let output_file:Vec<&str> = arg.trim().split('@').collect();
+            match output_file.len() {
+                1 => Some( output_file[0] ),
+                2 => Some( output_file[1] ),
+                _ => None
+            }.and_then(|dest_file|{
+                let src_path = self.work.join(output_file[0]);
+                let dst_path = self.root.join(dest_file);
+                //
+                if src_path.exists() && src_path != self.work {
+                    fs::create_dir_all( dst_path.parent()? ).ok()?;
+                    let cmd = format!("cp -rf {} {}", src_path.display(), dst_path.display());
+                    self.run(&cmd).ok()?;
+                    Some( dest_file.to_string() )
+                } else { None }
+            })
+        }).collect()
     }
 
     pub fn remove_output(&self, name:&String, files:&Vec<String>) {
@@ -146,7 +134,7 @@ impl Commander {
         fs::remove_dir_all( self.root.join(name) ).unwrap_or(());
     }
 
-    pub fn runtime_dependency(&self, args:DepMap) -> ExecResult {
+    pub fn runtime_dependency(&self, args:Option<DepMap>) -> ExecResult {
         self.build_dependency(args)
     }
 
