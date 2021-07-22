@@ -4,9 +4,8 @@ use std::convert::TryFrom;
 use std::collections::HashMap;
 //
 use num_enum::TryFromPrimitive;
-use shared_memory::{Shmem, ShmemConf};
+use shared_memory::{ShmemConf};
 use serde::{Serialize,Deserialize};
-use serde_json::{self, Value as JsonValue};
 use threadpool::ThreadPool;
 //
 use serde_ipc::{FFIDescriptor, ArcFFIManager};
@@ -15,9 +14,9 @@ use serde_ipc::IPCProtocol;
 type Message = (u32, String);
 
 // const SHM_REQ_MAX_SIZE:usize = 10*1024; //10KB
-#[allow(dead_code)] //Rust lint open issue, #47133
 const SHM_RES_MAX_SIZE:usize = 1024*1024; //1MB
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u16)]
 enum Command {
@@ -41,6 +40,9 @@ struct ResHeader {
     seq: u32,
     size: u32
 }
+
+const REQ_HEADER_LEN:usize = std::mem::size_of::<ReqHeader>();
+const RES_HEADER_LEN:usize = std::mem::size_of::<ResHeader>();
 
 #[derive(Serialize,Deserialize)]
 struct NameCall {
@@ -80,7 +82,6 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 _ => Err( format!("sem open failed.") )
             }
         }).unwrap(); //panic as you like
-    let req_header_len = std::mem::size_of::<ReqHeader>();
     let mut register_records = HashMap::<String, String>::new();
 
     let _result = || -> Result<(), Box<dyn std::error::Error>> {
@@ -92,11 +93,11 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
             // load data from shm_req
             let shm_ptr = ShmemConf::new().flink(&req_id).open()?.as_ptr();
             let req_header:ReqHeader = unsafe{
-                let _header = volatile_copy(shm_ptr, req_header_len);
+                let _header = volatile_copy(shm_ptr, REQ_HEADER_LEN);
                 std::mem::transmute( &_header.as_ptr() )
             };
             let req_data = unsafe{
-                let _data = volatile_copy(shm_ptr.add(req_header_len), req_header.size as usize);
+                let _data = volatile_copy(shm_ptr.add(REQ_HEADER_LEN), req_header.size as usize);
                 String::from_utf8(_data)?
             };
             // release the lock
@@ -166,7 +167,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
 }
 
 fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
-    let shm_res = match ShmemConf::new().size(SHM_RES_MAX_SIZE).flink( &res_id ).create() {
+    let _shm_res = match ShmemConf::new().size(SHM_RES_MAX_SIZE).flink( &res_id ).create() {
         Ok(m) => m,
         Err(e) => {
             eprintln!("Unable to create or open shmem flink: {}", e);
@@ -183,19 +184,25 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
         }).unwrap();
 
     let _result = || -> Result<(), Box<dyn std::error::Error>> {
-        while let Ok(_message) = rx.recv() {
+        while let Ok(message) = rx.recv() {
+            let mut shm_res = ShmemConf::new().flink(&res_id).open()?;
+            // format the message
+            let (seq, data) = message;
+            let data = data.as_bytes();
+            let size = data.len() as u32;
+            let res_header:[u8;RES_HEADER_LEN] = unsafe{
+                let _header = ResHeader{ seq, size };
+                std::mem::transmute( &_header )
+            };
+
             // acquire the lock
             if unsafe{ libc::sem_wait(sem_res) } != 0 {
                 break;
             }
-            {
-                let (seq, data) = _message;
-                let data = data.as_bytes();
-                let size = data.len() as u32;
-                let buffer = unsafe{
-                    let res_header = ResHeader{seq, size};
-                };
-                //TODO: write volatile to shared memory
+            unsafe {
+                let shm_slice = shm_res.as_slice_mut();
+                shm_slice[..RES_HEADER_LEN].clone_from_slice(&res_header);
+                shm_slice[RES_HEADER_LEN..].clone_from_slice(&data);
             }
             // release the lock
             if unsafe{ libc::sem_post(sem_res) } < 0 {
