@@ -162,9 +162,8 @@ impl Service {
     pub fn call(&self, name:&String, args:Vec<String>) -> Option<String> {
         let func = self.func.get(name)?;
         let argc = func.args.len();
-        // let args_name:Vec<&String> = func.args.iter().map( |(_,a2)|{a2} ).collect();
         let args_name:Option<Vec<&String>> = func.args.iter().map(|arg|{
-            Some( arg.iter().nth(0)?.1 )
+            Some( arg.iter().nth(0)?.0 )
         }).collect();
         
         Func::new(&self.context, name, argc)?.call(args, args_name?)
