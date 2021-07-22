@@ -50,6 +50,12 @@ struct NameCall {
 }
 
 #[derive(Serialize,Deserialize)]
+struct NameCallRes {
+    sig: String,
+    spec: String
+}
+
+#[derive(Serialize,Deserialize)]
 struct FuncCall {
     sig: String,
     func: String,
@@ -114,16 +120,17 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 Command::REGISTER => { //synchronized call
                     let args: NameCall = serde_json::from_str(&req_data)?;
                     let mut ffi_obj = ffi.lock()?;
-                    if let Some(cid) = ffi_obj.register(&args.name) {
-                        register_records.insert( args.name, cid.clone() );
-                        tx.send( (req_header.seq, cid) )?;
+                    if let Some((sig, spec)) = ffi_obj.register(&args.name) {
+                        register_records.insert( args.name, sig.clone() );
+                        let res = serde_json::to_string(&NameCallRes{sig,spec})?;
+                        tx.send( (req_header.seq, res) )?;
                     }
                 },
                 Command::UNREGISTER => { //synchronized call
                     let args: NameCall = serde_json::from_str(&req_data)?;
                     let mut ffi_obj = ffi.lock()?;
-                    if let Some(cid) = register_records.get(&args.name) {
-                        ffi_obj.unregister( &args.name, cid );
+                    if let Some(sig) = register_records.get(&args.name) {
+                        ffi_obj.unregister( &args.name, sig );
                         register_records.remove(&args.name);
                     }
                 },

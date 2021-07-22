@@ -116,12 +116,12 @@ where P: IPCProtocol
                 let info = info.as_object()?;
                 let restype:String = serde_json::from_value( info.get("restype")?.clone() ).ok()?;
                 let args: Vec<HashMap<String,String>> = serde_json::from_value( info.get("args")?.clone() ).ok()?;
-                let args: Option<Vec<_>> = args.iter().map(|x|{
-                    let (k,v) = x.iter().next()?;
-                    Some( (k.clone(), v.clone()) )
-                }).collect();
+                // let args: Option<Vec<_>> = args.iter().map(|x|{
+                //     let (k,v) = x.iter().next()?;
+                //     Some( (k.clone(), v.clone()) )
+                // }).collect();
 
-                let metafunc = ffi::MetaFunc{ restype, args:args? };
+                let metafunc = ffi::MetaFunc{ restype, args };
                 metadata.func.insert( name.into(), metafunc );
             }
             Some(())
@@ -142,7 +142,7 @@ impl<P> JsonifyIPC<P>
 where P: IPCProtocol
 {
     /// Get service directly via FFI Manager
-    pub fn get_service(&mut self, name:String) -> Option<String> {
+    pub fn get_service(&mut self, name:String) -> Option<(String,String)> {
         let mut _ffi = self.ffi.lock().ok()?;
         _ffi.register(&name)
     }

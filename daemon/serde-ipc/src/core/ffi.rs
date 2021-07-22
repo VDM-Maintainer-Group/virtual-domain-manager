@@ -33,7 +33,7 @@ pub struct RuntimeTemplate {
 #[derive(Serialize, Deserialize)]
 pub struct MetaFunc {
     pub restype: String,
-    pub args: Vec<(String, String)>
+    pub args: Vec<HashMap<String, String>>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -231,17 +231,18 @@ impl FFIManager {
 
 // service register / unregister
 impl FFIManager {
-    pub fn register(&mut self, name: &String) -> Option<String> {
-        let service_sig = {
+    pub fn register(&mut self, name: &String) -> Option<(String,String)> {
+        let (service_sig, spec) = {
             if let Some(sig) = self.service_map.get(name) {
-                Some(*sig)
+                Some( (*sig, "".into()) )
             }
             else {
                 let cfg = self.load_config_file(name)?;
                 let srv_sig = self.insert_service_map(name)?; //"None" is always impossible
+                let spec = serde_json::to_string( &cfg.metadata.as_ref()?.func ).ok()?;
                 // try insert service; cleanup if failed.
                 if let Some(_) = self.insert_service(srv_sig, cfg) {
-                    Some(srv_sig)
+                    Some( (srv_sig, spec) )
                 }
                 else {
                     self.cleanup(name, &srv_sig);
@@ -252,7 +253,7 @@ impl FFIManager {
 
         let usage_sig = self.insert_usage_map(&service_sig)?; //"None" is always impossible
         let srv_use_sig:u64 = ((service_sig as u64) << 32) + (usage_sig as u64);
-        Some( srv_use_sig.to_string() )
+        Some( (srv_use_sig.to_string(),spec) )
     }
     
     pub fn unregister(&mut self, name:&String, srv_use_sig: &String) {
