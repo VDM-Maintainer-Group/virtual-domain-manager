@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use libc::{c_char};
 use std::ffi::{CStr, CString};
 use pyo3::prelude::*;
-use pyo3::types::{IntoPyDict,};
+use pyo3::types::*;
 //
 use crate::core::ffi::{Metadata, MetaFunc};
 
@@ -105,15 +105,14 @@ impl<'a> Func<'a> {
             Self::PythonFunc(func) => {
                 let (lib, func) = func;
                 Python::with_gil(|py|{
-                    let py_module = PyModule::from_code(py, lib, "__internal__.py", "__internal__").ok()?;
-                    let py_func = py_module.get(func).ok()?;
+                    let py_module = PyModule::from_code(py, &lib, "__internal_file__", "__internal_module__").ok()?;
+                    let py_func = py_module.getattr(func).ok()?;
                     let kwargs:Vec<(String,String)> = args.into_iter().enumerate().map(|(i,v)|{
                         ( args_name[i].to_string(), v )
                     }).collect();
                     let kwargs = kwargs.into_py_dict(py);
-                    
                     py_func.call((), Some(kwargs)).ok()?.extract().ok()
-                })?
+                })
             }
         }
     }
@@ -165,7 +164,6 @@ impl Service {
         let args_name:Option<Vec<&String>> = func.args.iter().map(|arg|{
             Some( arg.iter().nth(0)?.0 )
         }).collect();
-        
         Func::new(&self.context, name, argc)?.call(args, args_name?)
     }
 }

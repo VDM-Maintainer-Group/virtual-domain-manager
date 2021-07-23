@@ -108,15 +108,19 @@ impl Commander {
         args.iter().map(|arg| {
             let output_file:Vec<&str> = arg.trim().split('@').collect();
             match output_file.len() {
-                1 => Some( output_file[0] ),
-                2 => Some( output_file[1] ),
+                1 => Some( (output_file[0],false) ),
+                2 => Some( (output_file[1],true) ),
                 _ => None
-            }.and_then(|dest_file|{
+            }.and_then(|(dest_file,rename)|{
                 let src_path = self.work.join(output_file[0]);
                 let dst_path = self.root.join(dest_file);
                 //
-                if src_path.exists() && src_path != self.work {
+                if src_path != self.work {
                     fs::create_dir_all( dst_path.parent()? ).ok()?;
+                    let dst_path = match rename {
+                        true => dst_path.as_path(),
+                        false => dst_path.parent().unwrap()
+                    };
                     let cmd = format!("cp -rf {} {}", src_path.display(), dst_path.display());
                     self.run(&cmd).ok()?;
                     Some( dest_file.to_string() )

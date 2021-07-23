@@ -7,6 +7,7 @@ use confy;
 use rand::{self, Rng};
 use serde::{Serialize,Deserialize};
 use threadpool::ThreadPool;
+use pyo3::{prelude::*, types::*};
 //
 // use crate::core::traits::Serde;
 use crate::core::command::*;
@@ -95,6 +96,15 @@ impl FFIManager {
         { // change working directory (panic as you like)
             std::fs::create_dir_all(&root).unwrap();
             std::env::set_current_dir(&root).unwrap(); 
+        }
+        {
+            pyo3::prepare_freethreaded_python();
+            let root = root.canonicalize().unwrap();
+            Python::with_gil(|py| {
+                let sys = py.import("sys").unwrap();
+                let path:&PyList = sys.getattr("path").unwrap().try_into().unwrap();
+                path.insert(0, &root).unwrap();
+            });
         }
         FFIManager{ root, services, service_map, usage_map, pool }
     }
@@ -312,14 +322,23 @@ impl FFIManager
         let (sig, func, args) = descriptor;
         let service = self.get_service_by_sig(&sig);
 
-        self.pool.execute(move || {
+        //FIXME: pyo3 not in threadpool
+        {
             let result = {
                 if let Some(service) = service {
                     service.call(&func, args)
                 } else { None }
             }.unwrap_or( String::new() );
             callback(result);
-        });
+        }
+        // self.pool.execute(move || {
+        //     let result = {
+        //         if let Some(service) = service {
+        //             service.call(&func, args)
+        //         } else { None }
+        //     }.unwrap_or( String::new() );
+        //     callback(result);
+        // });
     }
     
     pub fn chain_execute<CB>(&self, descriptors:Vec<FFIDescriptor>, callback:CB)

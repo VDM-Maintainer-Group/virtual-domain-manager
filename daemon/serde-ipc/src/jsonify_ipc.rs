@@ -158,15 +158,28 @@ where P: IPCProtocol
 }
 
 #[test]
-fn register_and_unregister() {
+fn register_run_and_unregister() {
     use crate::protocol::DummyProtocol;
     let mut server = JsonifyIPC::<DummyProtocol>::new(None, None);
     let src_path:String = "~/build/demo/python".into();
     server.install_service(src_path).unwrap();
     {
         let (sig, spec) = server.get_service("test".into()).unwrap();
-        println!("{}", serde_json::to_string(&spec.unwrap()).unwrap());
+        println!("{}, {:?}", sig, spec);
+        let (sig1, spec1) = server.get_service("test".into()).unwrap();
+        println!("{}, {:?}", sig1, spec1);
+        assert_eq!(spec1.is_none(), true);
+        {
+            let args = vec![ serde_json::to_string("World").unwrap() ];
+            let descriptor: ffi::FFIDescriptor = (sig.clone(), "main".into(), args);
+            //
+            let _ffi = server.ffi.lock().unwrap();
+            _ffi.execute(descriptor, move |res|{
+                println!("get results: {}",res);
+            });
+        }
         server.put_service("test".into(), sig);
+        server.put_service("test".into(), sig1);
     }
-    server.uninstall_service("test".into()).unwrap();
+    // server.uninstall_service("test".into()).unwrap();
 }
