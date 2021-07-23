@@ -218,7 +218,7 @@ impl FFIManager {
     pub fn uninstall(&self, name:&String) -> ExecResult {
         let commander = Commander::new(self.root.clone(), self.root.clone());
         if let Some(cfg) = self.load_config_file(name) {
-            commander.runtime_disable(&cfg.runtime.disable)?;
+            commander.runtime_disable(&cfg.runtime.disable).unwrap_or(()); //ignore the error
             commander.remove_output(&cfg.metadata.name, &cfg.files);
             Ok(())
         } else {

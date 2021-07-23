@@ -60,7 +60,8 @@ impl Commander {
             match key.as_ref() {
                 "pip" => {
                     for v in values.iter() {
-                        if let Err(_) = self.run( &format!("pip install {}", v) ) {
+                        if v.is_empty() { continue }
+                        if let Err(_) = self.run( &format!("pip install '{}'", v) ) {
                             ret = Err( format!("pip install failed for '{}'", v) );
                             break
                         }
@@ -68,6 +69,7 @@ impl Commander {
                 },
                 "cargo" => {
                     for v in values.iter() {
+                        if v.is_empty() { continue }
                         if let Err(_) = self.run( &format!("cargo install {}", v) ) {
                             ret = Err( format!("cargo install failed for '{}'", v) );
                             break
@@ -88,20 +90,17 @@ impl Commander {
     }
 
     pub fn build_script(&self, args:Option<Vec<String>>) -> ExecResult {
-        let mut ret = Ok(());
         let args = match args {
             Some(args) => args,
             None => return Ok(())
         };
 
-        for command in args.iter() {
-            if let Err(_) = self.run(command) {
-                ret = Err( format!("build failed for '{}'", command) );
-                break
+        args.iter().try_for_each(|command|{
+            match self.run(command) {
+                Ok(_) => Ok(()),
+                Err(_) => Err( format!("build failed for '{}'", command) )
             }
-        }
-
-        ret
+        })
     }
 
     pub fn build_output(&self, args:Vec<String>) -> Option<Vec<String>> {
@@ -153,22 +152,20 @@ impl Commander {
     }
 
     pub fn runtime_enable(&self, args:&Vec<String>) -> ExecResult {
-        let mut ret = Ok(());
-
-        for arg in args.iter() {
+        args.iter().try_for_each(|arg|{
             match self.runtime_status(arg) {
-                Some(true) => {},
-                Some(false) | None => {
-                    ret = Err( format!("Enable failed for '{}'", arg) );
-                    break
-                }
+                Some(true) | None => Ok(()),
+                Some(false) => Err( format!("Enable failed for '{}'", arg) )
             }
-        }
-
-        ret
+        })
     }
 
     pub fn runtime_disable(&self, args:&Vec<String>) -> ExecResult {
-        self.runtime_enable(args)
+        args.iter().try_for_each(|arg|{
+            match self.runtime_status(arg) {
+                Some(true) | None => Ok(()),
+                Some(false) => Err( format!("Disable failed for '{}'", arg) )
+            }
+        })
     }
 }
