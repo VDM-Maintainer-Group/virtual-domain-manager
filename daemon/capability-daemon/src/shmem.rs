@@ -8,8 +8,8 @@ use shared_memory::{ShmemConf};
 use serde::{Serialize,Deserialize};
 use threadpool::ThreadPool;
 //
-use crate::core::ffi::{FFIDescriptor, ArcFFIManager};
-use crate::core::traits::IPCProtocol;
+use serde_ipc::{FFIDescriptor, ArcFFIManager};
+use serde_ipc::IPCProtocol;
 
 type Message = (u32, String);
 
@@ -229,7 +229,6 @@ fn _close(sem:*mut libc::sem_t) {
     unsafe{ libc::sem_close(sem) };
 }
 
-#[derive(Clone)]
 pub struct ShMem {
     uid: String,
     ffi: Option<ArcFFIManager>,

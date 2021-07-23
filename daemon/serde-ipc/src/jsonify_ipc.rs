@@ -159,8 +159,8 @@ where P: IPCProtocol
 
 #[test]
 fn install_and_uninstall() {
-    use crate::protocol::shmem;
-    let server = JsonifyIPC::<shmem::ShMem>::new(None, None);
+    use crate::protocol::DummyProtocol;
+    let server = JsonifyIPC::<DummyProtocol>::new(None, None);
     let src_path:String = "~/build/demo/python".into();
     server.install_service(src_path).unwrap();
     server.uninstall_service("test".into()).unwrap();

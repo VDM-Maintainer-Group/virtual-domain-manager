@@ -12,7 +12,7 @@ pub trait Serde
     where T: Into<Self::Value> + Clone;
 }
 
-pub trait IPCProtocol: Sync+Send+Clone+'static
+pub trait IPCProtocol: Sync+Send+'static
 {
     type Message: Send;
 
