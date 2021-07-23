@@ -2,7 +2,7 @@
 // export core interface
 mod core;
 pub use crate::core::traits::{IPCProtocol,};
-pub use crate::core::ffi::{FFIDescriptor, FFIManager, ArcFFIManager};
+pub use crate::core::ffi::{MetaFuncMap, FFIDescriptor, FFIManager, ArcFFIManager};
 
 // export default protocols
 pub mod protocol;

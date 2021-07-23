@@ -8,7 +8,7 @@ use shared_memory::{ShmemConf};
 use serde::{Serialize,Deserialize};
 use threadpool::ThreadPool;
 //
-use serde_ipc::{FFIDescriptor, ArcFFIManager};
+use serde_ipc::{MetaFuncMap, FFIDescriptor, ArcFFIManager};
 use serde_ipc::IPCProtocol;
 
 type Message = (u32, String);
@@ -52,7 +52,7 @@ struct NameCall {
 #[derive(Serialize,Deserialize)]
 struct NameCallRes {
     sig: String,
-    spec: String
+    spec: Option<MetaFuncMap>
 }
 
 #[derive(Serialize,Deserialize)]

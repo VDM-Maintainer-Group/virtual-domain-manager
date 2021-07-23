@@ -130,7 +130,7 @@ impl<P> JsonifyIPC<P>
 where P: IPCProtocol
 {
     /// Get service directly via FFI Manager
-    pub fn get_service(&mut self, name:String) -> Option<(String,String)> {
+    pub fn get_service(&mut self, name:String) -> Option<(String,Option<ffi::MetaFuncMap>)> {
         let mut _ffi = self.ffi.lock().ok()?;
         _ffi.register(&name)
     }
@@ -158,10 +158,15 @@ where P: IPCProtocol
 }
 
 #[test]
-fn install_and_uninstall() {
+fn register_and_unregister() {
     use crate::protocol::DummyProtocol;
-    let server = JsonifyIPC::<DummyProtocol>::new(None, None);
+    let mut server = JsonifyIPC::<DummyProtocol>::new(None, None);
     let src_path:String = "~/build/demo/python".into();
     server.install_service(src_path).unwrap();
+    {
+        let (sig, spec) = server.get_service("test".into()).unwrap();
+        println!("{}", serde_json::to_string(&spec.unwrap()).unwrap());
+        server.put_service("test".into(), sig);
+    }
     server.uninstall_service("test".into()).unwrap();
 }

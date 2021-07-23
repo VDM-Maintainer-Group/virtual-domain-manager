@@ -15,6 +15,7 @@ use crate::core::service::*;
 pub type ArcFFIManager = Arc<Mutex<FFIManager>>;
 pub type FFIDescriptor = (String, String, Vec<String>);
 pub type DepMap = HashMap<String, Vec<String>>;
+pub type MetaFuncMap = HashMap<String, MetaFunc>;
 
 #[derive(Serialize, Deserialize)]
 pub struct BuildTemplate {
@@ -31,7 +32,7 @@ pub struct RuntimeTemplate {
     disable: Vec<String>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MetaFunc {
     pub restype: String,
     pub args: Vec<HashMap<String, String>>
@@ -161,7 +162,7 @@ impl FFIManager {
             }
         };
 
-        self.service_map.insert( name.into(), service_sig )?;
+        self.service_map.insert( name.into(), service_sig );
         Some( service_sig )
     }
 
@@ -178,11 +179,19 @@ impl FFIManager {
         Some( usage_sig )
     }
 
-    fn insert_service(&mut self, sig:ServiceSig, cfg: ServiceConfig) -> Option<()> {
-        let service = Service::load( &cfg.entry, cfg.metadata )?;
-        let service = Arc::new(service);
-        self.services.insert(sig, service);
-        Some(())
+    fn insert_service(&mut self, cfg: ServiceConfig) -> Option<ServiceSig> {
+        assert_eq!( self.service_map.get(&cfg.metadata.name), None ); //FIXME: remove after debug pass
+
+        // 1. load service
+        let name = String::from( &cfg.metadata.name );
+        let service = Arc::new( Service::load( &cfg.entry, cfg.metadata )? );
+        // 2. allocate service signature
+        let srv_sig = self.insert_service_map(&name).unwrap(); //"None" is always impossible
+        self.services.insert(srv_sig, service);
+        // 3. initialize usage map
+        self.usage_map.insert(srv_sig, BTreeSet::new());
+        
+        Some(srv_sig)
     }
 
     fn cleanup(&mut self, srv_name:&String, srv_sig:&ServiceSig) {
@@ -245,26 +254,20 @@ impl FFIManager {
 
 // service register / unregister
 impl FFIManager {
-    pub fn register(&mut self, name: &String) -> Option<(String,String)> {
+    pub fn register(&mut self, name: &String) -> Option<(String,Option<MetaFuncMap>)> {
         let (service_sig, spec) = {
-            if let Some(sig) = self.service_map.get(name) {
-                Some( (*sig, "".into()) )
-            }
-            else {
-                let cfg = self.load_config_file(name)?;
-                let srv_sig = self.insert_service_map(name)?; //"None" is always impossible
-                let spec = serde_json::to_string( &cfg.metadata.func ).ok()?;
-                // try insert service; cleanup if failed.
-                if let Some(_) = self.insert_service(srv_sig, cfg) {
-                    Some( (srv_sig, spec) )
-                }
-                else {
-                    self.cleanup(name, &srv_sig);
-                    None
+            match self.service_map.get(name) {
+                Some(sig) => Some( (*sig, None) ),
+                None => { //load service here
+                    let cfg = self.load_config_file(name)?;
+                    let spec = cfg.metadata.func.clone();
+                    match self.insert_service(cfg) {
+                        Some(srv_sig) => Some( (srv_sig, Some(spec)) ),
+                        None => None
+                    }
                 }
             }
         }?;
-
         let usage_sig = self.insert_usage_map(&service_sig)?; //"None" is always impossible
         let srv_use_sig:u64 = ((service_sig as u64) << 32) + (usage_sig as u64);
         Some( (srv_use_sig.to_string(),spec) )
