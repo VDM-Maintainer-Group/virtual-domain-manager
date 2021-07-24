@@ -105,8 +105,6 @@ impl<'a> Func<'a> {
             Self::PythonFunc(func) => {
                 let (mod_name, func_name) = func;
                 Python::with_gil(|py|{
-                    println!("====== at least with GIL ======");
-                    //
                     let py_module = PyModule::import(py, mod_name).ok()?;
                     let py_func = py_module.getattr(func_name).ok()?;
                     let kwargs:Vec<(String,String)> = args.into_iter().enumerate().map(|(i,v)|{

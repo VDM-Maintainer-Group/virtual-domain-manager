@@ -331,6 +331,7 @@ impl FFIManager
         });
     }
     
+    //TODO: NOT DEBUGGED.
     pub fn chain_execute<CB>(&self, descriptors:Vec<FFIDescriptor>, callback:CB)
     where CB: FnOnce(String) -> () + Send + 'static
     {

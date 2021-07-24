@@ -174,11 +174,12 @@ fn register_run_and_unregister() {
             let descriptor: ffi::FFIDescriptor = (sig.clone(), "main".into(), args);
             //
             let _ffi = server.ffi.lock().unwrap();
-            _ffi.execute(descriptor, move |res|{
-                println!("get results: {}",res);
-            });
-            //
-            std::thread::sleep( std::time::Duration::from_millis(10) );
+            for _ in 0..10 {
+                _ffi.execute(descriptor.clone(), move |res|{
+                    println!("get results: {}",res);
+                });
+            }
+            std::thread::sleep( std::time::Duration::from_millis(500) );
         }
         server.put_service("test".into(), sig);
         server.put_service("test".into(), sig1);
