@@ -6,6 +6,7 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import argparse
 import tempfile
+import pyvdm.core.vdm_capability_daemon as vcd
 from pyvdm.core.utils import *
 from pyvdm.core.errcode import CapabilityCode as ERR
 

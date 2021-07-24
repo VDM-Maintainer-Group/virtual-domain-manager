@@ -24,8 +24,10 @@ if __name__ == '__main__':
         package_dir = {'': 'build'},
         packages = find_packages(where='build'),
         package_data = {
+            "" : ["core/vdm_capability_daemon.so"],
             "pyvdm": ["assets/*"],
         },
+        include_package_data=True,
         entry_points = {
             'console_scripts': [
                 'pyvdm = pyvdm.core.manager:main',
