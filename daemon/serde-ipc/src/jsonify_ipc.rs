@@ -177,6 +177,8 @@ fn register_run_and_unregister() {
             _ffi.execute(descriptor, move |res|{
                 println!("get results: {}",res);
             });
+            //
+            std::thread::sleep( std::time::Duration::from_millis(10) );
         }
         server.put_service("test".into(), sig);
         server.put_service("test".into(), sig1);

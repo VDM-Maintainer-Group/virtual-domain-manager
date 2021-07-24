@@ -98,7 +98,6 @@ impl FFIManager {
             std::env::set_current_dir(&root).unwrap(); 
         }
         {
-            pyo3::prepare_freethreaded_python();
             let root = root.canonicalize().unwrap();
             Python::with_gil(|py| {
                 let sys = py.import("sys").unwrap();
@@ -321,24 +320,15 @@ impl FFIManager
     {
         let (sig, func, args) = descriptor;
         let service = self.get_service_by_sig(&sig);
-
-        //FIXME: pyo3 not in threadpool
-        {
+        
+        self.pool.execute(move || {
             let result = {
                 if let Some(service) = service {
                     service.call(&func, args)
                 } else { None }
             }.unwrap_or( String::new() );
             callback(result);
-        }
-        // self.pool.execute(move || {
-        //     let result = {
-        //         if let Some(service) = service {
-        //             service.call(&func, args)
-        //         } else { None }
-        //     }.unwrap_or( String::new() );
-        //     callback(result);
-        // });
+        });
     }
     
     pub fn chain_execute<CB>(&self, descriptors:Vec<FFIDescriptor>, callback:CB)

@@ -11,7 +11,7 @@ use pyo3::types::*;
 use crate::core::ffi::{Metadata, MetaFunc};
 
 type PyFuncName = String;
-type PyLibCode = String;
+type PyModName = String;
 
 enum RawFunc<'a,T,R>
 {
@@ -64,7 +64,7 @@ impl<'a,T,R> RawFunc<'a,T,R> {
 enum Func<'a> {
     CFunc(RawFunc<'a,*const c_char, *const c_char>),
     RustFunc(RawFunc<'a,String, String>),
-    PythonFunc((&'a PyLibCode, PyFuncName))
+    PythonFunc((&'a PyModName, PyFuncName))
 }
 
 impl<'a> Func<'a> {
@@ -81,7 +81,7 @@ impl<'a> Func<'a> {
                 } else {None}
             }
             LibraryContext::Python(lib) => {
-                Some( Func::PythonFunc(( &lib, name.clone() )) )
+                Some( Func::PythonFunc( (&lib, name.clone()) ) )
             }
         }
     }
@@ -103,10 +103,12 @@ impl<'a> Func<'a> {
                 func.call(args)
             },
             Self::PythonFunc(func) => {
-                let (lib, func) = func;
+                let (mod_name, func_name) = func;
                 Python::with_gil(|py|{
-                    let py_module = PyModule::from_code(py, &lib, "__internal_file__", "__internal_module__").ok()?;
-                    let py_func = py_module.getattr(func).ok()?;
+                    println!("====== at least with GIL ======");
+                    //
+                    let py_module = PyModule::import(py, mod_name).ok()?;
+                    let py_func = py_module.getattr(func_name).ok()?;
                     let kwargs:Vec<(String,String)> = args.into_iter().enumerate().map(|(i,v)|{
                         ( args_name[i].to_string(), v )
                     }).collect();
@@ -121,7 +123,7 @@ impl<'a> Func<'a> {
 enum LibraryContext {
     CDLL(libloading::Library),
     Rust(libloading::Library),
-    Python(PyLibCode)
+    Python(PyModName)
 }
 
 pub struct Service {
@@ -144,7 +146,11 @@ impl Service {
             }
             "python" => {
                 if let Ok(contents) = std::fs::read_to_string(entry) {
-                    Some( LibraryContext::Python(contents) )
+                    let module_name = std::path::Path::new(entry).file_name()?.to_str()?;
+                    Python::with_gil(|py|{
+                        let _py_module = PyModule::from_code(py, &contents, "__internal_file__", module_name).ok();
+                    });
+                    Some( LibraryContext::Python(module_name.into()) )
                 } else { None }
             },
             _ => { None }
