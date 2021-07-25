@@ -38,6 +38,9 @@ class CapabilityCode(ErrorCode):
     VCD_INTERNAL_ERROR    = 0x1100
     ARCHIVE_UNPACK_FAILED = 0x1200
     URL_PARSE_FAILURE     = 0x1300
+    DAEMON_ALREADY_EXISTS = 0x1400
+    DAEMON_IS_RUNNING     = 0x1500
+    DAEMON_IS_STOPPED     = 0x1600
     pass
 
 ## Bare Code Section

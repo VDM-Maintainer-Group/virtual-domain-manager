@@ -3,7 +3,7 @@ use std::{io, fs};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 // third-party crates
-use tokio::runtime::Runtime as TokioRuntime;
+// use tokio::runtime::Runtime as TokioRuntime;
 use serde_json::{self, Value as JsonValue};
 // root crates
 use crate::core::ipc;
@@ -11,14 +11,11 @@ use crate::core::ffi;
 use crate::core::traits::{Serde, IPCProtocol};
 use crate::core::command::ExecResult;
 
-pub struct JsonifyIPC<P>
-where P: IPCProtocol
+pub struct JsonifyIPC
 {
     // root: PathBuf,
     server_port: u16,
-    rt: TokioRuntime,
     ffi: ffi::ArcFFIManager,
-    server: Option<Arc<Mutex<ipc::IPCServer<P>>>>
 }
 
 impl Serde for ffi::FFIManager
@@ -37,8 +34,7 @@ impl Serde for ffi::FFIManager
     }
 }
 
-impl<P> JsonifyIPC<P>
-where P: IPCProtocol
+impl JsonifyIPC
 {
     /// Return JsonifyIPC handle configured with given:
     /// - (Optional) **path**: the working directory for capability, default is `~/.vdm/libs`
@@ -47,41 +43,30 @@ where P: IPCProtocol
         let root = PathBuf::from( shellexpand::tilde(&root).into_owned() );
         let server_port = server_port.unwrap_or(42000);
 
-        let rt = TokioRuntime::new().unwrap();
         let ffi = Arc::new(Mutex::new(
             ffi::FFIManager::new(root)
         ));
         
         JsonifyIPC {
-            server_port, rt, ffi, server:None
+            server_port, ffi
         }
     }
 
     /// Start the JsonifyIPC daemon waiting for client connection.
-    pub fn start(&mut self) {
+    #[tokio::main]
+    pub async fn start<P>(&mut self)
+    where P: IPCProtocol
+    {
         let ffi = self.ffi.clone();
-
-        self.server = Some( ipc::IPCServer::<P>::new(
+        let server = ipc::IPCServer::<P>::new(
             self.server_port, ffi
-        ) );
+        );
 
-        let _server = self.server.clone();
-        self.rt.spawn(async move {
-            ipc::IPCServer::daemon( _server.unwrap() ).await
-        });
-    }
-
-    /// Stop the JsonifyIPC daemon by: 1) shutdown all tokio threads; 2) stop IPCServer thread pool.
-    pub fn stop(mut self) {
-        self.rt.shutdown_background(); //drop occurs here
-        self.server = None; //drop occurs here
-        //
-        self.rt = TokioRuntime::new().unwrap();
+        ipc::IPCServer::daemon( server ).await
     }
 }
 
-impl<P> JsonifyIPC<P>
-where P: IPCProtocol
+impl JsonifyIPC
 {
     /// Add service via FFI Manager
     pub fn install_service(&self, src_path:String) -> ExecResult {
@@ -126,8 +111,7 @@ where P: IPCProtocol
     }
 }
 
-impl<P> JsonifyIPC<P>
-where P: IPCProtocol
+impl JsonifyIPC
 {
     /// Get service directly via FFI Manager
     pub fn get_service(&mut self, name:String) -> Option<(String,Option<ffi::MetaFuncMap>)> {
@@ -159,8 +143,7 @@ where P: IPCProtocol
 
 #[test]
 fn register_run_and_unregister() {
-    use crate::protocol::DummyProtocol;
-    let mut server = JsonifyIPC::<DummyProtocol>::new(None, None);
+    let mut server = JsonifyIPC::new(None, None);
     let src_path:String = "~/build/demo/python".into();
     server.install_service(src_path).unwrap();
     {
@@ -184,5 +167,5 @@ fn register_run_and_unregister() {
         server.put_service("test".into(), sig);
         server.put_service("test".into(), sig1);
     }
-    // server.uninstall_service("test".into()).unwrap();
+    server.uninstall_service("test".into()).unwrap();
 }

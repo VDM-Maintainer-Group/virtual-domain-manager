@@ -167,7 +167,7 @@ def main():
     args = parser.parse_args()
     ret = execute(args.command, args)
     if isinstance(ret, ErrorCode):
-        raise Exception( '%s: %s'%(type(ret).__name__, ret.name) )
+        print( '%s: %s'%(type(ret).__name__, ret.name) )
     pass
 
 if __name__ == '__main__':

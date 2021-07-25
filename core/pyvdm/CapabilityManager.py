@@ -4,14 +4,18 @@ import sys, inspect
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
-import argparse
+import os, psutil, argparse
 import tempfile, shutil
+import subprocess as sp
 from pyvdm.daemon.vdm_capability_daemon import CapabilityDaemon
 from pyvdm.core.utils import *
 from pyvdm.core.errcode import CapabilityCode as ERR
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 CAPABILITY_DIRECTORY = PARENT_ROOT / 'capability'
+
+def _start_daemon(root):
+    CapabilityManager(root).vcd.start_daemon()
 
 class CapabilityManager:
     def __init__(self, root=''):
@@ -21,7 +25,7 @@ class CapabilityManager:
             self.root = CAPABILITY_DIRECTORY
         self.root.mkdir(exist_ok=True, parents=True) #ensure root existing
         self.temp = Path( tempfile.mkdtemp() )
-        self.vcd = CapabilityDaemon(root=self.root)
+        self.vcd = CapabilityDaemon( root=self.root.as_posix() )
         pass
 
     def install(self, url:str) -> ERR:
@@ -76,13 +80,28 @@ class CapabilityManager:
         print(ret)
         return ret
 
-    def start_daemon(self):
-        #TODO: if not find process, start it; else return
-        self.vcd.start_daemon()
-        pass
-
-    def stop_daemon(self):
-        #TODO: kill the process
+    def daemon(self, option) -> ERR:
+        name = 'VDM-Capability-Daemon'
+        proc_iter = psutil.process_iter(attrs=['cmdline', 'pid'])
+        proc = next( (x for x in proc_iter if name in ' '.join(x.info['cmdline'])), '' )
+        #
+        if option=='start':
+            if proc:
+                return ERR.DAEMON_ALREADY_EXISTS
+            _file = (self.temp/name).as_posix()
+            with open(_file, 'w') as f:
+                f.write('import sys; import pyvdm.core.CapabilityManager as A_MAN; A_MAN._start_daemon(sys.argv[1])')
+            sp.Popen(['python3', _file, self.root.as_posix()])
+            return ERR.ALL_CLEAN
+        elif option=='stop':
+            if proc:
+                psutil.Process( proc.info['pid'] ).terminate()
+            return ERR.ALL_CLEAN
+        elif option=='status':
+            if proc:
+                return ERR.DAEMON_IS_RUNNING
+            else:
+                return ERR.DAEMON_IS_STOPPED
         pass
 
     pass
@@ -97,6 +116,8 @@ def execute(am, command, args, verbose=False):
         return am.enable(args.name)
     elif command=='disable':
         return am.disable(args.name)
+    elif command=='daemon':
+        return am.daemon(args.option)
     elif command=='query':
         return am.query(args.name)
     elif command==None:
@@ -125,6 +146,11 @@ def init_subparsers(subparsers):
         help='disable an installed capability.')
     p_disable.add_argument('name', metavar='name',
         help='the capability name')
+    #
+    p_daemon = subparsers.add_parser('daemon',
+        help='capability daemon manipulation.')
+    p_daemon.add_argument('option', metavar='option', choices=['start', 'status', 'stop'],
+        help='[start,stop,status]')
     #
     p_query = subparsers.add_parser('query',
         help='query the status of installed capability.')

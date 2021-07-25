@@ -8,7 +8,7 @@ use crate::shmem::ShMem;
 
 #[pyclass]
 struct CapabilityDaemon {
-    server: JsonifyIPC<ShMem>
+    server: JsonifyIPC
 }
 
 #[pymethods]
@@ -17,7 +17,7 @@ impl CapabilityDaemon {
     fn new(root:Option<String>, port:Option<u16>) -> Self {
         let root = Some( root.unwrap_or(VDM_CAPABILITY_DIR.into()) );
         let server_port = Some( port.unwrap_or(VDM_SERVER_PORT) );
-        let server = JsonifyIPC::<ShMem>::new(root, server_port);
+        let server = JsonifyIPC::new(root, server_port);
         CapabilityDaemon{ server }
     }
 
@@ -64,15 +64,9 @@ impl CapabilityDaemon {
 
     #[pyo3(name = "start_daemon")]
     fn start_daemon(&mut self) -> PyResult<()> {
-        self.server.start();
+        self.server.start::<ShMem>();
         Ok(())
     }
-
-    // #[pyo3(name = "stop_daemon")]
-    // fn stop_daemon(&mut self) -> PyResult<()> {
-    //     self.server.stop();
-    //     Ok(())
-    // }
 }
 
 #[pymodule]
