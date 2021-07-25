@@ -38,7 +38,6 @@ class CapabilityManager:
                 _path = tmp_dir
             except:
                 return ERR.ARCHIVE_UNPACK_FAILED
-            pass
         elif url.is_dir():
             _path = url.expanduser().resolve()
         else:
@@ -108,7 +107,9 @@ class CapabilityManager:
 
 def execute(am, command, args, verbose=False):
     assert( isinstance(am, CapabilityManager) )
-    if command=='install':
+    if command=='daemon':
+        return am.daemon(args.option)
+    elif command=='install':
         return am.install(args.url)
     elif command=='uninstall':
         return am.uninstall(args.name)
@@ -116,8 +117,6 @@ def execute(am, command, args, verbose=False):
         return am.enable(args.name)
     elif command=='disable':
         return am.disable(args.name)
-    elif command=='daemon':
-        return am.daemon(args.option)
     elif command=='query':
         return am.query(args.name)
     elif command==None:
