@@ -181,7 +181,7 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
             eprintln!("Unable to create or open shmem flink: {}", e);
             return;
         }
-    };
+    }; //panic as you like
     let sem_res = CString::new( format!("/{}", res_id) )
         .map_err(|_| format!("CString::new failed"))
         .and_then(|sem_name| {
@@ -270,12 +270,12 @@ impl IPCProtocol for ShMem {
     }
 
     fn spawn_recv_thread(&mut self, tx: mpsc::Sender<Self::Message>) {
-        let ffi = self.ffi.clone();
+        let ffi = Arc::clone( self.ffi.as_ref().unwrap() );
         let req_id = format!("{}_req", self.uid);
         
         if let Ok(pool_obj) = self.pool.lock() {
             pool_obj.execute(move || {
-                _recv_loop(ffi.unwrap(), tx, req_id);
+                _recv_loop(ffi, tx, req_id);
             });
         }
     }

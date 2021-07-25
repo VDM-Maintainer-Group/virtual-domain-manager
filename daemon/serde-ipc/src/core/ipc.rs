@@ -32,47 +32,52 @@ where P:IPCProtocol
         ))
     }
 
-    async fn try_connect(_self: Arc<Mutex<Self>>, mut socket:TcpStream) {
+    async fn try_connect(_self: Arc<Mutex<Self>>, mut socket:TcpStream) -> Result<(),String>
+    {
         let mut buf = [0; VDM_CLIENT_ID_LEN+1];
-        let mut id_buf = Vec::<u8>::new();
+        let mut id_buf = Vec::<u8>::with_capacity(VDM_CLIENT_ID_LEN);
         let (tx, rx) = mpsc::channel::< P::Message >();
+        let peer_port = socket.peer_addr().unwrap().port();
 
         // handshake-I(a): recv id
         let n = match socket.read(&mut buf).await {
-            Ok(n) => n,
-            Err(e) => {
-                eprintln!("hs1: failed to write to socket; err = {:?}", e);
-                return
+            Ok(n) if n==VDM_CLIENT_ID_LEN => Ok(n),
+            Ok(_) | Err(_) => {
+                Err( format!("[peer:{}] Phase-I handshake failed.", peer_port) )
             }
-        };
+        }?;
         id_buf.extend( buf[..n].iter().copied() );
-        let _id = std::str::from_utf8(&id_buf).unwrap();
+        let _id = std::str::from_utf8(&id_buf)
+            .map_err( format!("[peer:{}] Phase-I ID parse failed.", peer_port) )?;
         let mut _protocol = {
             if let Ok(mut _self) = _self.lock() {
                 let ffi = _self.ffi.clone();
                 Some( P::new(format!("{}", _id), ffi) )
             } else {None}
-        }.unwrap();
+        }.ok_or( format!("[peer:{}] Phase-I protocol init failed.", peer_port) )?;
 
         // handshake-I(b): spawn "send" thread
         _protocol.spawn_send_thread(rx);
 
         // handshake-II: write back
-        if let Err(e) = socket.write_all(&buf).await {
-            eprintln!("hs2: failed to write to socket; err = {:?}", e);
-            return;
-        }
+        socket.write_all(&buf).await.map_err(
+            format!("[peer:{}] Phase-II handshake failed.", peer_port) )?;
 
         // handshake-III: spawn "recv" thread
-        if let Err(e) = socket.read(&mut buf).await {
-            eprintln!("hs3: failed to read from socket; err = {:?}", e);
-            return;
-        }
+        socket.read(&mut buf).await.map_err(
+            format!("[peer:{}] Phase-III handshake failed.", peer_port) )?;
         _protocol.spawn_recv_thread(tx);
 
-        // record this connection
-        if let Ok(mut _self) = _self.lock() {
-            _self.conns.push( _protocol );
+        // try to record this connection
+        match _self.lock() {
+            Ok(mut _self) => {
+                _self.conns.push( _protocol );
+                Ok(())
+            },
+            Err(_) => {
+                _protocol.stop();
+                Err( format!("[peer:{}] Phase-III conn record failed.", peer_port) )
+            }
         }
     }
 
@@ -86,7 +91,10 @@ where P:IPCProtocol
         let listener = TcpListener::bind(sock_addr).await.unwrap();
 
         loop {
-            let (socket, _) = listener.accept().await.unwrap();
+            let (socket, _) = match listener.accept().await {
+                Ok(conn) => conn,
+                Err(_) => continue
+            };
             let _self = _self.clone();
 
             //cleanup (the first stopped) before connect
@@ -97,7 +105,9 @@ where P:IPCProtocol
             }
 
             tokio::spawn(async move {
-                Self::try_connect(_self, socket).await
+                if let Err(msg) = Self::try_connect(_self, socket).await {
+                    eprintln!( format!("{}",msg) );
+                }
             });
         }
 

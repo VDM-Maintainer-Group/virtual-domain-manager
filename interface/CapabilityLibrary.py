@@ -342,18 +342,19 @@ class CapabilityLibrary:
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         __server = ShmManager(self.__id)
         try:
+            _id = self.__id.encode()
             # handshake-I
             _sock.connect(_addr)
-            _sock.sendall(self.__id)
+            _sock.sendall(_id)
             # handshake-II
             _tmp = _sock.recv(VDM_CLIENT_ID_LEN+1) #+1 for '\0'
-            if _tmp==self.__id:
+            if _tmp==_id:
                 self.__server = __server
                 self.__server.start()
             else:
                 raise Exception('Invalid Connection: %s'%_tmp)
             # handshake-III
-            _sock.sendall(self.__id)
+            _sock.sendall(_id)
         except Exception as e:
             __server.close()
             raise e
