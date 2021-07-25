@@ -8,12 +8,14 @@ import os, argparse, re
 import tempfile, shutil
 import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
+import pyvdm.core.CapabilityManager as A_MAN
 from pyvdm.core.utils import *
 from pyvdm.core.errcode import *
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 PLUGIN_DIRECTORY = PARENT_ROOT / 'plugins'
 DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
+CAPABILITY_DIRECTORY = PARENT_ROOT / 'capability'
 
 class CoreManager:
     def __init__(self):
@@ -23,6 +25,7 @@ class CoreManager:
         self.stat = StatFile(PARENT_ROOT)
         self.dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
         self.pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
+        self.am = A_MAN.CapabilityManager(CAPABILITY_DIRECTORY)
         #
         _domain = self.stat.getStat()
         if _domain:
@@ -113,6 +116,10 @@ def execute(command, args):
         pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
         return P_MAN.execute(pm, args.plugin_command, args)
 
+    if command=='capability':
+        am = A_MAN.CapabilityManager(CAPABILITY_DIRECTORY)
+        return A_MAN.execute(am, args.capability_command, args)
+
     cm = CoreManager()
     if args.save_flag:
         return cm.save_domain()
@@ -147,6 +154,12 @@ def main():
         help='Call VDM Plugin Manager.')
     pm_subparsers = pm_parser.add_subparsers(dest='plugin_command')
     P_MAN.init_subparsers(pm_subparsers)
+
+    # capability_manager
+    am_parser = subparsers.add_parser('capability',
+        help='Call VDM Capability Manager.')
+    am_subparsers = am_parser.add_subparsers(dest='capability_command')
+    A_MAN.init_subparsers(am_subparsers)
 
     # sync_manager
     #TODO: add sync_manager    

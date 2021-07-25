@@ -5,8 +5,8 @@ from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import argparse
-import tempfile
-import pyvdm.core.vdm_capability_daemon as vcd
+import tempfile, shutil
+from pyvdm.daemon.vdm_capability_daemon import CapabilityDaemon
 from pyvdm.core.utils import *
 from pyvdm.core.errcode import CapabilityCode as ERR
 
@@ -21,21 +21,68 @@ class CapabilityManager:
             self.root = CAPABILITY_DIRECTORY
         self.root.mkdir(exist_ok=True, parents=True) #ensure root existing
         self.temp = Path( tempfile.mkdtemp() )
+        self.vcd = CapabilityDaemon(root=self.root)
         pass
 
-    def install(self, url):
+    def install(self, url:str) -> ERR:
+        url = Path(url)
+        #
+        if url.is_file():
+            try:
+                tmp_dir = self.temp / url.name
+                shutil.unpack_archive( POSIX(url), POSIX(tmp_dir) )
+                _path = tmp_dir
+            except:
+                return ERR.ARCHIVE_UNPACK_FAILED
+            pass
+        elif url.is_dir():
+            _path = url.expanduser().resolve()
+        else:
+            return ERR.URL_PARSE_FAILURE
+        #
+        ret = self.vcd.install(_path)
+        if ret:
+            print(ret)
+            return ERR.VCD_INTERNAL_ERROR
+        else:
+            return ERR.ALL_CLEAN
+
+    def uninstall(self, name:str) -> ERR:
+        ret = self.vcd.uninstall(name)
+        if ret:
+            print(ret)
+            return ERR.VCD_INTERNAL_ERROR
+        else:
+            return ERR.ALL_CLEAN
+
+    def enable(self, name:str) -> ERR:
+        ret = self.vcd.enable(name)
+        if ret:
+            print(ret)
+            return ERR.VCD_INTERNAL_ERROR
+        else:
+            return ERR.ALL_CLEAN
+
+    def disable(self, name) -> ERR:
+        ret = self.vcd.disable(name)
+        if ret:
+            print(ret)
+            return ERR.VCD_INTERNAL_ERROR
+        else:
+            return ERR.ALL_CLEAN
+
+    def query(self, name='') -> str:
+        ret = self.vcd.query(name)
+        print(ret)
+        return ret
+
+    def start_daemon(self):
+        #TODO: if not find process, start it; else return
+        self.vcd.start_daemon()
         pass
 
-    def uninstall(self, name):
-        pass
-
-    def enable(self, name):
-        pass
-
-    def disable(self, name):
-        pass
-
-    def query(self, name=''):
+    def stop_daemon(self):
+        #TODO: kill the process
         pass
 
     pass

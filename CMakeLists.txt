@@ -58,10 +58,11 @@ add_custom_target(build-pyvdm
         COMMAND ${CMAKE_COMMAND} -E copy ${PYVDM_API} ${PYVDM_DIST_DIR}/interface
         COMMAND ${CMAKE_COMMAND} -E copy ${PYVDM_WRAPPER} ${PYVDM_DIST_DIR}/interface
         COMMAND ${CMAKE_COMMAND} -E copy_directory "./core/pyvdm/" ${PYVDM_DIST_DIR}/core
-        COMMAND ${CMAKE_COMMAND} -E copy ${PYVDM_DAEMON} ${PYVDM_DIST_DIR}/core/vdm_capability_daemon.so
+        COMMAND ${CMAKE_COMMAND} -E copy ${PYVDM_DAEMON} ${PYVDM_DIST_DIR}/daemon/vdm_capability_daemon.so
         COMMAND ${CMAKE_COMMAND} -E copy_directory "./gui/pyvdm/" ${PYVDM_DIST_DIR}/gui
         COMMAND ${CMAKE_COMMAND} -E copy_directory "./assets/" ${PYVDM_DIST_DIR}/assets
         #
         COMMAND ${CMAKE_COMMAND} -E touch ${PYVDM_DIST_DIR}/__init__.py
+        COMMAND ${CMAKE_COMMAND} -E touch ${PYVDM_DIST_DIR}/daemon/__init__.py
         COMMAND python3 setup.py bdist_wheel
 )

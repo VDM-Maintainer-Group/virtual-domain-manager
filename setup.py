@@ -24,7 +24,7 @@ if __name__ == '__main__':
         package_dir = {'': 'build'},
         packages = find_packages(where='build'),
         package_data = {
-            "" : ["core/vdm_capability_daemon.so"],
+            "" : ["daemon/*.so"],
             "pyvdm": ["assets/*"],
         },
         include_package_data=True,

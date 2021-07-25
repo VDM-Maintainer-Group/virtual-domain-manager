@@ -1,11 +1,11 @@
 
-from enum import Enum,auto
+from enum import Enum,IntEnum
 
 class ErrorCode(Enum):
     pass
 
 ## Enum Code Section
-class PluginCode(ErrorCode):
+class PluginCode(ErrorCode,Enum):
     CONFIG_REQUIRED_FIELD_MISSING = 0x1001
     CONFIG_MAIN_ENTRY_ILLEGAL     = 0x1002
     CONFIG_MAIN_ENTRY_MISSING     = 0x1003
@@ -34,6 +34,10 @@ class DomainCode(ErrorCode):
     pass
 
 class CapabilityCode(ErrorCode):
+    ALL_CLEAN = 0x0000
+    VCD_INTERNAL_ERROR    = 0x1100
+    ARCHIVE_UNPACK_FAILED = 0x1200
+    URL_PARSE_FAILURE     = 0x1300
     pass
 
 ## Bare Code Section
