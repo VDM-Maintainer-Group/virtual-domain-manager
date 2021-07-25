@@ -347,7 +347,7 @@ class CapabilityLibrary:
             _sock.connect(_addr)
             _sock.sendall(_id)
             # handshake-II
-            _tmp = _sock.recv(VDM_CLIENT_ID_LEN+1) #+1 for '\0'
+            _tmp = _sock.recv(VDM_CLIENT_ID_LEN) #+1 for '\0'
             if _tmp==_id:
                 self.__server = __server
                 self.__server.start()

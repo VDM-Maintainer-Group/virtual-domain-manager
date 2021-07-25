@@ -48,7 +48,7 @@ where P:IPCProtocol
         }?;
         id_buf.extend( buf[..n].iter().copied() );
         let _id = std::str::from_utf8(&id_buf)
-            .map_err( format!("[peer:{}] Phase-I ID parse failed.", peer_port) )?;
+            .map_err( |_|{format!("[peer:{}] Phase-I ID parse failed.", peer_port)} )?;
         let mut _protocol = {
             if let Ok(mut _self) = _self.lock() {
                 let ffi = _self.ffi.clone();
@@ -60,12 +60,12 @@ where P:IPCProtocol
         _protocol.spawn_send_thread(rx);
 
         // handshake-II: write back
-        socket.write_all(&buf).await.map_err(
-            format!("[peer:{}] Phase-II handshake failed.", peer_port) )?;
+        socket.write_all(&buf).await.map_err(|_| {
+            format!("[peer:{}] Phase-II handshake failed.", peer_port) })?;
 
         // handshake-III: spawn "recv" thread
-        socket.read(&mut buf).await.map_err(
-            format!("[peer:{}] Phase-III handshake failed.", peer_port) )?;
+        socket.read(&mut buf).await.map_err(|_| {
+            format!("[peer:{}] Phase-III handshake failed.", peer_port) })?;
         _protocol.spawn_recv_thread(tx);
 
         // try to record this connection
@@ -106,7 +106,7 @@ where P:IPCProtocol
 
             tokio::spawn(async move {
                 if let Err(msg) = Self::try_connect(_self, socket).await {
-                    eprintln!( format!("{}",msg) );
+                    eprintln!("{}", msg);
                 }
             });
         }
