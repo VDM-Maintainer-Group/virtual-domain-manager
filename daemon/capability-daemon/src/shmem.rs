@@ -80,14 +80,11 @@ unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
 }
 
 fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
-    let sem_req = CString::new( format!("/{}", req_id) )
-        .map_err(|_| format!("CString::new failed"))
-        .and_then(|sem_name| {
-            match unsafe { libc::sem_open(sem_name.as_ptr(), 0, 0o600, 1) } {
-                i if i != libc::SEM_FAILED => Ok(i),
-                _ => Err( format!("sem open failed.") )
-            }
-        }).unwrap(); //panic as you like
+    let sem_name = CString::new( req_id.clone() ).unwrap();
+    let sem_req = match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
+        i if i != libc::SEM_FAILED => Ok(i),
+        _ => Err( format!("sem open failed.") )
+    }.unwrap(); //panic as you like
     let mut register_records = HashMap::<String, String>::new();
 
     let mut loop_result = || -> Result<(), Box<dyn std::error::Error>> {
@@ -173,7 +170,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
             ffi_obj.unregister(k, v);
         })
     }
-    _close(sem_req);
+    _close(sem_name, sem_req);
 }
 
 fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
@@ -185,14 +182,11 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
         }
     };
     shm_res.set_owner(true);
-    let sem_res = CString::new( format!("/{}",res_id) )
-        .map_err(|_| format!("CString::new failed"))
-        .and_then(|sem_name| {
-            match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
-                i if i != libc::SEM_FAILED => Ok(i),
-                _ => Err( format!("sem open failed.") )
-            }
-        }).unwrap(); //panic as you like
+    let sem_name = CString::new( res_id.clone() ).unwrap();
+    let sem_res = match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
+        i if i != libc::SEM_FAILED => Ok(i),
+        _ => Err( format!("sem open failed.") )
+    }.unwrap(); //panic as you like
 
     let loop_result = || -> Result<(), Box<dyn std::error::Error>> {
         while let Ok(message) = rx.recv() {
@@ -227,11 +221,14 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
     if let Err(e) = loop_result() {
         eprintln!("Send Loop Error: {}", e);
     }
-    _close(sem_res);
+    _close(sem_name, sem_res);
 }
 
-fn _close(sem:*mut libc::sem_t) {
-    unsafe{ libc::sem_close(sem) };
+fn _close(sem_name:CString, sem :*mut libc::sem_t) {
+    unsafe{
+        libc::sem_close(sem);
+        libc::sem_unlink(sem_name.as_ptr());
+    };
 }
 
 pub struct ShMem {

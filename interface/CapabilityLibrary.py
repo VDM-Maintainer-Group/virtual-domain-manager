@@ -69,7 +69,7 @@ class ShmManager:
         self.res_id = _id+'_res'
         #
         self.shm_req = SharedMemory(self.req_id, flags=O_CREX, size=SHM_REQ_MAX_SIZE)
-        self.sem_req = Semaphore('/'+self.req_id, flags=O_CREX, initial_value=1)
+        self.sem_req = Semaphore(self.req_id, flags=O_CREX, initial_value=1)
         self.shm_res = None
         self.sem_res = None
         pass
@@ -115,8 +115,9 @@ class ShmManager:
         pass
 
     def start(self) -> None:
+        os.system('ls /dev/shm')
         self.shm_res = SharedMemory(name=self.res_id)
-        self.sem_res = Semaphore(name='/'+self.res_id)
+        self.sem_res = Semaphore(name=self.res_id)
         #
         self.responses = dict()
         self.seq = Value('L', 0) #unsigned long, 4B
@@ -147,7 +148,7 @@ class ShmManager:
         # sem_res: close and unlink
         try:
             self.sem_res.close()
-            self.sem_res.unlink()
+            unlink_semaphore(self.sem_res.name)
         except:
             pass
         # shm_req: close and unlink
@@ -156,10 +157,10 @@ class ShmManager:
             self.shm_req = None
         except:
             pass
-        # sen_req: close and unlink
+        # sem_req: close and unlink
         try:
             self.sem_req.close()
-            self.sem_req.unlink()
+            unlink_semaphore(self.sem_req.name)
         except:
             pass
         pass

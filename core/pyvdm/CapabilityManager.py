@@ -84,7 +84,7 @@ class CapabilityManager:
         proc_iter = psutil.process_iter(attrs=['cmdline', 'pid'])
         proc = next( (x for x in proc_iter if name in ' '.join(x.info['cmdline'])), '' )
         #
-        if option=='start':
+        def _start():
             if proc:
                 return ERR.DAEMON_ALREADY_EXISTS
             _file = (self.temp/name).as_posix()
@@ -92,16 +92,17 @@ class CapabilityManager:
                 f.write('import sys; import pyvdm.core.CapabilityManager as A_MAN; A_MAN._start_daemon(sys.argv[1])')
             sp.Popen(['python3', _file, self.root.as_posix()])
             return ERR.ALL_CLEAN
-        elif option=='stop':
+        def _stop():
             if proc:
                 psutil.Process( proc.info['pid'] ).terminate()
             return ERR.ALL_CLEAN
-        elif option=='status':
-            if proc:
-                return ERR.DAEMON_IS_RUNNING
-            else:
-                return ERR.DAEMON_IS_STOPPED
-        pass
+        def _restart():
+            _stop(); _start();
+            return ERR.ALL_CLEAN
+        def _status():
+            return ERR.DAEMON_IS_RUNNING if proc else ERR.DAEMON_IS_STOPPED
+        #
+        return {'start':_start, 'stop':_stop, 'restart':_restart, 'status':_status}.get(option)()
 
     pass
 
@@ -148,8 +149,8 @@ def init_subparsers(subparsers):
     #
     p_daemon = subparsers.add_parser('daemon',
         help='capability daemon manipulation.')
-    p_daemon.add_argument('option', metavar='option', choices=['start', 'status', 'stop'],
-        help='[start,stop,status]')
+    p_daemon.add_argument('option', metavar='option', choices=['start','status','stop','restart'],
+        help='[start,stop,restart,status]')
     #
     p_query = subparsers.add_parser('query',
         help='query the status of installed capability.')
