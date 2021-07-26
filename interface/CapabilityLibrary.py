@@ -63,6 +63,36 @@ class AnyType(str):
             raise Exception('Invalid value for AnyType')
     pass
 
+class ShmContext:
+    set_mask   = lambda x: x | 0x80
+    unset_mask = lambda x: x & 0x7F
+    test_mark  = lambda x: x & 0x80 == 1
+
+    def __init__(self, sem, shm_buf, write:bool) -> None:
+        self.write_flag = write
+        self.sem = sem
+        self.shm_buf = shm_buf
+        pass
+
+    def __enter__(self):
+        while True:
+            self.sem.acquire()
+            if self.test_mark(self.shm_buf)!=self.write_flag:
+                self.sem.release()
+                time.sleep(0)
+                continue
+            break
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.write_flag:
+            self.shm_buf[0] = self.set_mask(self.shm_buf[0])
+        else:
+            self.shm_buf[0] = self.unset_mask(self.shm_buf[0])
+        self.sem.release()
+        pass
+    pass
+
 class ShmManager:
     def __init__(self, _id) -> None:
         self.req_id = _id+'_req'
@@ -81,13 +111,14 @@ class ShmManager:
         try:
             sem_req.release() #ready to write
             while True:
-                with sem_req as sm: #acquire lock until data is ready (to send)
+                with ShmContext(sem_req, shm_buf, write=True): #acquire lock until data is ready (to send)
                     command, data = q_in.get(timeout=5)
                     data = bytearray( data.encode() )
                     with seq.get_lock(): #read
                         buffer = req_header.pack(seq.value, command, len(data))
                         buffer += data
                     shm_buf[:len(buffer)] = buffer
+                pass
         except:
             self.close()
         pass
@@ -99,9 +130,10 @@ class ShmManager:
         shm_buf = mmap.mmap(shm_res.fd, shm_res.size)
         try:
             while True:
-                with sem_res as sm: #get lock once data is ready (to recv)
+                with ShmContext(sem_res, shm_buf, write=False): #get lock once data is ready (to recv)
                     seq, _size = res_header.unpack( shm_buf[:res_header_len] )
                     buffer = copy.copy( shm_buf[res_header_len:res_header_len+_size] )
+                    pass
                 #
                 data = bytes(buffer).decode()
                 q_out.put( (seq, data) )
