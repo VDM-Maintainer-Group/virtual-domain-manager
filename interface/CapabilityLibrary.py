@@ -69,7 +69,7 @@ class ShmManager:
         self.res_id = _id+'_res'
         #
         self.shm_req = SharedMemory(self.req_id, flags=O_CREX, size=SHM_REQ_MAX_SIZE)
-        self.sem_req = Semaphore(self.req_id, flags=O_CREX, initial_value=1)
+        self.sem_req = Semaphore(self.req_id, flags=O_CREX, initial_value=0)
         self.shm_res = None
         self.sem_res = None
         pass
@@ -79,20 +79,18 @@ class ShmManager:
         req_header = struct.Struct('4B2B2B')
         shm_buf = mmap.mmap(shm_req.fd, shm_req.size)
         try:
-            signal.signal(signal.SIGTERM, lambda: (_ for _ in ()).throw(Exception()) )
-            signal.signal(signal.SIGKILL, lambda: (_ for _ in ()).throw(Exception()) )
             while True:
-                with sem_req as sm: #acquire lock until data is ready (to send)
-                    command, data = q_in.get(timeout=15)
-                    data = bytearray( data.encode() )
-                    with seq.get_lock(): #read
-                        buffer = req_header.pack(seq.value, command, len(data))
-                        buffer += data
-                    shm_buf[:len(buffer)] = buffer
-                    pass
-                time.sleep(0) #transfer to other process
-        except:
+                # with sem_req as sm: #acquire lock until data is ready (to send)
+                command, data = q_in.get(timeout=5)
+                data = bytearray( data.encode() )
+                with seq.get_lock(): #read
+                    buffer = req_header.pack(seq.value, command, len(data))
+                    buffer += data
+                shm_buf[:len(buffer)] = buffer
+                sem_req.release() #NOTE: only release, no need acquire
+        except Exception as e: #FIXME: remove raise exception
             self.close()
+            raise e
         pass
 
     def recv(self, q_out: Queue, shm_res: SharedMemory, sem_res: Semaphore) -> None:
@@ -101,8 +99,6 @@ class ShmManager:
         res_header_len = res_header.size
         shm_buf = mmap.mmap(shm_res.fd, shm_res.size)
         try:
-            signal.signal(signal.SIGTERM, lambda: (_ for _ in ()).throw(Exception()) )
-            signal.signal(signal.SIGKILL, lambda: (_ for _ in ()).throw(Exception()) )
             while True:
                 with sem_res as sm: #get lock once data is ready (to recv)
                     seq, _size = res_header.unpack( shm_buf[:res_header_len] )
@@ -110,11 +106,15 @@ class ShmManager:
                 #
                 data = bytes(buffer).decode()
                 q_out.put( (seq, data) )
-        except:
+        except Exception as e: #FIXME: remove raise exception
             self.close()
+            raise e
         pass
 
     def start(self) -> None:
+        signal.signal( signal.SIGTERM, lambda _num,_frame:self.close() )
+        signal.signal( signal.SIGINT,  lambda _num,_frame:self.close() )
+        #
         self.shm_res = SharedMemory(name=self.res_id)
         self.sem_res = Semaphore(name=self.res_id)
         #
@@ -128,7 +128,7 @@ class ShmManager:
         time.sleep(0.1) #promise "send" process starts
         pass
 
-    def close(self) -> None:
+    def close(self,_num='',_frame='') -> None:
         print('client stopping ...') #FIXME:
         # stop the processes
         try:

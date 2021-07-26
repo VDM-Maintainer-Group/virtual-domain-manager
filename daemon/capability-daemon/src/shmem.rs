@@ -81,7 +81,7 @@ unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
 
 fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
     let sem_name = CString::new( req_id.clone() ).unwrap();
-    let sem_req = match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
+    let sem_req = match unsafe { libc::sem_open(sem_name.as_ptr(), 0, 0o600, 0) } {
         i if i != libc::SEM_FAILED => Ok(i),
         _ => Err( format!("sem open failed.") )
     }.unwrap(); //panic as you like
@@ -183,7 +183,7 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
     };
     shm_res.set_owner(true);
     let sem_name = CString::new( res_id.clone() ).unwrap();
-    let sem_res = match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
+    let sem_res = match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 0) } {
         i if i != libc::SEM_FAILED => Ok(i),
         _ => Err( format!("sem open failed.") )
     }.unwrap(); //panic as you like
@@ -200,10 +200,11 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
                 std::mem::transmute( &_header )
             };
 
-            // acquire the lock
-            if unsafe{ libc::sem_wait(sem_res) } != 0 {
-                break;
-            }
+            //NOTE: only release, no need acquire
+            // // acquire the lock
+            // if unsafe{ libc::sem_wait(sem_res) } != 0 {
+            //     break;
+            // }
             unsafe {
                 let shm_slice = shm_res.as_slice_mut();
                 shm_slice[..RES_HEADER_LEN].clone_from_slice(&res_header);
