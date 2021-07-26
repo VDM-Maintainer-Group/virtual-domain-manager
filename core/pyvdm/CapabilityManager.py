@@ -84,8 +84,8 @@ class CapabilityManager:
         proc_iter = psutil.process_iter(attrs=['cmdline', 'pid'])
         proc = next( (x for x in proc_iter if name in ' '.join(x.info['cmdline'])), '' )
         #
-        def _start():
-            if proc:
+        def _start(force=False):
+            if proc and not force:
                 return ERR.DAEMON_ALREADY_EXISTS
             _file = (self.temp/name).as_posix()
             with open(_file, 'w') as f:
@@ -97,7 +97,7 @@ class CapabilityManager:
                 psutil.Process( proc.info['pid'] ).terminate()
             return ERR.ALL_CLEAN
         def _restart():
-            _stop(); _start();
+            _stop(); _start(True)
             return ERR.ALL_CLEAN
         def _status():
             return ERR.DAEMON_IS_RUNNING if proc else ERR.DAEMON_IS_STOPPED

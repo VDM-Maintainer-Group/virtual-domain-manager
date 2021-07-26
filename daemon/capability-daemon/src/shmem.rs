@@ -262,12 +262,14 @@ impl IPCProtocol for ShMem {
     }
 
     fn spawn_send_thread(&mut self, rx: mpsc::Receiver<Self::Message>) {
+        use std::{thread, time};
         let res_id = format!("{}_res", self.uid);
         
         if let Ok(pool_obj) = self.pool.lock() {
             pool_obj.execute(move || {
                 _send_loop(rx, res_id);
             });
+            thread::sleep( time::Duration::from_millis(10) ); //promise thread starts
         }
     }
 

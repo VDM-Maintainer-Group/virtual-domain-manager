@@ -98,7 +98,7 @@ class ShmManager:
     def recv(self, q_out: Queue, shm_res: SharedMemory, sem_res: Semaphore) -> None:
         #res_header: ['seq':4B, 'size':4B]
         res_header = struct.Struct('4B4B')
-        res_header_len = len(res_header)
+        res_header_len = res_header.size
         shm_buf = mmap.mmap(shm_res.fd, shm_res.size)
         try:
             signal.signal(signal.SIGTERM, lambda: (_ for _ in ()).throw(Exception()) )
@@ -115,7 +115,6 @@ class ShmManager:
         pass
 
     def start(self) -> None:
-        os.system('ls /dev/shm')
         self.shm_res = SharedMemory(name=self.res_id)
         self.sem_res = Semaphore(name=self.res_id)
         #
@@ -130,6 +129,7 @@ class ShmManager:
         pass
 
     def close(self) -> None:
+        print('client stopping ...') #FIXME:
         # stop the processes
         try:
             self.send_process.close()
