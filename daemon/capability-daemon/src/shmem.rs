@@ -97,7 +97,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 break Ok(()) //connection drop happened
             }
             // load data from shm_req
-            let shm_ptr = ShmemConf::new().flink(&req_id).open()?.as_ptr();
+            let shm_ptr = ShmemConf::new().os_id(&req_id).open()?.as_ptr();
             let req_header:ReqHeader = unsafe{
                 let _header = volatile_copy(shm_ptr, REQ_HEADER_LEN);
                 std::mem::transmute( &_header.as_ptr() )
@@ -165,7 +165,9 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
     };
     
     // finalization after connection drop
-    loop_result().unwrap_or(());
+    if let Err(e) = loop_result() {
+        eprintln!("Recv Loop Error: {}", e);
+    }
     if let Ok(mut ffi_obj) = ffi.lock() {
         register_records.iter().for_each(|(k,v)|{
             ffi_obj.unregister(k, v);
@@ -175,25 +177,26 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
 }
 
 fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
-    let _shm_res = match ShmemConf::new().size(SHM_RES_MAX_SIZE).flink( &res_id ).create() {
+    let mut shm_res = match ShmemConf::new().size(SHM_RES_MAX_SIZE).os_id( &res_id ).create() {
         Ok(m) => m,
         Err(e) => {
-            eprintln!("Unable to create or open shmem flink: {}", e);
+            eprintln!("Unable to create or open shmem os_id: {}", e);
             return;
         }
-    }; //panic as you like
-    let sem_res = CString::new( format!("/{}", res_id) )
+    };
+    shm_res.set_owner(true);
+    let sem_res = CString::new( format!("/{}",res_id) )
         .map_err(|_| format!("CString::new failed"))
         .and_then(|sem_name| {
             match unsafe { libc::sem_open(sem_name.as_ptr(), libc::O_CREAT|libc::O_EXCL, 0o600, 1) } {
                 i if i != libc::SEM_FAILED => Ok(i),
                 _ => Err( format!("sem open failed.") )
             }
-        }).unwrap();
+        }).unwrap(); //panic as you like
 
     let loop_result = || -> Result<(), Box<dyn std::error::Error>> {
         while let Ok(message) = rx.recv() {
-            let mut shm_res = ShmemConf::new().flink(&res_id).open()?;
+            let mut shm_res = ShmemConf::new().os_id(&res_id).open()?;
             // format the message
             let (seq, data) = message;
             let data = data.as_bytes();
@@ -221,7 +224,9 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
     };
     
     // finalization after connection drop
-    loop_result().unwrap_or(());
+    if let Err(e) = loop_result() {
+        eprintln!("Send Loop Error: {}", e);
+    }
     _close(sem_res);
 }
 
@@ -270,7 +275,7 @@ impl IPCProtocol for ShMem {
     }
 
     fn spawn_recv_thread(&mut self, tx: mpsc::Sender<Self::Message>) {
-        let ffi = Arc::clone( self.ffi.as_ref().unwrap() );
+        let ffi = Arc::clone( self.ffi.as_ref().unwrap() ); //panic as you like
         let req_id = format!("{}_req", self.uid);
         
         if let Ok(pool_obj) = self.pool.lock() {

@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import random, time, string
-import os, re, socket, struct, signal
+import os, re, socket, struct, signal, mmap
 import json, base64
 from enum import Enum
 from functools import wraps
 from multiprocessing import (Process, Value, Queue)
-from multiprocessing.shared_memory import SharedMemory
-from posix_ipc import (Semaphore, O_CREX)
+from posix_ipc import (SharedMemory, Semaphore, O_CREX, unlink_semaphore, unlink_shared_memory)
 
 SHM_REQ_MAX_SIZE = 10*1024   #10KB
 SHM_RES_MAX_SIZE = 1024*1024 #1MB
@@ -21,20 +20,6 @@ class _COMMAND(Enum): #2-byte
     CALL        = 0x03
     ONE_WAY     = 0x04
     CHAIN_CALL  = 0x05
-    pass
-
-class AnyType(str):
-    def __new__(cls, value, restype, sig_func_args_table):
-        _regex = re.compile('restype_(.*?)_(.*)')
-        _tmp = _regex.split(value)
-        if len(_tmp)==4:
-            obj = str.__new__(cls, value)
-            obj.sig, obj.func = _tmp[1], _tmp[2]
-            obj.restype = restype
-            obj.table = sig_func_args_table
-            return obj
-        else:
-            raise Exception('Invalid value for AnyType')
     pass
 
 def __validate(_type, x) -> bool:
@@ -64,12 +49,26 @@ def __validate(_type, x) -> bool:
             return _map[_type](x)
     pass
 
+class AnyType(str):
+    def __new__(cls, value, restype, sig_func_args_table):
+        _regex = re.compile('restype_(.*?)_(.*)')
+        _tmp = _regex.split(value)
+        if len(_tmp)==4:
+            obj = str.__new__(cls, value)
+            obj.sig, obj.func = _tmp[1], _tmp[2]
+            obj.restype = restype
+            obj.table = sig_func_args_table
+            return obj
+        else:
+            raise Exception('Invalid value for AnyType')
+    pass
+
 class ShmManager:
     def __init__(self, _id) -> None:
         self.req_id = _id+'_req'
         self.res_id = _id+'_res'
         #
-        self.shm_req = SharedMemory(name=self.req_id, create=True, size=SHM_REQ_MAX_SIZE)
+        self.shm_req = SharedMemory(self.req_id, flags=O_CREX, size=SHM_REQ_MAX_SIZE)
         self.sem_req = Semaphore('/'+self.req_id, flags=O_CREX, initial_value=1)
         self.shm_res = None
         self.sem_res = None
@@ -78,6 +77,7 @@ class ShmManager:
     def send(self, q_in: Queue, shm_req: SharedMemory, sem_req: Semaphore, seq: Value) -> None:
         #req_header: ['seq':4B, 'command':2B, 'size':2B]
         req_header = struct.Struct('4B2B2B')
+        shm_buf = mmap.mmap(shm_req.fd, shm_req.size)
         try:
             signal.signal(signal.SIGTERM, lambda: (_ for _ in ()).throw(Exception()) )
             signal.signal(signal.SIGKILL, lambda: (_ for _ in ()).throw(Exception()) )
@@ -88,7 +88,7 @@ class ShmManager:
                     with seq.get_lock(): #read
                         buffer = req_header.pack(seq.value, command, len(data))
                         buffer += data
-                    shm_req.buf[:len(buffer)] = buffer
+                    shm_buf[:len(buffer)] = buffer
                     pass
                 time.sleep(0) #transfer to other process
         except:
@@ -99,13 +99,14 @@ class ShmManager:
         #res_header: ['seq':4B, 'size':4B]
         res_header = struct.Struct('4B4B')
         res_header_len = len(res_header)
+        shm_buf = mmap.mmap(shm_res.fd, shm_res.size)
         try:
             signal.signal(signal.SIGTERM, lambda: (_ for _ in ()).throw(Exception()) )
             signal.signal(signal.SIGKILL, lambda: (_ for _ in ()).throw(Exception()) )
             while True:
                 with sem_res as sm: #get lock once data is ready (to recv)
-                    seq, _size = res_header.unpack( shm_res.buf[:res_header_len] )
-                    buffer = shm_res.buf[res_header_len:res_header_len+_size].copy()
+                    seq, _size = res_header.unpack( shm_buf[:res_header_len] )
+                    buffer = shm_buf[res_header_len:res_header_len+_size].copy()
                 #
                 data = bytes(buffer).decode()
                 q_out.put( (seq, data) )
@@ -140,8 +141,7 @@ class ShmManager:
             self.responses = None
         # shm_res: close and unlink
         try:
-            self.shm_res.close()
-            self.shm_res.unlink()
+            unlink_shared_memory(self.shm_res.name)
         except:
             pass
         # sem_res: close and unlink
@@ -151,20 +151,17 @@ class ShmManager:
         except:
             pass
         # shm_req: close and unlink
-        if self.shm_req is not None:
-            try:
-                self.shm_req.close()
-                self.shm_req.unlink()
-                self.shm_req = None
-            except:
-                pass
+        try:
+            unlink_shared_memory(self.shm_req.name)
+            self.shm_req = None
+        except:
+            pass
         # sen_req: close and unlink
-        if self.sem_req is not None:
-            try:
-                self.sem_req.close()
-                self.sem_req.unlink()
-            except:
-                pass
+        try:
+            self.sem_req.close()
+            self.sem_req.unlink()
+        except:
+            pass
         pass
 
     def get_response(self, seq, blocking=True, timeout=-1):
@@ -347,7 +344,7 @@ class CapabilityLibrary:
             _sock.connect(_addr)
             _sock.sendall(_id)
             # handshake-II
-            _tmp = _sock.recv(VDM_CLIENT_ID_LEN) #+1 for '\0'
+            _tmp = _sock.recv(VDM_CLIENT_ID_LEN)
             if _tmp==_id:
                 self.__server = __server
                 self.__server.start()
