@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import random, time, string
-import os, re, socket, struct, signal, mmap
+import os, re, socket, struct, signal, mmap, copy
 import json, base64
-from enum import Enum
+from enum import IntEnum
 from functools import wraps
 from multiprocessing import (Process, Value, Queue)
 from posix_ipc import (SharedMemory, Semaphore, O_CREX, unlink_semaphore, unlink_shared_memory)
@@ -13,7 +13,7 @@ VDM_SERVER_PORT = 42000
 VDM_CLIENT_ID_LEN = 16
 GET_RANDOM_ID = lambda: ''.join( random.choices(string.hexdigits, k=VDM_CLIENT_ID_LEN) )
 
-class _COMMAND(Enum): #2-byte
+class _COMMAND(IntEnum): #2-byte
     ALIVE       = 0x00
     REGISTER    = 0x01
     UNREGISTER  = 0x02
@@ -75,40 +75,38 @@ class ShmManager:
         pass
 
     def send(self, q_in: Queue, shm_req: SharedMemory, sem_req: Semaphore, seq: Value) -> None:
-        #req_header: ['seq':4B, 'command':2B, 'size':2B]
-        req_header = struct.Struct('4B2B2B')
+        #req_header: ['seq':4B/I, 'command':2B/H, 'size':2B/H]
+        req_header = struct.Struct('IHH')
         shm_buf = mmap.mmap(shm_req.fd, shm_req.size)
         try:
+            sem_req.release() #ready to write
             while True:
-                # with sem_req as sm: #acquire lock until data is ready (to send)
-                command, data = q_in.get(timeout=5)
-                data = bytearray( data.encode() )
-                with seq.get_lock(): #read
-                    buffer = req_header.pack(seq.value, command, len(data))
-                    buffer += data
-                shm_buf[:len(buffer)] = buffer
-                sem_req.release() #NOTE: only release, no need acquire
-        except Exception as e: #FIXME: remove raise exception
+                with sem_req as sm: #acquire lock until data is ready (to send)
+                    command, data = q_in.get(timeout=5)
+                    data = bytearray( data.encode() )
+                    with seq.get_lock(): #read
+                        buffer = req_header.pack(seq.value, command, len(data))
+                        buffer += data
+                    shm_buf[:len(buffer)] = buffer
+        except:
             self.close()
-            raise e
         pass
 
     def recv(self, q_out: Queue, shm_res: SharedMemory, sem_res: Semaphore) -> None:
-        #res_header: ['seq':4B, 'size':4B]
-        res_header = struct.Struct('4B4B')
+        #res_header: ['seq':4B/I, 'size':4B/I]
+        res_header = struct.Struct('II')
         res_header_len = res_header.size
         shm_buf = mmap.mmap(shm_res.fd, shm_res.size)
         try:
             while True:
                 with sem_res as sm: #get lock once data is ready (to recv)
                     seq, _size = res_header.unpack( shm_buf[:res_header_len] )
-                    buffer = shm_buf[res_header_len:res_header_len+_size].copy()
+                    buffer = copy.copy( shm_buf[res_header_len:res_header_len+_size] )
                 #
                 data = bytes(buffer).decode()
                 q_out.put( (seq, data) )
-        except Exception as e: #FIXME: remove raise exception
+        except:
             self.close()
-            raise e
         pass
 
     def start(self) -> None:
@@ -125,7 +123,7 @@ class ShmManager:
         self.recv_process = Process(target=self.recv, args=(self.q_out, self.shm_res, self.sem_res), daemon=True)
         self.send_process.start()
         self.recv_process.start()
-        time.sleep(0.1) #promise "send" process starts
+        time.sleep(0.01) #promise "send" process starts
         pass
 
     def close(self,_num='',_frame='') -> None:
@@ -163,7 +161,7 @@ class ShmManager:
             unlink_semaphore(self.sem_req.name)
         except:
             pass
-        pass
+        exit()
 
     def get_response(self, seq, blocking=True, timeout=-1):
         data = self.responses.pop(seq, None)
@@ -194,7 +192,7 @@ class ShmManager:
 
     def request_async(self, command: _COMMAND, *args, **kwargs) -> int:
         request_format = {
-            _COMMAND.ALIVE:        lambda :(_COMMAND.ALIVE, ''),
+            _COMMAND.ALIVE:        lambda **kwargs:(_COMMAND.ALIVE, ''),
             _COMMAND.REGISTER:     lambda name:(_COMMAND.REGISTER, 
                 json.dumps({'name': name})
             ),
@@ -371,6 +369,9 @@ class CapabilityLibrary:
             _item.drop()
         self.__server.close()
         pass
+
+    def is_alive(self) -> bool:
+        return self.__server.is_alive()
 
     def getCapability(self, name:str, mode=None) -> CapabilityHandle:
         if name in self.capability.keys():

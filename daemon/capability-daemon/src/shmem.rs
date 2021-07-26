@@ -29,6 +29,7 @@ enum Command {
 }
 
 #[repr(C,packed)]
+#[derive(Debug, Copy, Clone)]
 struct ReqHeader {
     seq: u32,
     command: u16,
@@ -36,6 +37,7 @@ struct ReqHeader {
 }
 
 #[repr(C,packed)]
+#[derive(Debug, Copy, Clone)]
 struct ResHeader {
     seq: u32,
     size: u32
@@ -67,16 +69,11 @@ struct ChainCall {
     sig_func_args_table: Vec<FuncCall>
 }
 
-unsafe fn volatile_copy<T>(src: *const T, len: usize) -> Vec<T> {
-    let mut result = Vec::with_capacity(len);
-    let mut tmp_ptr = src; //copy
-    loop {
-        result.push( std::ptr::read_volatile(tmp_ptr) );
-        tmp_ptr = tmp_ptr.add(1);
-        if tmp_ptr >= src.add(len) {
-            break result
-        }
-    }
+unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
+    ::std::slice::from_raw_parts(
+        (p as *const T) as *const u8,
+        ::std::mem::size_of::<T>(),
+    )
 }
 
 fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
@@ -94,13 +91,16 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 break Ok(()) //connection drop happened
             }
             // load data from shm_req
-            let shm_ptr = ShmemConf::new().os_id(&req_id).open()?.as_ptr();
+            let shm_req = ShmemConf::new().os_id(&req_id).open()?;
+            let shm_slice = unsafe{ shm_req.as_slice() };
             let req_header:ReqHeader = unsafe{
-                let _header = volatile_copy(shm_ptr, REQ_HEADER_LEN);
-                std::mem::transmute( &_header.as_ptr() )
+                let _header:Vec<u8> = shm_slice[..REQ_HEADER_LEN].iter().cloned().collect();
+                println!("res_header: {:?}", _header); //FIXME: remove it
+                std::ptr::read( _header.as_ptr() as *const _ )
             };
-            let req_data = unsafe{
-                let _data = volatile_copy(shm_ptr.add(REQ_HEADER_LEN), req_header.size as usize);
+            let req_data = {
+                let _length = REQ_HEADER_LEN + req_header.size as usize;
+                let _data = shm_slice[REQ_HEADER_LEN.._length].iter().cloned().collect();
                 String::from_utf8(_data)?
             };
             // release the lock
@@ -189,26 +189,29 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
     }.unwrap(); //panic as you like
 
     let loop_result = || -> Result<(), Box<dyn std::error::Error>> {
+        // ready to write
+        if unsafe{ libc::sem_post(sem_res) } < 0 {
+            return Ok(());
+        }
         while let Ok(message) = rx.recv() {
             let mut shm_res = ShmemConf::new().os_id(&res_id).open()?;
             // format the message
             let (seq, data) = message;
             let data = data.as_bytes();
             let size = data.len() as u32;
-            let res_header:[u8;RES_HEADER_LEN] = unsafe{
-                let _header = ResHeader{ seq, size };
-                std::mem::transmute( &_header )
-            };
+            let _header = ResHeader{ seq, size };
+            println!("res_header: {:?}", _header); //FIXME: remove it
 
-            //NOTE: only release, no need acquire
-            // // acquire the lock
-            // if unsafe{ libc::sem_wait(sem_res) } != 0 {
-            //     break;
-            // }
+            // acquire the lock
+            if unsafe{ libc::sem_wait(sem_res) } != 0 {
+                break;
+            }
             unsafe {
                 let shm_slice = shm_res.as_slice_mut();
+                let res_header = any_as_u8_slice(&_header);
+                let _length = RES_HEADER_LEN + size as usize;
                 shm_slice[..RES_HEADER_LEN].clone_from_slice(&res_header);
-                shm_slice[RES_HEADER_LEN..].clone_from_slice(&data);
+                shm_slice[RES_HEADER_LEN.._length].clone_from_slice(&data);
             }
             // release the lock
             if unsafe{ libc::sem_post(sem_res) } < 0 {
