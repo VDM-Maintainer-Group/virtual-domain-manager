@@ -217,14 +217,14 @@ class ShmManager:
         #
         if blocking:
             _ddl = time.time() + (timeout if timeout>0 else 1E3)
-            exit_bounded = lambda: _ddl - time.time() < 0
+            exit_bounded = lambda: _ddl - time.time() > 0
             q_get = lambda: self.q_out.get(timeout=_ddl-time.time())
         else:
-            exit_bounded = False
+            exit_bounded = True
             q_get = lambda: self.q_out.get_nowait()
         #
         data = _process( q_get() )
-        while (data is not None) and exit_bounded():
+        while (data is None) and exit_bounded():
             data = _process( q_get() )
         return data
 
