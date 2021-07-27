@@ -114,7 +114,7 @@ class ShmManager:
             sem_req.release() #ready to write
             while True:
                 with ShmContext(sem_req, shm_req, write=True): #acquire lock until data is ready (to send)
-                    command, data = q_in.get(timeout=5)
+                    command, data = q_in.get(timeout=3)
                     data = bytearray( data.encode() )
                     with seq.get_lock(): #read
                         buffer = req_header.pack(seq.value, command, len(data))
@@ -208,7 +208,8 @@ class ShmManager:
             result = None
             if _seq==seq:
                 try:
-                    result = json.loads(_data) if _data else ''
+                    _data = '{}' if not _data else _data
+                    result = json.loads(_data)
                 except:
                     result = json.loads('null')
             else:
@@ -230,7 +231,7 @@ class ShmManager:
 
     def request_async(self, command: _COMMAND, *args, **kwargs) -> int:
         request_format = {
-            _COMMAND.ALIVE:        lambda **kwargs:(_COMMAND.ALIVE, ''),
+            _COMMAND.ALIVE:        lambda :(_COMMAND.ALIVE, ''),
             _COMMAND.REGISTER:     lambda name:(_COMMAND.REGISTER, 
                 json.dumps({'name': name})
             ),
@@ -254,12 +255,16 @@ class ShmManager:
         return _seq
 
     def request(self, command: _COMMAND, *args, **kwargs):
+        try:
+            timeout = kwargs.pop('timeout')
+        except:
+            timeout = None
         _seq = self.request_async(command, *args, **kwargs)
         
         if command==_COMMAND.ONE_WAY or command==_COMMAND.UNREGISTER:
             return None
-        if 'timeout' in kwargs:
-            return self.get_response(_seq, timeout=kwargs['timeout'])
+        if timeout:
+            return self.get_response(_seq, timeout=timeout)
         else:
             return self.get_response(_seq, timeout=-1)
 
@@ -280,8 +285,8 @@ class ShmManager:
 
 class CapabilityHandle:
     def __init__(self, server: ShmManager, name, mode) -> None:
-        res = server.request(_COMMAND.REGISTER, name)
-        if 'sig' not in res:
+        res = server.request(_COMMAND.REGISTER, name, timeout=1)
+        if not res['sig']:
             raise Exception('Invalid Capability.')
         #
         self._server = server
@@ -418,7 +423,8 @@ class CapabilityLibrary:
         try:
             assert(mode in [None, 'one-way', 'lazy'])
             _item = CapabilityHandle(self.__server, name, mode)
-        except:
+        except Exception as e:
+            print(e)
             return None
         else:
             self.capability.update( {name:_item} )

@@ -164,13 +164,26 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                     tx.send( (seq, String::new()) )?;
                 },
                 Command::REGISTER => { //synchronized call
-                    let args: NameCall = serde_json::from_str(&req_data)?;
-                    let mut ffi_obj = ffi.lock()?;
-                    if let Some((sig, spec)) = ffi_obj.register(&args.name) {
+                    let mut get_res = || -> Result<_,Box<dyn std::error::Error>>{
+                        let args: NameCall = serde_json::from_str(&req_data)?;
+                        let mut ffi_obj = ffi.lock()?;
+                        println!("at least locked?");
+                        let (sig, spec) = ffi_obj.register(&args.name)
+                            .ok_or( format!("") )?;
                         register_records.insert( args.name, sig.clone() );
-                        let res = serde_json::to_string(&NameCallRes{sig,spec})?;
-                        tx.send( (seq, res) )?;
-                    }
+                        Ok( serde_json::to_string(&NameCallRes{sig,spec})? )
+                    };
+                    match get_res() {
+                        Ok(res) => {
+                            tx.send( (seq, res) )?
+                        },
+                        Err(e) => {
+                            println!("error: {:?}", e);
+                            let res = NameCallRes{sig:"".into(), spec:None};
+                            let res = serde_json::to_string(&res).unwrap();
+                            tx.send( (seq, res) )?
+                        }
+                    };
                 },
                 Command::UNREGISTER => { //synchronized call
                     let args: NameCall = serde_json::from_str(&req_data)?;
@@ -255,6 +268,7 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
                 let data = data.as_bytes();
                 let size = data.len() as u32;
                 let _header = ResHeader{ seq, size };
+                println!("res_header: {:?}", _header);
 
                 unsafe {
                     let shm_slice = shm_res.as_slice_mut();

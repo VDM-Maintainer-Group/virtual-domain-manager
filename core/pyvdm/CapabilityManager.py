@@ -34,7 +34,7 @@ class CapabilityManager:
         if url.is_file():
             try:
                 tmp_dir = self.temp / url.name
-                shutil.unpack_archive( POSIX(url), POSIX(tmp_dir) )
+                shutil.unpack_archive( url.as_posix(), tmp_dir.as_posix() )
                 _path = tmp_dir
             except:
                 return ERR.ARCHIVE_UNPACK_FAILED
@@ -43,7 +43,7 @@ class CapabilityManager:
         else:
             return ERR.URL_PARSE_FAILURE
         #
-        ret = self.vcd.install(_path)
+        ret = self.vcd.install( _path.as_posix() )
         if ret:
             print(ret)
             return ERR.VCD_INTERNAL_ERROR
