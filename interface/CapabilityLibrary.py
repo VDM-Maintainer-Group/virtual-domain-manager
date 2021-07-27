@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import random, time, string
-import os, re, socket, struct, signal, mmap, copy
+import os, sys, re, socket, struct, signal, mmap, copy
 import json, base64
 from enum import IntEnum
 from functools import wraps
@@ -63,21 +63,22 @@ class AnyType(str):
             raise Exception('Invalid value for AnyType')
     pass
 
-class ShmContext:
-    set_mask   = lambda x: x | 0x80
-    unset_mask = lambda x: x & 0x7F
-    test_mark  = lambda x: x & 0x80 == 1
+set_mask   = lambda x: x | 0x80
+unset_mask = lambda x: x & 0x7F
+test_mark  = lambda x: not (x & 0x80 == 0)
 
-    def __init__(self, sem, shm_buf, write:bool) -> None:
+class ShmContext:
+    def __init__(self, sem, shm, write:bool) -> None:
         self.write_flag = write
         self.sem = sem
-        self.shm_buf = shm_buf
+        self.shm = shm
         pass
 
     def __enter__(self):
+        shm_buf = mmap.mmap(self.shm.fd, self.shm.size)
         while True:
             self.sem.acquire()
-            if self.test_mark(self.shm_buf)!=self.write_flag:
+            if test_mark(shm_buf[3])==self.write_flag:
                 self.sem.release()
                 time.sleep(0)
                 continue
@@ -85,10 +86,11 @@ class ShmContext:
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        shm_buf = mmap.mmap(self.shm.fd, self.shm.size)
         if self.write_flag:
-            self.shm_buf[0] = self.set_mask(self.shm_buf[0])
+            shm_buf[3] = set_mask(shm_buf[3])
         else:
-            self.shm_buf[0] = self.unset_mask(self.shm_buf[0])
+            shm_buf[3] = unset_mask(shm_buf[3])
         self.sem.release()
         pass
     pass
@@ -111,7 +113,7 @@ class ShmManager:
         try:
             sem_req.release() #ready to write
             while True:
-                with ShmContext(sem_req, shm_buf, write=True): #acquire lock until data is ready (to send)
+                with ShmContext(sem_req, shm_req, write=True): #acquire lock until data is ready (to send)
                     command, data = q_in.get(timeout=5)
                     data = bytearray( data.encode() )
                     with seq.get_lock(): #read
@@ -119,8 +121,9 @@ class ShmManager:
                         buffer += data
                     shm_buf[:len(buffer)] = buffer
                 pass
-        except:
+        except Exception as e:
             self.close()
+            raise e
         pass
 
     def recv(self, q_out: Queue, shm_res: SharedMemory, sem_res: Semaphore) -> None:
@@ -130,15 +133,16 @@ class ShmManager:
         shm_buf = mmap.mmap(shm_res.fd, shm_res.size)
         try:
             while True:
-                with ShmContext(sem_res, shm_buf, write=False): #get lock once data is ready (to recv)
+                with ShmContext(sem_res, shm_res, write=False): #get lock once data is ready (to recv)
                     seq, _size = res_header.unpack( shm_buf[:res_header_len] )
                     buffer = copy.copy( shm_buf[res_header_len:res_header_len+_size] )
                     pass
                 #
                 data = bytes(buffer).decode()
-                q_out.put( (seq, data) )
-        except:
+                q_out.put( (seq&0x7FFF, data) )
+        except Exception as e:
             self.close()
+            raise e
         pass
 
     def start(self) -> None:
@@ -159,7 +163,6 @@ class ShmManager:
         pass
 
     def close(self,_num='',_frame='') -> None:
-        print('client stopping ...') #FIXME:
         # stop the processes
         try:
             self.send_process.close()
@@ -193,7 +196,7 @@ class ShmManager:
             unlink_semaphore(self.sem_req.name)
         except:
             pass
-        exit()
+        # sys.exit(0) #FIXME:
 
     def get_response(self, seq, blocking=True, timeout=-1):
         data = self.responses.pop(seq, None)
@@ -204,7 +207,10 @@ class ShmManager:
             _seq, _data = res
             result = None
             if _seq==seq:
-                result = json.loads(_data)
+                try:
+                    result = json.loads(_data) if _data else ''
+                except:
+                    result = json.loads('null')
             else:
                 self.responses.update({_seq:_data})
             return result
@@ -218,7 +224,7 @@ class ShmManager:
             q_get = lambda: self.q_out.get_nowait()
         #
         data = _process( q_get() )
-        while (data is not None) or exit_bounded():
+        while (data is not None) and exit_bounded():
             data = _process( q_get() )
         return data
 

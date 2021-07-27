@@ -83,7 +83,7 @@ fn unset_mask(seq:&mut u8) {
     *seq &= 0x7F;
 }
 fn test_mask(seq:&u8) -> bool {
-    seq & 0x80 == 1
+    !(seq & 0x80 == 0)
 }
 
 fn acquire_lock(sem: *mut libc::sem_t, shm_name:&String, write_flag:bool) -> Result<(), String>
@@ -92,12 +92,12 @@ fn acquire_lock(sem: *mut libc::sem_t, shm_name:&String, write_flag:bool) -> Res
         if unsafe{ libc::sem_wait(sem) } != 0 {
             break Err( format!("Semaphore: acquire lock failed.") )
         }
-        let mut shm = ShmemConf::new().os_id(&shm_name).open().map_err(|_|{
+        let shm = ShmemConf::new().os_id(&shm_name).open().map_err(|_|{
             format!("SharedMemory: open failed during acquire lock.")
         })?;
         unsafe{
-            let shm_slice = shm.as_slice_mut();
-            if test_mask(&shm_slice[0])!=write_flag {
+            let shm_slice = shm.as_slice();
+            if test_mask(&shm_slice[3])==write_flag {
                 if libc::sem_post(sem) != 0 {
                     break Err( format!("Semaphore: acquire lock failed.") )
                 }
@@ -109,17 +109,18 @@ fn acquire_lock(sem: *mut libc::sem_t, shm_name:&String, write_flag:bool) -> Res
     }
 }
 
-fn release_lock(sem: *mut libc::sem_t, shm_name:&String, write_flag:bool) -> Result<(), String> {
+fn release_lock(sem: *mut libc::sem_t, shm_name:&String, write_flag:bool) -> Result<(), String>
+{
     let mut shm = ShmemConf::new().os_id(&shm_name).open().map_err(|_|{
         format!("SharedMemory: open failed during release lock.")
     })?;
     unsafe{
         let shm_slice = shm.as_slice_mut();
         if write_flag {
-            set_mask(&mut shm_slice[0]);
+            set_mask(&mut shm_slice[3]);
         }
         else {
-            unset_mask(&mut shm_slice[0]);
+            unset_mask(&mut shm_slice[3]);
         }
     };
     if unsafe{ libc::sem_post(sem) } < 0 {
@@ -145,7 +146,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 let shm_slice = unsafe{ shm_req.as_slice() };
                 let req_header:ReqHeader = unsafe{
                     let _header:Vec<u8> = shm_slice[..REQ_HEADER_LEN].iter().cloned().collect();
-                    println!("res_header: {:?}", _header); //FIXME: remove it
+                    println!("req_header: {:?}", _header); //FIXME: remove it
                     std::ptr::read( _header.as_ptr() as *const _ )
                 };
                 let req_data = {
@@ -157,9 +158,10 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
 
             // match command with its response
             let command = Command::try_from(req_header.command)?;
+            let seq = req_header.seq & 0x7FFF;
             match command {
                 Command::ALIVE => { //synchronized call
-                    tx.send( (req_header.seq, String::new()) )?;
+                    tx.send( (seq, String::new()) )?;
                 },
                 Command::REGISTER => { //synchronized call
                     let args: NameCall = serde_json::from_str(&req_data)?;
@@ -167,7 +169,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                     if let Some((sig, spec)) = ffi_obj.register(&args.name) {
                         register_records.insert( args.name, sig.clone() );
                         let res = serde_json::to_string(&NameCallRes{sig,spec})?;
-                        tx.send( (req_header.seq, res) )?;
+                        tx.send( (seq, res) )?;
                     }
                 },
                 Command::UNREGISTER => { //synchronized call
@@ -184,7 +186,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                     let desc: FFIDescriptor = (args.sig, args.func, args.args);
                     let ffi_obj = ffi.lock()?;
                     ffi_obj.execute(desc, move |res|{
-                        tx_ref.send( (req_header.seq, res) ).unwrap_or(());
+                        tx_ref.send( (seq, res) ).unwrap_or(());
                     });                    
                 },
                 Command::ONE_WAY => {
@@ -201,7 +203,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                     }).collect();
                     let ffi_obj = ffi.lock()?;
                     ffi_obj.chain_execute(descs, move |res|{
-                        tx_ref.send( (req_header.seq, res) ).unwrap_or(());
+                        tx_ref.send( (seq, res) ).unwrap_or(());
                     });
                 }
             }
@@ -239,30 +241,31 @@ fn _send_loop(rx: mpsc::Receiver<Message>, res_id: String) {
     }.unwrap(); //panic as you like
 
     let loop_result = || -> Result<(), Box<dyn std::error::Error>> {
-        // ready to write
-        if unsafe{ libc::sem_post(sem_res) } < 0 {
-            return Ok(());
+        // ready to read
+        if unsafe{ libc::sem_post(sem_res) } != 0 {
+            Err( format!("Semaphore: acquire lock failed.") )?
         }
-        while let Ok(message) = rx.recv() {
-            let mut shm_res = ShmemConf::new().os_id(&res_id).open()?;
-            // format the message
-            let (seq, data) = message;
-            let data = data.as_bytes();
-            let size = data.len() as u32;
-            let _header = ResHeader{ seq, size };
-            println!("res_header: {:?}", _header); //FIXME: remove it
-
+        loop {
             acquire_write_lock(sem_res, &res_id)?;
-            unsafe {
-                let shm_slice = shm_res.as_slice_mut();
-                let res_header = any_as_u8_slice(&_header);
-                let _length = RES_HEADER_LEN + size as usize;
-                shm_slice[..RES_HEADER_LEN].clone_from_slice(&res_header);
-                shm_slice[RES_HEADER_LEN.._length].clone_from_slice(&data);
+            {
+                let message = rx.recv()?;
+                let mut shm_res = ShmemConf::new().os_id(&res_id).open()?;
+                // format the message
+                let (seq, data) = message;
+                let data = data.as_bytes();
+                let size = data.len() as u32;
+                let _header = ResHeader{ seq, size };
+
+                unsafe {
+                    let shm_slice = shm_res.as_slice_mut();
+                    let res_header = any_as_u8_slice(&_header);
+                    let _length = RES_HEADER_LEN + size as usize;
+                    shm_slice[..RES_HEADER_LEN].clone_from_slice(&res_header);
+                    shm_slice[RES_HEADER_LEN.._length].clone_from_slice(&data);
+                }
             }
             release_write_lock(sem_res, &res_id)?;
         }
-        Ok(())
     };
     
     // finalization after connection drop
