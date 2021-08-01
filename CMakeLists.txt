@@ -48,7 +48,7 @@ add_subdirectory(gui)
 # pyvdm build: "pyvdm.interface" + "pyvdm.core" + "pyvdm.gui"
 set(PYVDM_DIST_DIR ${CMAKE_CURRENT_BINARY_DIR}/pyvdm)
 file(GLOB PYVDM_API "./interface/*.py")
-file(GLOB PYVDM_WRAPPER "./capability/__wrapper__/python/wrapper.py")
+file(GLOB PYVDM_WRAPPER "./capability/__wrapper__/serde_wrapper_py/wrapper.py")
 set(PYVDM_DAEMON "./daemon/target/release/libvdm_capability_daemon.so")
 add_custom_target(build-pyvdm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

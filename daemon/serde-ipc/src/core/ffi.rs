@@ -25,7 +25,7 @@ pub struct BuildTemplate {
     output: Vec<String>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct RuntimeTemplate {
     dependency: Option<DepMap>,
     status: String,
@@ -39,7 +39,7 @@ pub struct MetaFunc {
     pub args: Vec<HashMap<String, String>>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct Metadata {
     pub name: String,
     pub class: String,
@@ -47,28 +47,12 @@ pub struct Metadata {
     pub func: HashMap<String, MetaFunc>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 struct ServiceConfig {
     entry: String,
     files: Vec<String>,
     metadata: Metadata,
     runtime: RuntimeTemplate
-}
-
-impl Default for ServiceConfig {
-    fn default() -> Self {
-        Self{
-            entry: "".into(), files: Vec::new(),
-            metadata: Metadata {
-                name: "".into(), class: "".into(), version: "".into(),
-                func: HashMap::new()
-            },
-            runtime: RuntimeTemplate {
-                dependency:None, status:"".into(),
-                enable: Vec::new(), disable: Vec::new()
-            }
-        }
-    }
 }
 
 //================================================================================//

@@ -25,7 +25,6 @@ class CapabilityManager:
             self.root = CAPABILITY_DIRECTORY
         self.root.mkdir(exist_ok=True, parents=True) #ensure root existing
         self.temp = Path( tempfile.mkdtemp() )
-        self.vcd = CapabilityDaemon( root=self.root.as_posix() )
         pass
 
     def install(self, url:str) -> ERR:
@@ -43,7 +42,8 @@ class CapabilityManager:
         else:
             return ERR.URL_PARSE_FAILURE
         #
-        ret = self.vcd.install( _path.as_posix() )
+        vcd = CapabilityDaemon( root=self.root.as_posix() )
+        ret = vcd.install( _path.as_posix() )
         if ret:
             print(ret)
             return ERR.VCD_INTERNAL_ERROR
@@ -51,7 +51,8 @@ class CapabilityManager:
             return ERR.ALL_CLEAN
 
     def uninstall(self, name:str) -> ERR:
-        ret = self.vcd.uninstall(name)
+        vcd = CapabilityDaemon( root=self.root.as_posix() )
+        ret = vcd.uninstall(name)
         if ret:
             print(ret)
             return ERR.VCD_INTERNAL_ERROR
@@ -59,7 +60,8 @@ class CapabilityManager:
             return ERR.ALL_CLEAN
 
     def enable(self, name:str) -> ERR:
-        ret = self.vcd.enable(name)
+        vcd = CapabilityDaemon( root=self.root.as_posix() )
+        ret = vcd.enable(name)
         if ret:
             print(ret)
             return ERR.VCD_INTERNAL_ERROR
@@ -67,7 +69,8 @@ class CapabilityManager:
             return ERR.ALL_CLEAN
 
     def disable(self, name) -> ERR:
-        ret = self.vcd.disable(name)
+        vcd = CapabilityDaemon( root=self.root.as_posix() )
+        ret = vcd.disable(name)
         if ret:
             print(ret)
             return ERR.VCD_INTERNAL_ERROR
@@ -75,7 +78,8 @@ class CapabilityManager:
             return ERR.ALL_CLEAN
 
     def query(self, name='') -> str:
-        ret = self.vcd.query(name)
+        vcd = CapabilityDaemon( root=self.root.as_posix() )
+        ret = vcd.query(name)
         print(ret)
         return ret
 
