@@ -144,28 +144,44 @@ impl JsonifyIPC
 #[test]
 fn register_run_and_unregister() {
     let mut server = JsonifyIPC::new(None, None);
-    let src_path:String = "~/build/demo/python".into();
+    let src_name = "inotify-lookup";
+    let src_path:String = "~/build/virtual-domain-manager/capability/inotify-lookup".into();
     server.install_service(src_path).unwrap();
     {
-        let (sig, spec) = server.get_service("test".into()).unwrap();
-        println!("{}, {:?}", sig, spec);
-        let (sig1, spec1) = server.get_service("test".into()).unwrap();
-        println!("{}, {:?}", sig1, spec1);
-        assert_eq!(spec1.is_none(), true);
+        let (sig, _spec) = server.get_service(src_name.into()).unwrap();
         {
-            let args = vec![ serde_json::to_string("World").unwrap() ];
-            let descriptor: ffi::FFIDescriptor = (sig.clone(), "main".into(), args);
-            //
-            let _ffi = server.ffi.lock().unwrap();
-            for _ in 0..10 {
-                _ffi.execute(descriptor.clone(), move |res|{
-                    println!("get results: {}",res);
-                });
-            }
-            std::thread::sleep( std::time::Duration::from_millis(500) );
+
         }
-        server.put_service("test".into(), sig);
-        server.put_service("test".into(), sig1);
+        server.put_service(src_name.into(), sig);
     }
-    server.uninstall_service("test".into()).unwrap();
+    server.uninstall_service(src_name.into()).unwrap();
 }
+
+// A Python Library Test
+// fn register_run_and_unregister() {
+//     let mut server = JsonifyIPC::new(None, None);
+//     let src_path:String = "~/build/demo/python".into();
+//     server.install_service(src_path).unwrap();
+//     {
+//         let (sig, spec) = server.get_service("test".into()).unwrap();
+//         println!("{}, {:?}", sig, spec);
+//         let (sig1, spec1) = server.get_service("test".into()).unwrap();
+//         println!("{}, {:?}", sig1, spec1);
+//         assert_eq!(spec1.is_none(), true);
+//         {
+//             let args = vec![ serde_json::to_string("World").unwrap() ];
+//             let descriptor: ffi::FFIDescriptor = (sig.clone(), "main".into(), args);
+//             //
+//             let _ffi = server.ffi.lock().unwrap();
+//             for _ in 0..10 {
+//                 _ffi.execute(descriptor.clone(), move |res|{
+//                     println!("get results: {}",res);
+//                 });
+//             }
+//             std::thread::sleep( std::time::Duration::from_millis(500) );
+//         }
+//         server.put_service("test".into(), sig);
+//         server.put_service("test".into(), sig1);
+//     }
+//     server.uninstall_service("test".into()).unwrap();
+// }
