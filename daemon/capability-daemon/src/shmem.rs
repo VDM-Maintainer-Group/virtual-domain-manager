@@ -167,7 +167,6 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                     let mut get_res = || -> Result<_,Box<dyn std::error::Error>>{
                         let args: NameCall = serde_json::from_str(&req_data)?;
                         let mut ffi_obj = ffi.lock()?;
-                        println!("at least locked?");
                         let (sig, spec) = ffi_obj.register(&args.name)
                             .ok_or( format!("") )?;
                         register_records.insert( args.name, sig.clone() );
@@ -177,8 +176,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                         Ok(res) => {
                             tx.send( (seq, res) )?
                         },
-                        Err(e) => {
-                            println!("error: {:?}", e);
+                        Err(_) => {
                             let res = NameCallRes{sig:"".into(), spec:None};
                             let res = serde_json::to_string(&res).unwrap();
                             tx.send( (seq, res) )?

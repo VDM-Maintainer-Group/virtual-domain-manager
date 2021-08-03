@@ -145,12 +145,19 @@ impl JsonifyIPC
 fn register_run_and_unregister() {
     let mut server = JsonifyIPC::new(None, None);
     let src_name = "inotify-lookup";
-    let src_path:String = "~/build/virtual-domain-manager/capability/inotify-lookup".into();
+    let src_path:String = "~/build/vdm-capability-library/inotify-lookup".into();
     server.install_service(src_path).unwrap();
     {
-        let (sig, _spec) = server.get_service(src_name.into()).unwrap();
+        let (sig, spec) = server.get_service(src_name.into()).unwrap();
+        println!("{}, {:?}", sig, spec);
         {
-
+            let args = vec![ serde_json::to_string("code").unwrap() ];
+            let descriptor: ffi::FFIDescriptor = (sig.clone(), "register".into(), args);
+            let _ffi = server.ffi.lock().unwrap();
+            _ffi.execute(descriptor.clone(), move |res|{
+                println!("get results: {}",res);
+            });
+            std::thread::sleep( std::time::Duration::from_millis(100) );
         }
         server.put_service(src_name.into(), sig);
     }

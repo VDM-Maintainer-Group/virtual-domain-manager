@@ -15,7 +15,7 @@ PARENT_ROOT = Path('~/.vdm').expanduser()
 CAPABILITY_DIRECTORY = PARENT_ROOT / 'capability'
 
 def _start_daemon(root):
-    CapabilityManager(root).vcd.start_daemon()
+    CapabilityDaemon( root ).start_daemon()
 
 class CapabilityManager:
     def __init__(self, root=''):

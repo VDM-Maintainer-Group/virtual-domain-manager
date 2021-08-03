@@ -118,12 +118,14 @@ impl<'a> Func<'a> {
     }
 }
 
+#[derive(Debug)]
 enum LibraryContext {
     CDLL(libloading::Library),
     Rust(libloading::Library),
     Python(PyModName)
 }
 
+#[derive(Debug)]
 pub struct Service {
     context: LibraryContext,
     func: HashMap<String, MetaFunc>
