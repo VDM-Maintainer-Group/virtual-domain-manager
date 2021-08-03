@@ -248,12 +248,15 @@ impl FFIManager {
 // service register / unregister
 impl FFIManager {
     pub fn register(&mut self, name: &String) -> Option<(String,Option<MetaFuncMap>)> {
+        let cfg = self.load_config_file(name)?;
+        let spec = cfg.metadata.func.clone();
+
         let (service_sig, spec) = {
             match self.service_map.get(name) {
-                Some(sig) => Some( (*sig, None) ),
+                Some(sig) => {
+                    Some( (*sig, Some(spec)) )
+                },
                 None => { //load service here
-                    let cfg = self.load_config_file(name)?;
-                    let spec = cfg.metadata.func.clone();
                     match self.insert_service(cfg) {
                         Some(srv_sig) => Some( (srv_sig, Some(spec)) ),
                         None => None

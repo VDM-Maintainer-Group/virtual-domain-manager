@@ -22,7 +22,7 @@ class _COMMAND(IntEnum): #2-byte
     CHAIN_CALL  = 0x05
     pass
 
-def __validate(_type, x) -> bool:
+def _validate(_type, x) -> bool:
     _map = {
         'Null':   lambda x:x is None,
         'Bool':   lambda x:isinstance(x, bool),
@@ -37,12 +37,12 @@ def __validate(_type, x) -> bool:
     if isinstance(x, AnyType): #only for top-level type
         return (_type==x.restype)
     else:
-        if len(_nested)==3:
+        if _nested:#len(_nested)==3:
             if _nested[0]=='Array' and _map[_type](x):
-                return __validate(_nested[1], x[0])
+                return _validate(_nested[1], x[0])
             elif _nested[0]=='Object' and _map[_type](x):
                 key_type, val_type = _nested[1].replace(' ','').split(',')
-                return key_type=='String' and __validate(key_type, x.keys()[0]) and __validate(val_type, x.values()[0])
+                return key_type=='String' and _validate(key_type, x.keys()[0]) and _validate(val_type, x.values()[0])
             else:
                 return False
         else:
@@ -309,7 +309,7 @@ class CapabilityHandle:
                 _sig_func_args_table = list()
                 # check spec validation with *args and **kwargs
                 for i,x in enumerate(args_spec):
-                    _name, _type = x.keys()[0], x.values()[0]
+                    _name, _type = next( iter(x.items()) )
                     if i < len(args):
                         _arg = args[i]
                     elif _name in kwargs:
@@ -317,16 +317,16 @@ class CapabilityHandle:
                     else:
                         raise Exception('Input argument missing: %s.'%_name)
                     #
-                    if __validate(_type, _arg):
+                    if _validate(_type, _arg):
                         args_spec[i] = _arg #feed in: dict -> arg
                         if isinstance(_arg, AnyType):
-                            _sig_func_args_table.extend(_arg.table)
+                            _sig_func_args_table.append(_arg.table)
                     else:
                         raise Exception('Input type mismatch: "%r" for type "%s".'%(_arg, _type))
                     pass
-                _sig_func_args_table.extend( [self._sig, name, args_spec] )
+                _sig_func_args_table.append( [self._sig, name, args_spec] )
                 # wrap request method, lazy or not
-                if len(_sig_func_args_table) > 0 or _mode=='lazy':
+                if len(_sig_func_args_table) > 1 or _mode=='lazy':
                     self._sig_func_args_table = _sig_func_args_table
                     res = AnyType( 'restype_%s_%s'%(self._sig, name), _restype, _sig_func_args_table )
                 elif _mode=='one-way':
@@ -424,7 +424,6 @@ class CapabilityLibrary:
             assert(mode in [None, 'one-way', 'lazy'])
             _item = CapabilityHandle(self.__server, name, mode)
         except Exception as e:
-            print(e)
             return None
         else:
             self.capability.update( {name:_item} )
