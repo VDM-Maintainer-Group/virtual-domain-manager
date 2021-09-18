@@ -79,11 +79,11 @@ impl JsonifyIPC
         // 1. check basic information
         let mut metadata = ffi::Metadata {
             name: manifest.get("name").and_then( |val|{val.as_str()} )
-                    .ok_or( format!("'name' section missing ins manifest file.") )?.into(),
+                    .ok_or( format!("'name' section missing in manifest file.") )?.into(),
             class: manifest.get("type").and_then( |val|{val.as_str()} )
-                    .ok_or( format!("'type' section missing ins manifest file.") )?.into(),
+                    .ok_or( format!("'type' section missing in manifest file.") )?.into(),
             version: manifest.get("version").and_then( |val|{val.as_str()} )
-                    .ok_or( format!("'version' section missing ins manifest file.") )?.into(),
+                    .ok_or( format!("'version' section missing in manifest file.") )?.into(),
             func: HashMap::new()
         };
         // 2. check "build" information
