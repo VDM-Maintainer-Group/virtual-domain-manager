@@ -158,7 +158,7 @@ def init_subparsers(subparsers):
     #
     p_query = subparsers.add_parser('query',
         help='query the status of installed capability.')
-    p_query.add_argument('name', metavar='name', nargs='?',
+    p_query.add_argument('name', metavar='name', nargs='?', default='',
         help='the capability name')
     pass
 

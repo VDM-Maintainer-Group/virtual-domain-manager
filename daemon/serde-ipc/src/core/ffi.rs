@@ -107,11 +107,14 @@ impl FFIManager {
 
     fn load_config_file(&self, name:&String) -> Option<ServiceConfig> {
         let cfg_file = self.root.join(&name).join(".conf");
-        confy::load_path(&cfg_file).ok().and_then(|cfg:ServiceConfig|{
-            if !cfg.entry.is_empty() {
-                Some(cfg)
-            } else { None }
-        })
+        if cfg_file.exists() {
+            confy::load_path(&cfg_file).ok().and_then(|cfg:ServiceConfig|{
+                if !cfg.entry.is_empty() {
+                    Some(cfg)
+                } else { None }
+            })
+        }
+        else { None }
     }
 
     fn prepare_runtime(&self, files:Vec<String>, metadata:Metadata, runtime:RuntimeTemplate) -> ExecResult

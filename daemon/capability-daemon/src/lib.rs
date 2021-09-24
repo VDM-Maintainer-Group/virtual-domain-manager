@@ -56,9 +56,9 @@ impl CapabilityDaemon {
     #[pyo3(name = "query")]
     fn query_status(&self, name:String) -> PyResult<String> {
         match self.server.service_status(name) {
-            None => Ok( "N/A".into() ),
-            Some(true) => Ok( "Capable".into() ),
-            Some(false) => Ok( "Incapable".into() )
+            None => Ok( "N/A.".into() ),
+            Some(true) => Ok( "Capable.".into() ),
+            Some(false) => Ok( "Incapable.".into() )
         }
     }
 
