@@ -34,18 +34,18 @@ impl Commander {
         }
     }
 
-    fn run_prog(&self, prog: &str, args:Vec<&str>) -> Result<String, ()> {
-        let result = Command::new(prog)
-                    .current_dir( self.root.clone() )
-                    .args(args)
-                    .output();
-        match result {
-            Err(_) => Err(()),
-            Ok(output) => {
-                Ok( String::from_utf8_lossy(&output.stdout).into_owned() )
-            }
-        }
-    }
+    // fn run_prog(&self, prog: &str, args:Vec<&str>) -> Result<String, ()> {
+    //     let result = Command::new(prog)
+    //                 .current_dir( self.root.clone() )
+    //                 .args(args)
+    //                 .output();
+    //     match result {
+    //         Err(_) => Err(()),
+    //         Ok(output) => {
+    //             Ok( String::from_utf8_lossy(&output.stdout).into_owned() )
+    //         }
+    //     }
+    // }
 }
 
 impl Commander {
@@ -146,9 +146,9 @@ impl Commander {
             return None;
         }
         else {
-            let mut args:Vec<&str> = arg.split(' ').collect();
-            let params:Vec<&str> = args.drain(1..).collect();
-            match self.run_prog(args[0], params) {
+            // let mut args:Vec<&str> = arg.split(' ').collect();
+            // let params:Vec<&str> = args.drain(1..).collect();
+            match self.run(arg) { //[0], params
                 Ok(_) => Some(true),
                 Err(_) => Some(false)
             }
