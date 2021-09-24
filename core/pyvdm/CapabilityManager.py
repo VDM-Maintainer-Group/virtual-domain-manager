@@ -77,10 +77,17 @@ class CapabilityManager:
         else:
             return ERR.ALL_CLEAN
 
-    def query(self, name='') -> str:
+    def query(self, name=''): #-> str or dict
         vcd = CapabilityDaemon( root=self.root.as_posix() )
-        ret = vcd.query(name)
-        print(ret)
+        if not name:
+            ret = dict()
+            for name,_,content in os.walk(CAPABILITY_DIRECTORY):
+                if '.conf' in content:
+                    ret.update({ Path(name).name : vcd.query(name) })
+            pass
+        else:
+            ret = vcd.query(name)
+        print( json.dumps(ret, indent=4) )
         return ret
 
     def daemon(self, option) -> ERR:
@@ -157,7 +164,7 @@ def init_subparsers(subparsers):
         help='[start,stop,restart,status]')
     #
     p_query = subparsers.add_parser('query',
-        help='query the status of installed capability.')
+        help='query the status of the installed capability(s).')
     p_query.add_argument('name', metavar='name', nargs='?', default='',
         help='the capability name')
     pass
