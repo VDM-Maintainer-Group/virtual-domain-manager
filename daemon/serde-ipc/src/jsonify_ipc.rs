@@ -172,9 +172,6 @@ fn register_run_and_unregister() {
 //     {
 //         let (sig, spec) = server.get_service("test".into()).unwrap();
 //         println!("{}, {:?}", sig, spec);
-//         let (sig1, spec1) = server.get_service("test".into()).unwrap();
-//         println!("{}, {:?}", sig1, spec1);
-//         assert_eq!(spec1.is_none(), true);
 //         {
 //             let args = vec![ serde_json::to_string("World").unwrap() ];
 //             let descriptor: ffi::FFIDescriptor = (sig.clone(), "main".into(), args);
@@ -188,7 +185,6 @@ fn register_run_and_unregister() {
 //             std::thread::sleep( std::time::Duration::from_millis(500) );
 //         }
 //         server.put_service("test".into(), sig);
-//         server.put_service("test".into(), sig1);
 //     }
 //     server.uninstall_service("test".into()).unwrap();
 // }
