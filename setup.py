@@ -31,7 +31,8 @@ if __name__ == '__main__':
         entry_points = {
             'console_scripts': [
                 'pyvdm = pyvdm.core.manager:main',
-                'pyvdm-tray = pyvdm.gui.tray:main'
+                'pyvdm-tray = pyvdm.gui.tray:main',
+                'sbs = pyvdm.build:main'
             ]
         }
     )
