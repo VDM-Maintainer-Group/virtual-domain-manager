@@ -40,13 +40,12 @@ In the open working domain, VDM would request all the support applications to re
 
    ```bash
    mkdir build; cd build; cmake ..; make
-   cd build; make build-pyvdm
    ```
 
-3. **install the capability library and pyvdm**
+3. **build and install pyvdm**
 
    ```bash
-   cd build; sudo make install
+   cd build; make build-pyvdm
    cd dist; pip3 install *.whl
    ```
 
@@ -66,23 +65,30 @@ In the open working domain, VDM would request all the support applications to re
 
 - **Plugin Management**
 
-  - install a plugin: `pyvdm plugin install <path-to-plugin-archive-file>`
-  - uninstall plugin(s): `pyvdm plugin uninstall <plugin1> [<plugin2> ...]`
-  - list plugin(s) details: `pyvdm plugin list [<plugin-name>]`
-  - run plugin functions: `pyvdm plugin run <plugin-name> <function-name>`
+  - `install` a plugin with the "*.zip" file
+  - `uninstall` existing plugin(s) with `name(s)`
+  - `list` plugin details (list all by default)
+  - `run` plugin functions with:
+
+  `pyvdm plugin run <plugin-name> <function-name>`
 
 - **Domain Management**
 
-  - add a domain via TUI: `pyvdm domain add <domain-name>`
-  - update a domain via TUI: `pyvdm domain update <domain-name>`
-  - remove a domain: `pyvdm domain remove <domain-name>`
-  - list domain(s) details: `pyvdm domain list [<domain-name>]`
+  - `add` a domain via TUI with `name`
+  - `update` an existing domain with `name`
+  - `remove` an existing domain with `name`
+  - `list` domain details (list all by default)
 
 - **Capability Management**
 
   > Manage capability installation, enabling and running status.
 
-  (To be updated ...)
+  - `install` capability from folder or "*.zip" file
+  - `uninstall` capability with `name`
+  - `enable`/`disable`/`query` capability status
+  - capability daemon status:
+
+    `pyvdm capability daemon start/stop/restart/status`
 
 - **Sync Management**
 
