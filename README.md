@@ -70,7 +70,7 @@ In the open working domain, VDM would request all the support applications to re
   - `list` plugin details (list all by default)
   - `run` plugin functions with:
 
-  `pyvdm plugin run <plugin-name> <function-name>`
+    `pyvdm plugin run <plugin-name> <function-name>`
 
 - **Domain Management**
 
