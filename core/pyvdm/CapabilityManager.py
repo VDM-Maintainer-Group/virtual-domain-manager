@@ -25,9 +25,14 @@ class CapabilityManager:
             self.root = CAPABILITY_DIRECTORY
         self.root.mkdir(exist_ok=True, parents=True) #ensure root existing
         self.temp = Path( tempfile.mkdtemp() )
+
+        os.environ['VDM_CAPABILITY_OUTPUT_DIRECTORY'] = self.temp.as_posix()
+        os.environ['VDM_CAPABILITY_INSTALL_DIRECTORY'] = self.root.as_posix()
         pass
 
     def install(self, url:str) -> ERR:
+        from pyvdm.build import sbs_entry as sbs
+
         url = Path(url)
         #
         if url.is_file():
@@ -42,22 +47,36 @@ class CapabilityManager:
         else:
             return ERR.URL_PARSE_FAILURE
         #
-        vcd = CapabilityDaemon( root=self.root.as_posix() )
-        ret = vcd.install( _path.as_posix() )
-        if ret:
+        ret = sbs('install', [_path.as_posix()])[0]
+        if ret==True:
+            return ERR.ALL_CLEAN
+        else:
             print(ret)
             return ERR.VCD_INTERNAL_ERROR
-        else:
-            return ERR.ALL_CLEAN
+        # vcd = CapabilityDaemon( root=self.root.as_posix() )
+        # ret = vcd.install( _path.as_posix() )
+        # if ret:
+        #     print(ret)
+        #     return ERR.VCD_INTERNAL_ERROR
+        # else:
+        #     return ERR.ALL_CLEAN
 
     def uninstall(self, name:str) -> ERR:
-        vcd = CapabilityDaemon( root=self.root.as_posix() )
-        ret = vcd.uninstall(name)
-        if ret:
+        from pyvdm.build import sbs_entry as sbs
+
+        ret = sbs('uninstall', [name])[0]
+        if ret==True:
+            return ERR.ALL_CLEAN
+        else:
             print(ret)
             return ERR.VCD_INTERNAL_ERROR
-        else:
-            return ERR.ALL_CLEAN
+        # vcd = CapabilityDaemon( root=self.root.as_posix() )
+        # ret = vcd.uninstall(name)
+        # if ret:
+        #     print(ret)
+        #     return ERR.VCD_INTERNAL_ERROR
+        # else:
+        #     return ERR.ALL_CLEAN
 
     def enable(self, name:str) -> ERR:
         vcd = CapabilityDaemon( root=self.root.as_posix() )
