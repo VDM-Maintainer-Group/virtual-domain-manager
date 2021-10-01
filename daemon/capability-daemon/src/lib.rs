@@ -1,10 +1,8 @@
 mod consts;
-mod shmem;
 use pyo3::prelude::*;
 use crate::consts::*;
 
-use serde_ipc::JsonifyIPC;
-use crate::shmem::ShMem;
+use serde_ipc::{JsonifyIPC, protocol::shmem};
 
 #[pyclass]
 struct CapabilityDaemon {
@@ -19,22 +17,6 @@ impl CapabilityDaemon {
         let server_port = Some( port.unwrap_or(VDM_SERVER_PORT) );
         let server = JsonifyIPC::new(root, server_port);
         CapabilityDaemon{ server }
-    }
-
-    #[pyo3(name = "install")]
-    fn install_capability(&self, path:String) -> PyResult<String> {
-        match self.server.install_service(path) {
-            Ok(_) => Ok("".into()),
-            Err(msg) => Ok(msg)
-        }
-    }
-
-    #[pyo3(name = "uninstall")]
-    fn uninstall_capability(&self, name:String) -> PyResult<String> {
-        match self.server.uninstall_service(name) {
-            Ok(_) => Ok("".into()),
-            Err(msg) => Ok(msg)
-        }
     }
 
     #[pyo3(name = "enable")]
@@ -64,7 +46,7 @@ impl CapabilityDaemon {
 
     #[pyo3(name = "start_daemon")]
     fn start_daemon(&mut self) -> PyResult<()> {
-        self.server.start::<ShMem>();
+        self.server.start::<shmem::ShMem>();
         Ok(())
     }
 }

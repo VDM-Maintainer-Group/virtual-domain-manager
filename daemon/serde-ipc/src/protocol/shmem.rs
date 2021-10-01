@@ -8,8 +8,8 @@ use shared_memory::{ShmemConf};
 use serde::{Serialize,Deserialize};
 use threadpool::ThreadPool;
 //
-use serde_ipc::{MetaFuncMap, FFIDescriptor, ArcFFIManager};
-use serde_ipc::IPCProtocol;
+use crate::core::ffi::{MetaFuncMap, FFIDescriptor, ArcFFIManager};
+use crate::core::traits::IPCProtocol;
 
 type Message = (u32, String);
 

@@ -14,3 +14,5 @@ impl IPCProtocol for DummyProtocol {
     fn spawn_recv_thread(&mut self, _tx: mpsc::Sender<Self::Message>) {}
     fn stop(&self) {}
 }
+
+pub mod shmem;

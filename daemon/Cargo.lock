@@ -552,10 +552,12 @@ dependencies = [
  "libloading",
  "nix",
  "num_cpus",
+ "num_enum",
  "pyo3",
  "rand",
  "serde",
  "serde_json",
+ "shared_memory",
  "shellexpand",
  "threadpool",
  "tokio",
@@ -730,12 +732,10 @@ name = "vdm-capability-daemon"
 version = "0.1.0"
 dependencies = [
  "libc",
- "num_enum",
  "pyo3",
  "serde",
  "serde-ipc",
  "serde_json",
- "shared_memory",
  "shellexpand",
  "threadpool",
 ]
