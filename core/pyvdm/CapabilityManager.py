@@ -53,13 +53,6 @@ class CapabilityManager:
         else:
             print(ret)
             return ERR.VCD_INTERNAL_ERROR
-        # vcd = CapabilityDaemon( root=self.root.as_posix() )
-        # ret = vcd.install( _path.as_posix() )
-        # if ret:
-        #     print(ret)
-        #     return ERR.VCD_INTERNAL_ERROR
-        # else:
-        #     return ERR.ALL_CLEAN
 
     def uninstall(self, name:str) -> ERR:
         from pyvdm.build import sbs_entry as sbs
@@ -70,13 +63,6 @@ class CapabilityManager:
         else:
             print(ret)
             return ERR.VCD_INTERNAL_ERROR
-        # vcd = CapabilityDaemon( root=self.root.as_posix() )
-        # ret = vcd.uninstall(name)
-        # if ret:
-        #     print(ret)
-        #     return ERR.VCD_INTERNAL_ERROR
-        # else:
-        #     return ERR.ALL_CLEAN
 
     def enable(self, name:str) -> ERR:
         vcd = CapabilityDaemon( root=self.root.as_posix() )
