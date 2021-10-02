@@ -292,7 +292,7 @@ impl FFIManager {
 // service execute / chain_execute
 impl FFIManager
 {
-    fn get_service_by_sig(&self, srv_use_sig: &String) -> Option<Arc<Service>> {
+    pub fn get_service_by_sig(&self, srv_use_sig: &String) -> Option<Arc<Service>> {
         let srv_use_sig:u64 = srv_use_sig.parse().unwrap_or(0);
         let service_sig = (srv_use_sig >> 32) as u32;   //high u32
         let usage_sig   = srv_use_sig as u32;           //low u32
