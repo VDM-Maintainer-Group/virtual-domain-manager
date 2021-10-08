@@ -7,6 +7,9 @@ from functools import wraps
 from multiprocessing import (Process, Value, Queue)
 from posix_ipc import (SharedMemory, Semaphore, O_CREX, unlink_semaphore, unlink_shared_memory)
 
+from pathlib import Path
+from pyvdm.daemon.vdm_capability_daemon import CapabilityDaemon
+
 SHM_REQ_MAX_SIZE = 10*1024   #10KB
 SHM_RES_MAX_SIZE = 1024*1024 #1MB
 VDM_SERVER_PORT = 42000
@@ -280,6 +283,45 @@ class ShmManager:
         else:
             return True
         pass
+
+    pass
+
+class CapabilityHandleLocal:
+    def __init__(self, name, root=None):
+        if root is None:
+            root = Path('~/.vdm/capability').expanduser().resolve()
+        vcd = CapabilityDaemon(root.as_posix())
+        try:
+            result = vcd.register(name)
+            result = json.loads(result)
+            self.sig = result['sig']
+            self.spec = result['spec']
+            self.vcd = vcd
+        except Exception as e:
+            raise e
+
+    def __getattribute__(self, name: str):
+        _spec = super().__getattribute__('spec')
+        if name in _spec.keys():
+
+            @wraps(name)
+            def _wrapper(*args, **kwargs):
+                args_spec = _spec[name]['args']
+                for i,x in enumerate(args_spec):
+                    _name, _type = next( iter(x.items()) )
+                    if i < len(args):
+                        _arg = args[i]
+                    elif _name in kwargs:
+                        _arg = kwargs[_name]
+                    else:
+                        raise Exception('Input argument missing: %s.'%_name)
+                    args_spec[i] = json.dumps(_arg)
+                self.vcd.call(self.sig, name, args_spec)
+                pass
+
+            return _wrapper
+        else:
+            return super().__getattribute__(name)
 
     pass
 
