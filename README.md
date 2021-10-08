@@ -102,7 +102,7 @@ Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-
 
 ## Plugin Development
 
-Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/CONTRIBUTING.md).
+Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
 
 ## License
 
