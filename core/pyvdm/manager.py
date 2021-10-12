@@ -108,15 +108,15 @@ class CoreManager:
     pass
 
 def execute(command, args):
-    if command=='domain':
+    if command in ['domain', 'dm']:
         dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
         return D_MAN.execute(dm, args.domain_command, args)
     
-    if command=='plugin':
+    if command in ['plugin', 'pm']:
         pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
         return P_MAN.execute(pm, args.plugin_command, args)
 
-    if command=='capability':
+    if command in ['capability', 'am', 'cap']:
         am = A_MAN.CapabilityManager(CAPABILITY_DIRECTORY)
         return A_MAN.execute(am, args.capability_command, args)
 
@@ -144,19 +144,19 @@ def main():
     subparsers = parser.add_subparsers(dest='command')
 
     # domain_manager
-    dm_parser = subparsers.add_parser('domain',
+    dm_parser = subparsers.add_parser('domain', aliases=['dm'],
         help='Call VDM Domain Manager.')
     dm_subparsers = dm_parser.add_subparsers(dest='domain_command')
     D_MAN.init_subparsers(dm_subparsers)
 
     # plugin_manager
-    pm_parser = subparsers.add_parser('plugin',
+    pm_parser = subparsers.add_parser('plugin', aliases=['pm'],
         help='Call VDM Plugin Manager.')
     pm_subparsers = pm_parser.add_subparsers(dest='plugin_command')
     P_MAN.init_subparsers(pm_subparsers)
 
     # capability_manager
-    am_parser = subparsers.add_parser('capability',
+    am_parser = subparsers.add_parser('capability', aliases=['am', 'cap'],
         help='Call VDM Capability Manager.')
     am_subparsers = am_parser.add_subparsers(dest='capability_command')
     A_MAN.init_subparsers(am_subparsers)
