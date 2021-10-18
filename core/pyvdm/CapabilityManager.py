@@ -105,7 +105,7 @@ class CapabilityManager:
                 return ERR.DAEMON_ALREADY_EXISTS
             _file = (self.temp/name).as_posix()
             with open(_file, 'w') as f:
-                f.write('import sys; import pyvdm.core.CapabilityManager as A_MAN; A_MAN._start_daemon(sys.argv[1])')
+                f.write('import sys; import pyvdm.core.CapabilityManager as C_MAN; C_MAN._start_daemon(sys.argv[1])')
             sp.Popen(['python3', _file, self.root.as_posix()])
             return ERR.ALL_CLEAN
         def _stop():
@@ -122,22 +122,22 @@ class CapabilityManager:
 
     pass
 
-def execute(am, command, args, verbose=False):
-    assert( isinstance(am, CapabilityManager) )
+def execute(cm, command, args, verbose=False):
+    assert( isinstance(cm, CapabilityManager) )
     if command=='daemon':
-        return am.daemon(args.option)
+        return cm.daemon(args.option)
     elif command=='install':
-        return am.install(args.url)
+        return cm.install(args.url)
     elif command=='uninstall':
-        return am.uninstall(args.name)
+        return cm.uninstall(args.name)
     elif command=='enable':
-        return am.enable(args.name)
+        return cm.enable(args.name)
     elif command=='disable':
-        return am.disable(args.name)
+        return cm.disable(args.name)
     elif command=='query':
-        return am.query(args.name)
+        return cm.query(args.name)
     elif command==None:
-        return am.query()
+        return cm.query()
     else:
         print('The command <{}> is not supported.'.format(command))
     return
@@ -182,8 +182,8 @@ if __name__ == '__main__':
         init_subparsers(subparsers)
         #
         args = parser.parse_args()
-        am = CapabilityManager()
-        ret = execute(am, args.command, args)
+        cm = CapabilityManager()
+        ret = execute(cm, args.command, args)
         if isinstance(ret, ERR):
             raise Exception(ret.name)
     except Exception as e:
