@@ -85,7 +85,7 @@ impl FFIManager {
             let root = root.canonicalize().unwrap();
             Python::with_gil(|py| {
                 let sys = py.import("sys").unwrap();
-                let path:&PyList = sys.getattr("path").unwrap().try_into().unwrap();
+                let path:&PyList = PyTryInto::try_into(&*sys.getattr("path").unwrap()).unwrap();
                 path.insert(0, &root).unwrap();
             });
         }

@@ -2,7 +2,7 @@
 name = "vdm-capability-daemon"
 version = "0.1.0"
 authors = ["iamhyc <sudofree@163.com>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "vdm_capability_daemon"
