@@ -144,8 +144,8 @@ impl JsonifyIPC
 #[test]
 fn register_run_and_unregister() {
     let mut server = JsonifyIPC::new(None, None);
-    let src_name = "inotify-lookup";
-    let src_path:String = "~/build/vdm-capability-library/inotify-lookup".into();
+    let src_name = "test";
+    let src_path:String = "~/build/demo".into();
     server.install_service(src_path).unwrap();
     {
         let (sig, spec) = server.get_service(src_name.into()).unwrap();
