@@ -306,7 +306,7 @@ class CapabilityHandleLocal:
 
             @wraps(name)
             def _wrapper(*args, **kwargs):
-                args_spec = _spec[name]['args']
+                args_spec = _spec[name]['args'].copy()
                 for i,x in enumerate(args_spec):
                     _name, _type = next( iter(x.items()) )
                     if i < len(args):
@@ -343,8 +343,8 @@ class CapabilityHandle:
         _spec = super().__getattribute__('_spec')
         _mode = super().__getattribute__('mode')
         if name in _spec.keys():
-            args_spec = _spec[name]['args']
-            _restype  = _spec[name]['restype']
+            args_spec = _spec[name]['args'].copy()
+            _restype  = _spec[name]['restype'].copy()
 
             @wraps(name)
             def _wrapper(*args, **kwargs):
