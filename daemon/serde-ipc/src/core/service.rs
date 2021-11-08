@@ -143,7 +143,7 @@ impl Service {
                 if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
                     Some( LibraryContext::Rust(lib) )
                 } else { None }
-            }
+            },
             "python" => {
                 if let Ok(contents) = std::fs::read_to_string(entry) {
                     let module_name = std::path::Path::new(entry).file_name()?.to_str()?;
