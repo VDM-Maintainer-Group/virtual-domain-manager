@@ -151,8 +151,8 @@ fn register_run_and_unregister() {
         let (sig, spec) = server.get_service(src_name.into()).unwrap();
         println!("{}, {:?}", sig, spec);
         {
-            let args = vec![ serde_json::to_string("code").unwrap() ];
-            let descriptor: ffi::FFIDescriptor = (sig.clone(), "register".into(), args);
+            let kwargs = serde_json::to_string("{{\"name\":\"code\"}}").unwrap();
+            let descriptor: ffi::FFIDescriptor = (sig.clone(), "register".into(), kwargs);
             let _ffi = server.ffi.lock().unwrap();
             _ffi.execute(descriptor.clone(), move |res|{
                 println!("get results: {}",res);

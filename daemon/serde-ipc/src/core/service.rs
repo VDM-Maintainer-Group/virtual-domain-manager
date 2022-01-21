@@ -68,15 +68,15 @@ enum Func<'a> {
 }
 
 impl<'a> Func<'a> {
-    pub fn new<'lib>(lib:&'lib LibraryContext, name:&String, argc:usize) -> Option<Func<'lib>> {
+    pub fn new<'lib>(lib:&'lib LibraryContext, name:&String) -> Option<Func<'lib>> {
         match lib {
             LibraryContext::CDLL(lib) => {
-                if let Some(func) = RawFunc::load(lib, name.as_bytes(), argc) {
+                if let Some(func) = RawFunc::load(lib, name.as_bytes(), 1) {
                     Some( Func::CFunc(func) )
                 } else {None}
             },
             LibraryContext::Rust(lib) => {
-                if let Some(func) = RawFunc::load(lib, name.as_bytes(), argc) {
+                if let Some(func) = RawFunc::load(lib, name.as_bytes(), 1) {
                     Some( Func::RustFunc(func) )
                 } else {None}
             }
@@ -86,30 +86,26 @@ impl<'a> Func<'a> {
         }
     }
 
-    pub fn call(&self, args:Vec<String>, args_name:Vec<&String>) -> Option<String> {
+    pub fn call(&self, kwargs:String) -> Option<String> {
         match self {
             Self::CFunc(func) => {
-                let args:Vec<CString> = args.iter().map(|arg|{
-                    CString::new( arg.to_string() ).unwrap()
-                }).collect();
-                let _args:Vec<*const c_char> = args.iter().map(|arg|{
-                    arg.as_ptr()
-                }).collect();
-                unsafe{ Some(
-                    CStr::from_ptr( func.call(_args)? ).to_string_lossy().into_owned()
-                ) }
+                let kwargs = CString::new( kwargs ).unwrap();
+                let p_kwargs:*const c_char = kwargs.as_ptr();
+                unsafe{
+                    Some(
+                        CStr::from_ptr( func.call(vec![p_kwargs])? ).to_string_lossy().into_owned()
+                    )
+                }
             },
             Self::RustFunc(func) => {
-                func.call(args)
+                func.call( vec![kwargs] )
             },
             Self::PythonFunc(func) => {
                 let (mod_name, func_name) = func;
                 Python::with_gil(|py|{
                     let py_module = PyModule::import(py, mod_name).ok()?;
                     let py_func = py_module.getattr(func_name).ok()?;
-                    let kwargs:Vec<(String,String)> = args.into_iter().enumerate().map(|(i,v)|{
-                        ( args_name[i].to_string(), v )
-                    }).collect();
+                    let kwargs:Vec<(String,String)> = vec![("kwargs".into(), kwargs)];
                     let kwargs = kwargs.into_py_dict(py);
                     py_func.call((), Some(kwargs)).ok()?.extract().ok()
                 })
@@ -164,12 +160,8 @@ impl Service {
         } else {None}
     }
 
-    pub fn call(&self, name:&String, args:Vec<String>) -> Option<String> {
-        let func = self.func.get(name)?;
-        let argc = func.args.len();
-        let args_name:Option<Vec<&String>> = func.args.iter().map(|arg|{
-            Some( arg.iter().nth(0)?.0 )
-        }).collect();
-        Func::new(&self.context, name, argc)?.call(args, args_name?)
+    pub fn call(&self, name:&String, kwargs:String) -> Option<String> {
+        let _func = self.func.get(name)?;
+        Func::new(&self.context, name)?.call(kwargs)
     }
 }

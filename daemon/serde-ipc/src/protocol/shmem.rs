@@ -61,7 +61,7 @@ struct NameCallRes {
 struct FuncCall {
     sig: String,
     func: String,
-    args: Vec<String>
+    kwargs: String
 }
 
 #[derive(Serialize,Deserialize)]
@@ -194,7 +194,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 Command::CALL => {
                     let tx_ref = tx.clone();
                     let args: FuncCall = serde_json::from_str(&req_data)?;
-                    let desc: FFIDescriptor = (args.sig, args.func, args.args);
+                    let desc: FFIDescriptor = (args.sig, args.func, args.kwargs);
                     let ffi_obj = ffi.lock()?;
                     ffi_obj.execute(desc, move |res|{
                         tx_ref.send( (seq, res) ).unwrap_or(());
@@ -202,7 +202,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 },
                 Command::ONE_WAY => {
                     let args: FuncCall = serde_json::from_str(&req_data)?;
-                    let desc: FFIDescriptor = (args.sig, args.func, args.args);
+                    let desc: FFIDescriptor = (args.sig, args.func, args.kwargs);
                     let ffi_obj = ffi.lock()?;
                     ffi_obj.execute(desc, |_|{}); //no callback for one-way
                 },
@@ -210,7 +210,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                     let tx_ref = tx.clone();
                     let args: ChainCall = serde_json::from_str(&req_data)?;
                     let descs: Vec<FFIDescriptor> = args.sig_func_args_table.into_iter().map(|args| {
-                        (args.sig, args.func, args.args)
+                        (args.sig, args.func, args.kwargs)
                     }).collect();
                     let ffi_obj = ffi.lock()?;
                     ffi_obj.chain_execute(descs, move |res|{

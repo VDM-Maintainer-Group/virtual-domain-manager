@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::{thread, time};
+// use std::{thread, time};
 use std::sync::{Arc, Mutex};
 use std::collections::{HashMap, BTreeMap, BTreeSet};
 //
@@ -14,7 +14,7 @@ use crate::core::command::*;
 use crate::core::service::*;
 
 pub type ArcFFIManager = Arc<Mutex<FFIManager>>;
-pub type FFIDescriptor = (String, String, Vec<String>);
+pub type FFIDescriptor = (String, String, String);
 pub type DepMap = HashMap<String, Vec<String>>;
 pub type MetaFuncMap = HashMap<String, MetaFunc>;
 
@@ -322,60 +322,61 @@ impl FFIManager
     }
     
     //TODO: NOT DEBUGGED.
-    pub fn chain_execute<CB>(&self, descriptors:Vec<FFIDescriptor>, callback:CB)
+    pub fn chain_execute<CB>(&self, _descriptors:Vec<FFIDescriptor>, _callback:CB)
     where CB: FnOnce(String) -> () + Send + 'static
     {
-        let shared_results:Vec<Option<String>> = vec![None; descriptors.len()];
-        let shared_results = Arc::new(Mutex::new( shared_results ));
-        let sig_func_map:Vec<_> = descriptors.iter().map(|(sig, func, _)| {
-            format!("restype_{}_{}", sig, func)
-        }).collect();
+        unimplemented!()
+        // let shared_results:Vec<Option<String>> = vec![None; descriptors.len()];
+        // let shared_results = Arc::new(Mutex::new( shared_results ));
+        // let sig_func_map:Vec<_> = descriptors.iter().map(|(sig, func, _)| {
+        //     format!("restype_{}_{}", sig, func)
+        // }).collect();
 
-        for (i, (sig, func, mut args)) in descriptors.into_iter().enumerate() {
-            let shared_results = shared_results.clone();
-            let service = self.get_service_by_sig(&sig);
-            let mut dep_map:Vec<_> = args.iter().enumerate().filter_map(|(pos, arg)| {
-                if arg.starts_with("restype") {
-                    let idx = sig_func_map.iter().position( |x|{x==arg} )?;
-                    Some( (pos, idx) )
-                } else { None }
-            }).collect();
+        // for (i, (sig, func, mut args)) in descriptors.into_iter().enumerate() {
+        //     let shared_results = shared_results.clone();
+        //     let service = self.get_service_by_sig(&sig);
+        //     let mut dep_map:Vec<_> = args.iter().enumerate().filter_map(|(pos, arg)| {
+        //         if arg.starts_with("restype") {
+        //             let idx = sig_func_map.iter().position( |x|{x==arg} )?;
+        //             Some( (pos, idx) )
+        //         } else { None }
+        //     }).collect();
 
-            self.pool.execute(move || loop {
-                let dep_map:Vec<_> = dep_map.drain(..).filter(|(pos,idx)|{
-                    if let Ok(_results) = shared_results.lock() {
-                        if let Some(ref res) = _results[*idx] {
-                            args[*pos] = res.clone();
-                            return false
-                        }
-                    }
-                    true
-                }).collect();
+        //     self.pool.execute(move || loop {
+        //         let dep_map:Vec<_> = dep_map.drain(..).filter(|(pos,idx)|{
+        //             if let Ok(_results) = shared_results.lock() {
+        //                 if let Some(ref res) = _results[*idx] {
+        //                     args[*pos] = res.clone();
+        //                     return false
+        //                 }
+        //             }
+        //             true
+        //         }).collect();
 
-                if dep_map.is_empty() {
-                    let result = {
-                        if let Some(ref service) = service {
-                            service.call(&func, args)
-                        } else { None }
-                    }.unwrap_or( String::new() );
-                    let mut _results = shared_results.lock().unwrap(); //panic as you like
-                    _results[i] = Some( result );
-                    break;
-                } else { thread::sleep(time::Duration::from_millis(10)); }
-            });
-        }
+        //         if dep_map.is_empty() {
+        //             let result = {
+        //                 if let Some(ref service) = service {
+        //                     service.call(&func, args)
+        //                 } else { None }
+        //             }.unwrap_or( String::new() );
+        //             let mut _results = shared_results.lock().unwrap(); //panic as you like
+        //             _results[i] = Some( result );
+        //             break;
+        //         } else { thread::sleep(time::Duration::from_millis(10)); }
+        //     });
+        // }
 
-        // create callback check thread
-        let shared_results = shared_results.clone();
-        self.pool.execute(move || loop {
-            if let Ok(_results) = shared_results.lock() {
-                if _results.iter().all( |x|{x.is_some()} ) {
-                    let res = _results.last().unwrap().clone().unwrap();
-                    callback(res);
-                    break
-                }
-            }
-            thread::sleep(time::Duration::from_millis(10));
-        });
+        // // create callback check thread
+        // let shared_results = shared_results.clone();
+        // self.pool.execute(move || loop {
+        //     if let Ok(_results) = shared_results.lock() {
+        //         if _results.iter().all( |x|{x.is_some()} ) {
+        //             let res = _results.last().unwrap().clone().unwrap();
+        //             callback(res);
+        //             break
+        //         }
+        //     }
+        //     thread::sleep(time::Duration::from_millis(10));
+        // });
     }
 }

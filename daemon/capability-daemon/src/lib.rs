@@ -80,10 +80,10 @@ impl CapabilityDaemon {
     }
 
     #[pyo3(name = "call")]
-    fn call(&self, sig:String, func:String, args:Vec<String>) -> PyResult<Option<String>> {
+    fn call(&self, sig:String, func:String, kwargs:String) -> PyResult<Option<String>> {
         if let Some(service) = self.ffi_sa.get_service_by_sig(&sig)
         {
-            Ok( service.call(&func, args) )
+            Ok( service.call(&func, kwargs) )
         } else { Ok(None) }
     }
 }
