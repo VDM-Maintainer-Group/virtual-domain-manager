@@ -63,7 +63,7 @@ impl<'a,T,R> RawFunc<'a,T,R> {
 
 enum Func<'a> {
     CFunc(RawFunc<'a,*const c_char, *const c_char>),
-    RustFunc(RawFunc<'a,String, String>),
+    // RustFunc(RawFunc<'a,String, String>),
     PythonFunc((&'a PyModName, PyFuncName))
 }
 
@@ -77,7 +77,7 @@ impl<'a> Func<'a> {
             },
             LibraryContext::Rust(lib) => {
                 if let Some(func) = RawFunc::load(lib, name.as_bytes(), 1) {
-                    Some( Func::RustFunc(func) )
+                    Some( Func::CFunc(func) )
                 } else {None}
             }
             LibraryContext::Python(lib) => {
@@ -90,16 +90,16 @@ impl<'a> Func<'a> {
         match self {
             Self::CFunc(func) => {
                 let kwargs = CString::new( kwargs ).unwrap();
-                let p_kwargs:*const c_char = kwargs.as_ptr();
+                let p_kwargs:*const c_char = kwargs.into_raw();
                 unsafe{
                     Some(
                         CStr::from_ptr( func.call(vec![p_kwargs])? ).to_string_lossy().into_owned()
                     )
                 }
             },
-            Self::RustFunc(func) => {
-                func.call( vec![kwargs] )
-            },
+            // Self::RustFunc(func) => {
+            //     func.call( vec![kwargs] )
+            // },
             Self::PythonFunc(func) => {
                 let (mod_name, func_name) = func;
                 Python::with_gil(|py|{

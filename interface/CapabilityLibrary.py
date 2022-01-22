@@ -318,8 +318,8 @@ class CapabilityHandleLocal:
                         raise Exception('Input argument missing: %s.'%_name)
                     arguments.update({_name:_arg})
                 arguments = json.dumps(arguments)
-                self.vcd.call(self.sig, name, arguments)
-                pass
+                res = self.vcd.call(self.sig, name, arguments)
+                return res
 
             return _wrapper
         else:
