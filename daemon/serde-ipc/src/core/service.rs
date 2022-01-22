@@ -129,20 +129,31 @@ pub struct Service {
 
 impl Service {
     pub fn load(entry:&String, metadata:Metadata) -> Option<Self> {
+        let entry_path = std::env::current_dir().and_then(|pwd| {
+            Ok( pwd.join(entry) )
+        }).ok()?;
+        
         let context = match &metadata.class[..] {
             "c" | "cpp" => {
-                if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
+                if let Ok(lib) = unsafe{ libloading::Library::new(entry_path) } {
                     Some( LibraryContext::CDLL(lib) )
                 } else { None }
             },
             "rust" => {
-                if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
-                    Some( LibraryContext::Rust(lib) )
-                } else { None }
+                match unsafe{ libloading::Library::new(entry_path) } {
+                    Ok(lib) => Some( LibraryContext::Rust(lib) ),
+                    Err(msg) => {
+                        println!("{}", msg);
+                        None
+                    }
+                }
+                // if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
+                //     Some( LibraryContext::Rust(lib) )
+                // } else { None }
             },
             "python" => {
-                if let Ok(contents) = std::fs::read_to_string(entry) {
-                    let module_name = std::path::Path::new(entry).file_name()?.to_str()?;
+                if let Ok(contents) = std::fs::read_to_string(&entry_path) {
+                    let module_name = entry_path.file_name()?.to_str()?;
                     Python::with_gil(|py|{
                         let _py_module = PyModule::from_code(py, &contents, "__internal_file__", module_name).ok();
                     });

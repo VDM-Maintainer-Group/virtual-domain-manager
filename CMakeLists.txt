@@ -21,7 +21,7 @@ set(VERSION ${ver_major}.${ver_minor}.${ver_patch})
 set(VDM_INSTALL_DIR "/opt/vdm")
 
 # vdm capability build
-add_subdirectory(capability)
+# add_subdirectory(capability)
 
 # vdm daemon build
 include(ExternalProject)
