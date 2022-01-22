@@ -45,8 +45,8 @@ class PluginWrapper():
             _func = self.wrap_call_in_workspace(_func)
             return _func
         except:
-            print('%s is an illegal function name.'%name)
             return super().__getattribute__(name)
+            # print('%s is an illegal function name.'%name)
         pass
 
     @staticmethod
@@ -121,7 +121,7 @@ class PluginManager:
         # test capability requirement
         if ('capability' in config) and isinstance(config['capability'], list):
             for item in config['capability']:
-                #TODO: invoke dependency check on each item
+                #TODO: invoke dependency check from `CapabilityManager`
                 pass
             pass
         # test build command and build plugin
