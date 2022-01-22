@@ -319,7 +319,7 @@ class CapabilityHandleLocal:
                     arguments.update({_name:_arg})
                 arguments = json.dumps(arguments)
                 res = self.vcd.call(self.sig, name, arguments)
-                return res
+                return json.loads(res)
 
             return _wrapper
         else:
