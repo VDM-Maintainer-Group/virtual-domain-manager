@@ -7,13 +7,18 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 import pkg_resources
 from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager
-from PyQt5.QtCore import (QObject, QThread, Qt, QSize, QUrl, pyqtSignal)
+from PyQt5.QtCore import (QObject, QThread, Qt, QSize, QUrl, pyqtSignal, pyqtSlot)
 from PyQt5.QtGui import (QIcon, )
 from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu)
-from PyQt5.QtMultimedia import QSoundEffect
+from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
 global app
 ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
+
+SE_MAP = {
+    'save': ASSETS('SE-Save-SagradaReset.wav'),
+    'close': ASSETS('SE-Close-SagradaReset.wav'),
+}
 
 class MFWorker(QObject):
     def __init__(self, func, args=None):
@@ -47,6 +52,7 @@ class MFWorker(QObject):
 
 class TrayIcon(QSystemTrayIcon):
     stop_signal = pyqtSignal()
+    play_signal  = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -54,31 +60,24 @@ class TrayIcon(QSystemTrayIcon):
         self.dm = self.cm.dm
         self.w_ts = TransitionSceneWidget()
         self.stop_signal.connect(self.w_ts.stop)
+        self.play_signal.connect(self.playSoundEffect)
         #
         _open_domain = self.getCurrentDomain('')
         if _open_domain: #for abnormal exit
             self.cm.open_domain(_open_domain)
         #
         self.setIcon( QIcon(ASSETS('VD_icon.png')) )
-        self.loadSoundEffect()
         #
         self.setContextMenu( self.getDefaultMenu() )
         self.show()
         pass
     
-    def loadSoundEffect(self):
-        try:
-            self.se_save = QSoundEffect()
-            self.se_save.setSource( QUrl.fromLocalFile(ASSETS('SE-Save-SagradaReset.wav')) )
-            self.se_save.setVolume(0.25)
-        except:
-            self.se_save = None
-        try:
-            self.se_close = QSoundEffect()
-            self.se_close.setSource( QUrl.fromLocalFile(ASSETS('SE-Close-SagradaReset.wav')) )
-            self.se_close.setVolume(0.25)
-        except:
-            self.se_close = None
+    @pyqtSlot(str)
+    def playSoundEffect(self, type:str):
+        _url = QUrl.fromLocalFile( SE_MAP[type] )
+        se = QSoundEffect( self )
+        se.setSource(_url)
+        se.play()
         pass
 
     def playTransitionScene():
@@ -101,7 +100,7 @@ class TrayIcon(QSystemTrayIcon):
         self.act_save.triggered.connect(self.save_domain)
         self.act_close = menu.addAction('Close')
         self.act_close.triggered.connect(self.close_domain)
-        self.switch_menu = menu.addMenu('Switch to') #leave empty for default
+        self.switch_menu = menu.addMenu('Switch') #leave empty for default
         self.switch_menu.aboutToShow.connect( self.onActivation )
         self.switch_menu.triggered.connect( self.switch_domain )
         menu.addSeparator()
@@ -122,6 +121,7 @@ class TrayIcon(QSystemTrayIcon):
             # act_name.triggered.connect(self.switch_domain)
             if _name==_open_name:
                 act_name.setEnabled(False)
+        self.switch_menu.show()
         pass
 
     #---------- wrap of CoreManager operations ----------#
@@ -130,15 +130,15 @@ class TrayIcon(QSystemTrayIcon):
         if ret is not True:
             print(ret)
         else:
-            self.se_save.play()
+            self.play_signal.emit('save')
         pass
 
     def close_domain(self, e=None):
-        self.se_close.play()
+        self.play_signal.emit('close')
         ret = self.cm.close_domain()
         if ret is not True:
             print(ret)
-            print('... save shi te na i.')
+            print('Save... shi te na i.')
         else:
             self.title_bar.setText( self.getCurrentDomain() ) #expect "<None>"
             self.act_save.setEnabled(False)

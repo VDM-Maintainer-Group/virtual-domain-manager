@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-'''Mind Flash
-This is *mf*, a flash pass your mind.
-You Write, You Listen.
-'''
 import sys, time, pkg_resources
-from PyQt5.QtCore import (QEasingCurve, QPropertyAnimation, Qt, QSize, QRect, QTimer, QThread, pyqtSlot)
+from PyQt5.QtCore import (QEasingCurve, QPropertyAnimation, Qt, QSize, QRect, QTimer, QUrl,
+                    QThread, pyqtSignal, pyqtSlot)
 from PyQt5.QtGui import (QBrush, QColor, QMovie, QPainter, QPen, QPixmap)
-from PyQt5.QtWidgets import (QApplication, QGraphicsOpacityEffect, QLabel, QProxyStyle, QWidget, QDesktopWidget,
-                    QLayout, QGridLayout)
+from PyQt5.QtWidgets import (QApplication, QGraphicsOpacityEffect, QLabel, QProxyStyle, QWidget,
+                    QDesktopWidget, QLayout, QGridLayout)
+from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
 ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
 SIZE_FULLSCREEN = -1
@@ -50,12 +48,17 @@ class RoundPixmapStyle(QProxyStyle):
     pass
 
 class SceneManager(QWidget):
+    play_signal  = pyqtSignal()
+
     def __init__(self, parent, filename, size=0, mask=True):
         super().__init__(parent)
         self.parent = parent
         self.mask = mask
         self.styleHelper()
         self.setScene(filename, size)
+        #
+        self.soundEffect = None
+        self.play_signal.connect(self.playSoundEffect)
         pass
     
     def styleHelper(self):
@@ -97,14 +100,23 @@ class SceneManager(QWidget):
             self.proxy_style.setRadius( self.movie_size.height() / 2 )
         pass
 
+    @pyqtSlot()
+    def playSoundEffect(self):
+        _url = QUrl.fromLocalFile( ASSETS('SE-Trans-BNA.wav') )
+        self.soundEffect = QSoundEffect( self )
+        self.soundEffect.setLoopCount( QSoundEffect.Infinite )
+        self.soundEffect.setSource(_url)
+        self.soundEffect.play()
+        pass
+
     def start(self):
         if self.movie: self.movie.start()
-        #play sound effect
+        self.play_signal.emit()
         pass
 
     def stop(self):
         if self.movie: self.movie.stop()
-        #stop sound effect
+        self.soundEffect.stop()
         pass
 
     pass
