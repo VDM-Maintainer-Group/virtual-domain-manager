@@ -306,7 +306,8 @@ class CapabilityHandleLocal:
 
             @wraps(name)
             def _wrapper(*args, **kwargs):
-                args_spec = _spec[name]['args'].copy()
+                args_spec = _spec[name]['args']
+                arguments = dict()
                 for i,x in enumerate(args_spec):
                     _name, _type = next( iter(x.items()) )
                     if i < len(args):
@@ -315,8 +316,9 @@ class CapabilityHandleLocal:
                         _arg = kwargs[_name]
                     else:
                         raise Exception('Input argument missing: %s.'%_name)
-                    args_spec[i] = json.dumps(_arg)
-                self.vcd.call(self.sig, name, args_spec)
+                    arguments.update({_name:_arg})
+                arguments = json.dumps(arguments)
+                self.vcd.call(self.sig, name, arguments)
                 pass
 
             return _wrapper

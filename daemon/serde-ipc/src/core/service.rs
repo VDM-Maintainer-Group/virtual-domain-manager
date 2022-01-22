@@ -140,16 +140,9 @@ impl Service {
                 } else { None }
             },
             "rust" => {
-                match unsafe{ libloading::Library::new(entry_path) } {
-                    Ok(lib) => Some( LibraryContext::Rust(lib) ),
-                    Err(msg) => {
-                        println!("{}", msg);
-                        None
-                    }
-                }
-                // if let Ok(lib) = unsafe{ libloading::Library::new(entry) } {
-                //     Some( LibraryContext::Rust(lib) )
-                // } else { None }
+                if let Ok(lib) = unsafe{ libloading::Library::new(entry_path) } {
+                    Some( LibraryContext::Rust(lib) )
+                } else { None }
             },
             "python" => {
                 if let Ok(contents) = std::fs::read_to_string(&entry_path) {
