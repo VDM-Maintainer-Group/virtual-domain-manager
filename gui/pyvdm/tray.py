@@ -7,7 +7,8 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 import pkg_resources
 from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager
-from PyQt5.QtCore import (QObject, QThread, Qt, QSize, QUrl, pyqtSignal, pyqtSlot)
+from PyQt5.QtCore import (QObject, QThread, Qt, QSize, QUrl,
+                QTimer, pyqtSignal, pyqtSlot)
 from PyQt5.QtGui import (QIcon, )
 from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
@@ -100,9 +101,14 @@ class TrayIcon(QSystemTrayIcon):
         self.act_save.triggered.connect(self.save_domain)
         self.act_close = menu.addAction('Close')
         self.act_close.triggered.connect(self.close_domain)
+        #
         self.switch_menu = menu.addMenu('Switch') #leave empty for default
-        self.switch_menu.aboutToShow.connect( self.onActivation )
         self.switch_menu.triggered.connect( self.switch_domain )
+        self.switch_menu.aboutToShow.connect( self.onShow )
+        self.switch_menu.aboutToHide.connect( self.onHide )
+        self.updateSwitchMenu()
+        self.update_timer = None
+        #
         menu.addSeparator()
         # add 'quit' act
         act_quit = menu.addAction('Quit')
@@ -110,7 +116,17 @@ class TrayIcon(QSystemTrayIcon):
         #
         return menu
 
-    def onActivation(self):
+    @pyqtSlot()
+    def onShow(self):
+        if self.update_timer:
+            self.update_timer.stop()
+
+    @pyqtSlot()
+    def onHide(self):
+        self.update_timer = QTimer.singleShot(300, self.updateSwitchMenu)
+
+    @pyqtSlot()
+    def updateSwitchMenu(self):
         _open_name = self.getCurrentDomain()
         self.title_bar.setText( _open_name )
         #
@@ -121,7 +137,6 @@ class TrayIcon(QSystemTrayIcon):
             # act_name.triggered.connect(self.switch_domain)
             if _name==_open_name:
                 act_name.setEnabled(False)
-        self.switch_menu.show()
         pass
 
     #---------- wrap of CoreManager operations ----------#
