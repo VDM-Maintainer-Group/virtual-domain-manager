@@ -29,7 +29,8 @@ class CoreManager:
         #
         _domain = self.stat.getStat()
         if _domain:
-            self.load(_domain)
+            # self.load(_domain)
+            self.open_domain(_domain)
         pass
 
     def load(self, name):
