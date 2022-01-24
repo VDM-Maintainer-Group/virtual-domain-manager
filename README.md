@@ -81,8 +81,6 @@ In the open working domain, VDM would request all the support applications to re
 
 - **Capability Management**
 
-  > Manage capability installation, enabling and running status.
-
   - `install` capability from folder or "*.zip" file
   - `uninstall` capability with `name`
   - `enable`/`disable`/`query` capability status
@@ -98,7 +96,7 @@ In the open working domain, VDM would request all the support applications to re
 
 ## Capability Development
 
-Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/).
+Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/blob/main/CONTRIBUTING.md).
 
 ## Plugin Development
 
