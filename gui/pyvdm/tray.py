@@ -52,6 +52,7 @@ class MFWorker(QObject):
     pass
 
 class TrayIcon(QSystemTrayIcon):
+    start_signal = pyqtSignal()
     stop_signal = pyqtSignal()
     play_signal  = pyqtSignal(str)
 
@@ -60,7 +61,8 @@ class TrayIcon(QSystemTrayIcon):
         self.cm = CoreManager()
         self.dm = self.cm.dm
         self.w_ts = TransitionSceneWidget()
-        self.stop_signal.connect(self.w_ts.stop)
+        self.start_signal.connect( self.w_ts.start )
+        self.stop_signal.connect( self.w_ts.stop )
         self.play_signal.connect(self.playSoundEffect)
         #
         _open_domain = self.getCurrentDomain('')
@@ -163,8 +165,9 @@ class TrayIcon(QSystemTrayIcon):
     def switch_domain(self, e):
         _name = e.text() if hasattr(e, 'text') else e
         # play transition animation on new threads (with sound effect)
-        self.worker = MFWorker(self.w_ts.start)
-        self.worker.run()
+        self.start_signal.emit()
+        # self.worker = MFWorker(self.w_ts.start)
+        # self.worker.run()
         #
         ret = self.cm.switch_domain(_name)
         if ret is True:
