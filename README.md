@@ -65,7 +65,7 @@ In the open working domain, VDM would request all the support applications to re
 
   Or, you can easily apply above operations via `pyvdm-tray` on your dock.
 
-- **Plugin Management**
+- **Plugin Management** `pyvdm plugin`
 
   - `install` a plugin with the "*.zip" file
   - `uninstall` existing plugin(s) with `name(s)`
@@ -74,14 +74,14 @@ In the open working domain, VDM would request all the support applications to re
 
     `pyvdm plugin run <plugin-name> <function-name>`
 
-- **Domain Management**
+- **Domain Management** `pyvdm domain`
 
   - `add` a domain via TUI with `name`
   - `update` an existing domain with `name`
   - `remove` an existing domain with `name`
   - `list` domain details (list all by default)
 
-- **Capability Management**
+- **Capability Management** `pyvdm capability`
 
   - `install` capability from folder or "*.zip" file
   - `uninstall` capability with `name`
@@ -90,7 +90,7 @@ In the open working domain, VDM would request all the support applications to re
 
     `pyvdm capability daemon start/stop/restart/status`
 
-- **Sync Management**
+- **Sync Management** `pyvdm sync`
 
   > Manage synchronization of domain status files.
 
@@ -98,11 +98,11 @@ In the open working domain, VDM would request all the support applications to re
 
 ## Capability Development
 
-Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/blob/main/CONTRIBUTING.md).
+Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/blob/main/CONTRIBUTING.md).
 
 ## Plugin Development
 
-Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
+Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
 
 ## License
 
