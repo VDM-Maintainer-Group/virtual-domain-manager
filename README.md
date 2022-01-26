@@ -47,9 +47,9 @@ In the open working domain, VDM would request all the support applications to re
 
 4. **build and install capability library**
 
-  ```bash
-  cd capability; sbs build; sbs install
-  ```
+    ```bash
+    cd capability; sbs build; sbs install
+    ```
 
 ## Usage for Command Line
 
