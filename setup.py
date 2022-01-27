@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import re
+import re, os
 from setuptools import find_packages, setup
 
 _version = open('./VERSION').read()
@@ -26,7 +26,7 @@ if __name__ == '__main__':
         packages = find_packages(where='build'),
         package_data = {
             "" : ["daemon/*.so"],
-            "pyvdm": ["assets/*"],
+            "pyvdm": ["assets/*", "assets/*/*"],
         },
         include_package_data=True,
         entry_points = {

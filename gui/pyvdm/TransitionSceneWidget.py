@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (QApplication, QGraphicsOpacityEffect, QLabel, QProx
                     QDesktopWidget, QLayout, QGridLayout)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
-ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
+ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/themes/'+_)
 SIZE_FULLSCREEN = -1
 SIZE_ORIGINAL   = 0
 

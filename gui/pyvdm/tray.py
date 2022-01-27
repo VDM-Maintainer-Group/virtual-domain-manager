@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu, QAction)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
 global app
-ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
+ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/themes/'+_)
 CONFIG = {
     'Autosave': True
 }
@@ -74,7 +74,7 @@ class TrayIcon(QSystemTrayIcon):
         #
         self.setContextMenu( self.getDefaultMenu() )
         self.updateTitleBar()
-        self.setIcon( QIcon(ASSETS('VD_icon.png')) )
+        self.setIcon( QIcon(ASSETS('../VD_icon_white.png')) )
         self.show()
         pass
 
