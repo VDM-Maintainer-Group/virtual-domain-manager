@@ -10,15 +10,21 @@ from pyvdm.core.manager import CoreManager
 from PyQt5.QtCore import (QObject, QThread, Qt, QSize, QUrl,
                 QTimer, pyqtSignal, pyqtSlot)
 from PyQt5.QtGui import (QIcon, )
-from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu)
+from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu, QAction)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
 global app
 ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
+CONFIG = {
+    'Autosave': True
+}
 
+NONE_DOMAIN = '<NONE>'
 SE_MAP = {
     'save': ASSETS('SE-Save-SagradaReset.wav'),
+    'save_fail': '',
     'close': ASSETS('SE-Close-SagradaReset.wav'),
+    'quit': ''
 }
 
 class MFWorker(QObject):
@@ -57,63 +63,72 @@ class TrayIcon(QSystemTrayIcon):
         super().__init__(parent)
         self.cm = CoreManager()
         self.dm = self.cm.dm
+        _open_name = self.getCurrentDomain()
+        if _open_name: #for abnormal exit
+            self.cm.open_domain(_open_name)
+        #
         self.w_ts = TransitionSceneWidget()
         self.start_signal.connect( self.w_ts.start )
         self.stop_signal.connect( self.w_ts.stop )
         self.play_signal.connect(self.playSoundEffect)
         #
-        _open_domain = self.getCurrentDomain('')
-        if _open_domain: #for abnormal exit
-            self.cm.open_domain(_open_domain)
-        #
-        self.setIcon( QIcon(ASSETS('VD_icon.png')) )
-        #
         self.setContextMenu( self.getDefaultMenu() )
+        self.updateTitleBar()
+        self.setIcon( QIcon(ASSETS('VD_icon.png')) )
         self.show()
         pass
-    
-    @pyqtSlot(str)
-    def playSoundEffect(self, type:str):
-        _url = QUrl.fromLocalFile( SE_MAP[type] )
-        se = QSoundEffect( self )
-        se.setSource(_url)
-        se.play()
-        pass
 
-    def playTransitionScene():
-        pass
-
-    def getCurrentDomain(self, default='<None>'):
+    def getCurrentDomain(self):
         _name = self.cm.stat.getStat()
-        _name = default if not _name else _name
+        _name = None if not _name else _name
         return _name
 
     def getDefaultMenu(self):
         menu = QMenu()
-        # set title bar
-        _name = self.getCurrentDomain()
-        self.title_bar = menu.addAction(_name)
+        # set title bar and autosave act
+        self.title_bar = menu.addAction(NONE_DOMAIN)
         self.title_bar.setEnabled(False)
+        self.act_autosave = QAction('Autosave', self)
+        self.act_autosave.setCheckable(True)
+        menu.addAction( self.act_autosave )
+        self.act_autosave.triggered.connect( self.onActAutosave )
+        self.autosave_timer = None
         menu.addSeparator()
-        # add 'save', 'close' and 'switch' acts
+
+        # add 'save' and 'close' acts
         self.act_save = menu.addAction('Save')
         self.act_save.triggered.connect(self.save_domain)
         self.act_close = menu.addAction('Close')
         self.act_close.triggered.connect(self.close_domain)
-        #
+        # and 'switch' submenu
         self.switch_menu = menu.addMenu('Switch') #leave empty for default
         self.switch_menu.triggered.connect( self.switch_domain )
         self.switch_menu.aboutToShow.connect( self.onShow )
         self.switch_menu.aboutToHide.connect( self.onHide )
         self.updateSwitchMenu()
         self.update_timer = None
-        #
         menu.addSeparator()
+
         # add 'quit' act
         act_quit = menu.addAction('Quit')
         act_quit.triggered.connect(self.quit)
-        #
+
         return menu
+
+    def updateTitleBar(self):
+        _open_name = self.getCurrentDomain()
+        if _open_name:
+            self.title_bar.setText( _open_name )
+            self.act_autosave.setEnabled(True)
+            self.act_save.setEnabled(True)
+            self.act_close.setEnabled(True)
+            self.act_autosave.setChecked( CONFIG['Autosave'] )
+        else:
+            self.title_bar.setText( NONE_DOMAIN )
+            self.act_autosave.setEnabled(False)
+            self.act_save.setEnabled(False)
+            self.act_close.setEnabled(False)
+        return _open_name
 
     @pyqtSlot()
     def onShow(self):
@@ -124,18 +139,40 @@ class TrayIcon(QSystemTrayIcon):
     def onHide(self):
         self.update_timer = QTimer.singleShot(300, self.updateSwitchMenu)
 
+    @pyqtSlot(str)
+    def playSoundEffect(self, type:str):
+        _url = QUrl.fromLocalFile( SE_MAP[type] )
+        se = QSoundEffect( self )
+        se.setSource(_url)
+        se.play()
+        pass
+
     @pyqtSlot()
     def updateSwitchMenu(self):
-        _open_name = self.getCurrentDomain()
-        self.title_bar.setText( _open_name )
+        _open_name = self.updateTitleBar()
         #
         self.switch_menu.clear()
         _domains = list( self.dm.list_domain().keys() )
         for _name in _domains:
             act_name = self.switch_menu.addAction(_name)
-            # act_name.triggered.connect(self.switch_domain)
             if _name==_open_name:
                 act_name.setEnabled(False)
+        pass
+
+    @pyqtSlot()
+    def onActAutosave(self):
+        _checked = self.act_autosave.isChecked()
+        CONFIG['Autosave'] = _checked
+        
+        if not _checked:
+            if self.autosave_timer: self.autosave_timer.stop()
+            self.autosave_timer = None
+        else:
+            self.autosave_timer = QTimer(self)
+            self.autosave_timer.timeout.connect(
+                lambda: self.cm.save_domain()
+            )
+            self.autosave_timer.start(15*1000) #interval: 15s
         pass
 
     #---------- wrap of CoreManager operations ----------#
@@ -154,29 +191,22 @@ class TrayIcon(QSystemTrayIcon):
             print(ret)
             print('Save... shi te na i.')
         else:
-            self.title_bar.setText( self.getCurrentDomain() ) #expect "<None>"
-            self.act_save.setEnabled(False)
-            self.act_close.setEnabled(False)
+            self.updateTitleBar()
         pass
 
     def switch_domain(self, e):
-        _name = e.text() if hasattr(e, 'text') else e
-        
-        def _switch_domain():
+        def _switch_domain(name):
             self.start_signal.emit()
-
-            ret = self.cm.switch_domain(_name)
+            ret = self.cm.switch_domain(name)
             if ret is True:
-                self.title_bar.setText( self.getCurrentDomain() )
-                self.act_save.setEnabled(True)
-                self.act_close.setEnabled(True)
+                self.updateTitleBar()
             else:
                 print(ret)
-
             self.stop_signal.emit()
             pass
         
-        self.worker = MFWorker( _switch_domain )
+        _name = e.text() if hasattr(e, 'text') else e
+        self.worker = MFWorker( _switch_domain, args=(_name,) )
         self.worker.start()
         pass
 
