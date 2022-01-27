@@ -1,8 +1,8 @@
 # Virtual Domain Manager
 
-<!-- Virtual Domain Manager (VDM) is a *Plan B* to take snapshot of the running status of operating system, by *archive, restore and synchronize* your applications, for fast arranging your workloads. -->
 
-> *NEED A DEMO GIF HERE.*
+https://user-images.githubusercontent.com/9068301/151111613-aed3a894-c65d-473d-9df1-eb542bd64718.mp4
+
 
 ## Introduction
 [中文简介 - deepin论坛](https://bbs.deepin.org/zh/post/219493)
@@ -15,17 +15,13 @@ As "Plan A" is straightforward (e.g., virtual machine) but always with high over
 
 This project, VDM, is a non-serious-but-effective "Plan B" design. Focusing on the running status of all your GUI applications on **multiple-desktop / multiple-screen / multiple-device**, VDM would like to arrange them according to your **working domain** definition.
 
-In the open working domain, VDM would request all the support applications to report their necessary running status (open files, window status and etc.), record them for future restore. Unfortunately, while there are no such status-report APIs, VDM proposes a **plugin mechanism** to implement such support and provides **capability library** to simplify the development.
-
-
-
-> VDM is now dedicated developed on GNU/Linux platform and highly coupled with Linux kernel.-->
+In the open working domain, VDM would request all the support applications to report their necessary running status (open files, window status and etc.), record them for future restore. Unfortunately, while there are no such status-report APIs, VDM proposes a **plugin mechanism** to implement such support and provides **capability library** to simplify the development.-->
 
 <p align="center">
   <img src="./previews/structure.png" width="650px" />
 </p>
 
-> Currently, we are seeking for help on: plugin development, capability library contribution, and any suggestions. If you want to join the maintainer team, please [contact us](mailto:sudofree_at_163_com). 
+> Currently, we are seeking for help on: plugin development, capability library contribution, and any suggestions. If you want to join the maintainer team, please [contact me](mailto:sudofree_at_163_com). 
 
 ## Installation
 
@@ -49,7 +45,13 @@ In the open working domain, VDM would request all the support applications to re
    cd dist; pip3 install *.whl
    ```
 
-## Usage
+4. **build and install capability library**
+
+    ```bash
+    cd capability; sbs build; sbs install
+    ```
+
+## Usage for Command Line
 
 > Currently, the VDM main program is `pyvdm`, the GUI entry is a tray icon `pyvdm-tray`.
 
@@ -63,7 +65,7 @@ In the open working domain, VDM would request all the support applications to re
 
   Or, you can easily apply above operations via `pyvdm-tray` on your dock.
 
-- **Plugin Management**
+- **Plugin Management** `pyvdm plugin`
 
   - `install` a plugin with the "*.zip" file
   - `uninstall` existing plugin(s) with `name(s)`
@@ -72,14 +74,14 @@ In the open working domain, VDM would request all the support applications to re
 
     `pyvdm plugin run <plugin-name> <function-name>`
 
-- **Domain Management**
+- **Domain Management** `pyvdm domain`
 
   - `add` a domain via TUI with `name`
   - `update` an existing domain with `name`
   - `remove` an existing domain with `name`
   - `list` domain details (list all by default)
 
-- **Capability Management**
+- **Capability Management** `pyvdm capability`
 
   - `install` capability from folder or "*.zip" file
   - `uninstall` capability with `name`
@@ -88,7 +90,7 @@ In the open working domain, VDM would request all the support applications to re
 
     `pyvdm capability daemon start/stop/restart/status`
 
-- **Sync Management**
+- **Sync Management** `pyvdm sync`
 
   > Manage synchronization of domain status files.
 
@@ -96,11 +98,11 @@ In the open working domain, VDM would request all the support applications to re
 
 ## Capability Development
 
-Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/blob/main/CONTRIBUTING.md).
+Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/blob/main/CONTRIBUTING.md).
 
 ## Plugin Development
 
-Please refer to the tutorial [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
+Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
 
 ## License
 
