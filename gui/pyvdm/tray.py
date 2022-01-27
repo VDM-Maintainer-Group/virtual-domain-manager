@@ -22,7 +22,7 @@ SE_MAP = {
 }
 
 class MFWorker(QObject):
-    def __init__(self, func, args=None):
+    def __init__(self, func, args=()):
         super().__init__(None)
         self.func = func
         self.args = args
@@ -43,11 +43,8 @@ class MFWorker(QObject):
         pass
 
     def run(self):
-        if self.args:
-            self.func(*self.args)
-        else:
-            self.func()
-        self.thread.exit(0)
+        self.func(*self.args)
+        self.terminate()
         pass
     pass
 
@@ -164,20 +161,23 @@ class TrayIcon(QSystemTrayIcon):
 
     def switch_domain(self, e):
         _name = e.text() if hasattr(e, 'text') else e
-        # play transition animation on new threads (with sound effect)
-        self.start_signal.emit()
-        # self.worker = MFWorker(self.w_ts.start)
-        # self.worker.run()
-        #
-        ret = self.cm.switch_domain(_name)
-        if ret is True:
-            self.title_bar.setText( self.getCurrentDomain() ) #expect not "<None>"
-            self.act_save.setEnabled(True)
-            self.act_close.setEnabled(True)
-        else:
-            print(ret)
-        # end animation playing (with sound effect)
-        self.stop_signal.emit()
+        
+        def _switch_domain():
+            self.start_signal.emit()
+
+            ret = self.cm.switch_domain(_name)
+            if ret is True:
+                self.title_bar.setText( self.getCurrentDomain() )
+                self.act_save.setEnabled(True)
+                self.act_close.setEnabled(True)
+            else:
+                print(ret)
+
+            self.stop_signal.emit()
+            pass
+        
+        self.worker = MFWorker( _switch_domain )
+        self.worker.start()
         pass
 
     def quit(self, e):
