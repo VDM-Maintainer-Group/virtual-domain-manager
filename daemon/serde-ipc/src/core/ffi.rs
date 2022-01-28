@@ -176,7 +176,7 @@ impl FFIManager {
     }
 
     fn insert_service(&mut self, cfg: ServiceConfig) -> Option<ServiceSig> {
-        assert_eq!( self.service_map.get(&cfg.metadata.name), None ); //FIXME: remove after debug pass
+        // assert_eq!( self.service_map.get(&cfg.metadata.name), None );
 
         // 1. load service
         let name = String::from( &cfg.metadata.name );

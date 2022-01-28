@@ -146,7 +146,7 @@ fn _recv_loop(ffi: ArcFFIManager, tx: mpsc::Sender<Message>, req_id: String) {
                 let shm_slice = unsafe{ shm_req.as_slice() };
                 let req_header:ReqHeader = unsafe{
                     let _header:Vec<u8> = shm_slice[..REQ_HEADER_LEN].iter().cloned().collect();
-                    println!("req_header: {:?}", _header); //FIXME: remove it
+                    // println!("req_header: {:?}", _header);
                     std::ptr::read( _header.as_ptr() as *const _ )
                 };
                 let req_data = {

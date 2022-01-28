@@ -199,7 +199,6 @@ class ShmManager:
             unlink_semaphore(self.sem_req.name)
         except:
             pass
-        # sys.exit(0) #FIXME:
 
     def get_response(self, seq, blocking=True, timeout=-1):
         data = self.responses.pop(seq, None)
