@@ -6,6 +6,7 @@ sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import os, argparse, re
 import tempfile, shutil
+import concurrent.futures
 import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
 import pyvdm.core.CapabilityManager as C_MAN
@@ -51,44 +52,67 @@ class CoreManager:
         return True
 
     #---------- online domain operations -----------#
+    def executeBlade(self, executor, worker):
+        _futures = [ executor.submit(worker, _plugin, _stat)
+                                            for _plugin,_stat in self.plugins.items() ]
+        _results = [ x.result() for x in _futures ]
+        _results = list( filter(lambda x:x is not None, _results) )
+        if len(_results)!=0:
+            return _results
+        else:
+            return None
+
     def save_domain(self, delayed=False):
         if not self.stat.getStat():
             return (DomainCode.DOMAIN_NOT_OPEN, '')
         # save to current open domain
-        for _plugin,_stat in self.plugins.items():
-            if _plugin.onSave( _stat.getFile() ) < 0:
-                return (DomainCode.DOMAIN_SAVE_FAILED, _plugin.name)
-            if not delayed: _stat.putFile()
-            pass
-        return True
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            def _worker(plugin, stat):
+                if plugin.onSave( stat.getFile() ) < 0:
+                    return (DomainCode.DOMAIN_SAVE_FAILED, plugin.name)
+                else:
+                    if not delayed: stat.putFile()
+                    return None
+            #
+            results = self.executeBlade(executor, _worker)
+            if results: return results
+            return True
 
     def open_domain(self, name):
         ret = self.load(name)
         if ret is not True:
             return (DomainCode.DOMAIN_LOAD_FAILED, ret)
         # onStart --> onResume
-        for _plugin,_ in self.plugins.items():
-            if _plugin.onStart() < 0:
-                return (DomainCode.DOMAIN_START_FAILED, _plugin.name)
-        for _plugin,_stat in self.plugins.items():
-            if _plugin.onResume( _stat.getFile() ) < 0:
-                return (DomainCode.DOMAIN_RESUME_FAILED, _plugin.name)
-        # put new stat
-        self.stat.putStat(name)
-        return True
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            def _worker(plugin, stat):
+                if plugin.onStart() < 0:
+                    return (DomainCode.DOMAIN_START_FAILED, plugin.name)
+                if plugin.onResume( stat.getFile() ) < 0:
+                    return (DomainCode.DOMAIN_RESUME_FAILED, plugin.name)
+                return None
+            #
+            results = self.executeBlade(executor, _worker)
+            if results: return results
+            # put new stat
+            self.stat.putStat(name)
+            return True
 
     def close_domain(self):
         if not self.stat.getStat():
             return (DomainCode.DOMAIN_NOT_OPEN, '')
         # onClose --> onStop
-        for _plugin,_stat in self.plugins.items():
-            if _plugin.onClose() < 0:
-                return (DomainCode.DOMAIN_CLOSE_FAILED, _plugin.name)
-            if _plugin.onStop() < 0:
-                return (DomainCode.DOMAIN_STOP_FAILED, _plugin.name)
-        # put empty stat
-        self.stat.putStat('')
-        return True
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            def _worker(plugin, stat):
+                if plugin.onClose() < 0:
+                    return (DomainCode.DOMAIN_CLOSE_FAILED, plugin.name)
+                if plugin.onStop() < 0:
+                    return (DomainCode.DOMAIN_STOP_FAILED, plugin.name)
+            #
+            results = self.executeBlade(executor, _worker)
+            if results: return results
+            # put empty stat
+            self.stat.putStat('')
+            return True
 
     def switch_domain(self, name):
         if not self.stat.getStat():

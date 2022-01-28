@@ -41,7 +41,6 @@ class PluginWrapper():
     def __getattribute__(self, name):
         try:
             _func = getattr(self.obj, name)
-            # _func = self.wrap_call_in_process(_func) #FIXME: execution may fail in current process
             _func = self.wrap_call_in_workspace(_func)
             return _func
         except:
@@ -63,7 +62,7 @@ class PluginWrapper():
         def _wrap(*args, **kwargs):
             with mp.Pool() as pool:
                 handle = pool.apply_async(func, args=args, kwds=kwargs)
-                return handle.get(timeout=None) #FIXME: remote exception may raise here
+                return handle.get(timeout=None) # remote exception may raise here
         return _wrap
 
     def wrap_call_in_workspace(self, func):
@@ -76,8 +75,8 @@ class PluginWrapper():
 
     def load_python(self, entry):
         self.obj = None
-        _module = __import__( Path(entry).stem )
-        for _,obj in inspect.getmembers(_module):
+        self._module = __import__( Path(entry).stem )
+        for _,obj in inspect.getmembers(self._module):
             if inspect.isclass(obj) and issubclass(obj, SRC_API) and (obj is not SRC_API):
                 self.obj = obj() #instantiate the abstract class
                 break
