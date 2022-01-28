@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import sys, time, pkg_resources
+from utils import CONFIG
+import sys, time
 from PyQt5.QtCore import (QEasingCurve, QPropertyAnimation, Qt, QSize, QRect, QTimer, QUrl,
                     QThread, pyqtSignal, pyqtSlot)
 from PyQt5.QtGui import (QBrush, QColor, QMovie, QPainter, QPen, QPixmap)
@@ -7,10 +8,8 @@ from PyQt5.QtWidgets import (QApplication, QGraphicsOpacityEffect, QLabel, QProx
                     QDesktopWidget, QLayout, QGridLayout)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
-ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/themes/'+_)
 SIZE_FULLSCREEN = -1
 SIZE_ORIGINAL   = 0
-
 
 #Reference: https://stackoverflow.com/questions/54230005/qmovie-with-border-radius
 class RoundPixmapStyle(QProxyStyle):
@@ -50,12 +49,12 @@ class RoundPixmapStyle(QProxyStyle):
 class SceneManager(QWidget):
     play_signal  = pyqtSignal()
 
-    def __init__(self, parent, filename, size=0, mask=True):
+    def __init__(self, parent, size=0, mask=True):
         super().__init__(parent)
         self.parent = parent
         self.mask = mask
+        self.size = size
         self.styleHelper()
-        self.setScene(filename, size)
         #
         self.soundEffect = None
         self.play_signal.connect(self.playSoundEffect)
@@ -79,30 +78,32 @@ class SceneManager(QWidget):
         self.setFixedSize( self.parent.size() )
         pass
 
-    def setScene(self, filename, size):
-        self.movie = QMovie( ASSETS(filename) )
+    def setupScene(self):
+        self.movie = QMovie( CONFIG['THEME_MOV_TRANS'] )
         self.movie.jumpToFrame(0)
+        _size = self.size
+        #
         _movie_size = self.movie.currentImage().size()
-        if size==SIZE_ORIGINAL:
+        if _size==SIZE_ORIGINAL:
             self.movie_size = _movie_size
-        elif size==SIZE_FULLSCREEN:
+        elif _size==SIZE_FULLSCREEN:
             _movie_size.scale( self.parent.size(), Qt.KeepAspectRatio )
             self.movie.setScaledSize(_movie_size)
             pass
         else: #custom size
-            _movie_size.scale( QSize(size, size), Qt.KeepAspectRatio )
+            _movie_size.scale( QSize(_size, _size), Qt.KeepAspectRatio )
             self.movie.setScaledSize(_movie_size)
             pass
         #
         self.label.setMovie(self.movie)
         self.label.setFixedSize( self.movie_size )
-        if self.mask and size!=SIZE_FULLSCREEN:
+        if self.mask and _size!=SIZE_FULLSCREEN:
             self.proxy_style.setRadius( self.movie_size.height() / 2 )
         pass
 
     @pyqtSlot()
     def playSoundEffect(self):
-        _url = QUrl.fromLocalFile( ASSETS('SE-Trans-BNA.wav') )
+        _url = QUrl.fromLocalFile( CONFIG['THEME_SE_TRANS'] )
         self.soundEffect = QSoundEffect( self )
         self.soundEffect.setLoopCount( QSoundEffect.Infinite )
         self.soundEffect.setSource(_url)
@@ -110,6 +111,7 @@ class SceneManager(QWidget):
         pass
 
     def start(self):
+        self.setupScene()
         if self.movie: self.movie.start()
         self.play_signal.emit()
         pass
@@ -126,7 +128,7 @@ class TransitionSceneWidget(QWidget):
         super().__init__(parent)
         # set fullscreen size on default display
         self.setFixedSize( QDesktopWidget().availableGeometry().size() )
-        self.w_scene  = SceneManager(self, 'MOV-Trans-BNA.gif', size, mask)
+        self.w_scene  = SceneManager(self, size, mask)
         self.start_time = time.time()
         # set main window layout as grid
         self.grid = QGridLayout()

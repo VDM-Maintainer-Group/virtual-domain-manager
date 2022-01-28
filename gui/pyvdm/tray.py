@@ -4,7 +4,7 @@ import sys, signal, socket
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
-import pkg_resources
+from utils import CONFIG
 from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager
 from PyQt5.QtCore import (QObject, QThread, Qt, QSize, QUrl,
@@ -14,18 +14,7 @@ from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu, QAction)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
 global app
-ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/themes/'+_)
-CONFIG = {
-    'Autosave': True
-}
-
-NONE_DOMAIN = '<NONE>'
-SE_MAP = {
-    'save': ASSETS('SE-Save-SagradaReset.wav'),
-    'save_fail': '',
-    'close': ASSETS('SE-Close-SagradaReset.wav'),
-    'quit': ''
-}
+NONE_DOMAIN = '<None>'
 
 class MFWorker(QObject):
     def __init__(self, func, args=()):
@@ -74,7 +63,7 @@ class TrayIcon(QSystemTrayIcon):
         #
         self.setContextMenu( self.getDefaultMenu() )
         self.updateTitleBar()
-        self.setIcon( QIcon(ASSETS('../VD_icon_white.png')) )
+        self.setIcon( QIcon( CONFIG['ASSETS_ICON'] ) )
         self.show()
         pass
 
@@ -122,7 +111,7 @@ class TrayIcon(QSystemTrayIcon):
             self.act_autosave.setEnabled(True)
             self.act_save.setEnabled(True)
             self.act_close.setEnabled(True)
-            self.act_autosave.setChecked( CONFIG['Autosave'] )
+            self.act_autosave.setChecked( CONFIG['AUTOSAVE']=='True' )
         else:
             self.title_bar.setText( NONE_DOMAIN )
             self.act_autosave.setEnabled(False)
@@ -140,8 +129,8 @@ class TrayIcon(QSystemTrayIcon):
         self.update_timer = QTimer.singleShot(300, self.updateSwitchMenu)
 
     @pyqtSlot(str)
-    def playSoundEffect(self, type:str):
-        _url = QUrl.fromLocalFile( SE_MAP[type] )
+    def playSoundEffect(self, _file):
+        _url = QUrl.fromLocalFile(_file)
         se = QSoundEffect( self )
         se.setSource(_url)
         se.play()
@@ -162,7 +151,7 @@ class TrayIcon(QSystemTrayIcon):
     @pyqtSlot()
     def onActAutosave(self):
         _checked = self.act_autosave.isChecked()
-        CONFIG['Autosave'] = _checked
+        CONFIG['AUTOSAVE'] = "True" if _checked else "False"
         
         if not _checked:
             if self.autosave_timer: self.autosave_timer.stop()
@@ -181,11 +170,11 @@ class TrayIcon(QSystemTrayIcon):
         if ret is not True:
             print(ret)
         else:
-            self.play_signal.emit('save')
+            self.play_signal.emit( CONFIG['THEME_SE_SAVE'] )
         pass
 
     def close_domain(self, e=None):
-        self.play_signal.emit('close')
+        self.play_signal.emit( CONFIG['THEME_SE_CLOSE'] )
         ret = self.cm.close_domain()
         if ret is not True:
             print(ret)
