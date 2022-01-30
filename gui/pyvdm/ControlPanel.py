@@ -5,13 +5,13 @@ from PyQt5.QtWidgets import (QApplication, QLabel, QWidget, QTabWidget,
                     QDesktopWidget, QLayout, QGridLayout)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
-class MainTabWidget(QTabWidget):
+class MainTabWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         pass
     pass
 
-class DMTabWidget(QTabWidget):
+class DMTabWidget(QWidget):
     def __init__(self, parent, dm):
         super().__init__(parent)
         self.parent = parent
@@ -19,7 +19,7 @@ class DMTabWidget(QTabWidget):
         pass
     pass
 
-class CMTabWidget(QTabWidget):
+class CMTabWidget(QWidget):
     def __init__(self, parent, cm):
         super().__init__(parent)
         self.parent = parent
@@ -27,7 +27,7 @@ class CMTabWidget(QTabWidget):
         pass
     pass
 
-class PMTabWidget(QTabWidget):
+class PMTabWidget(QWidget):
     def __init__(self, parent, pm):
         super().__init__(parent)
         self.parent = parent

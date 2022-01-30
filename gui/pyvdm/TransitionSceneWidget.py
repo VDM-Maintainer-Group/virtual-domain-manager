@@ -79,7 +79,7 @@ class SceneManager(QWidget):
         pass
 
     def setupScene(self):
-        self.movie = QMovie( CONFIG['THEME_MOV_TRANS'] )
+        self.movie = QMovie( CONFIG['THEME_MOV_TRANS'], parent=self )
         self.movie.jumpToFrame(0)
         _size = self.size
         #
