@@ -9,6 +9,12 @@ ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
 THEMES = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/themes/'+_)
 THEMES_FOLDER = PARENT_ROOT / 'themes'; THEMES_FOLDER.mkdir(parents=True, exist_ok=True)
 
+def signal_emit(_signal, _slot, _msg=None):
+    _signal.connect(_slot)
+    _signal.emit(*_msg) if _msg else _signal.emit()
+    _signal.disconnect(_slot)
+    pass
+
 class ConfigFile(MutableMapping):
 
     def __init__(self):

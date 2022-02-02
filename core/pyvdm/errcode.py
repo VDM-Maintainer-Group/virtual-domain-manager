@@ -15,7 +15,7 @@ class PluginCode(ErrorCode,Enum):
     PLUGIN_BUILD_FAILED           = 0x1007
     PLUGIN_LOAD_FAILED            = 0x1008
     PLUGIN_WRAPPER_FAILED         = 0x1009
-    PLUGIN_HIGHER_VERSION         = 0x100A
+    PLUGIN_HIGHER_VERSION_EXISTS  = 0x100A
     pass
 
 class DomainCode(ErrorCode):

@@ -216,7 +216,7 @@ class PluginManager:
         return True
 
     def uninstall(self, names):
-        names = list(names)
+        names = names if isinstance(names, list) else [names]
         with WorkSpace(self.root) as ws:
             for name in names:
                 _regex = re.compile( '%s-(\d\.\d.*)'%name )
@@ -239,15 +239,15 @@ class PluginManager:
             if len(names)==0 or (_name in names):
                 _config = json_load( POSIX(item / CONFIG_FILENAME) )
                 if _name not in result:
-                    result[_name] = [_config]
+                    result[_name] = _config
                 else:
-                    result[_name].append(_config)
+                    # result[_name].append(_config)
+                    pass
             pass
-        print(result)
 
         return result
 
-    def run(self, name, function, *args):
+    def run(self, name, function, args):
         ret = self.getInstalledPlugin(name)
         if isinstance(ret, PluginWrapper):
             return getattr(ret, function)(*args)
@@ -264,7 +264,8 @@ def execute(pm, command, args, verbose=False):
     elif command=='uninstall':
         return pm.uninstall(args.names)
     elif command=='list':
-        return pm.list(args.names)
+        _res = pm.list(args.names); print(_res)
+        return _res
     elif command=='run':
         return pm.run(args.plugin_name, args.plugin_function)
     elif command==None:
