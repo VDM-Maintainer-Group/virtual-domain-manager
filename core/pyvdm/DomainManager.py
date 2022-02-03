@@ -125,7 +125,6 @@ class DomainManager():
             if item.is_dir() and (len(names)==0 or item.stem in names) and _config.is_file():
                 result[item.stem] = json_load( POSIX(_config) )
             pass
-        print( result )
         return result
 
     pass
@@ -139,7 +138,9 @@ def execute(dm, command, args, verbose=False):
     elif command=='rm' or command=='remove':
         return dm.delete_domain(args.name)
     elif command=='ls' or command=='list':
-        return dm.list_domain(args.names)
+        ret = dm.list_domain(args.names)
+        print(ret)
+        return ret
     elif command==None:
         print('<Domain Directory Status>')
     else:

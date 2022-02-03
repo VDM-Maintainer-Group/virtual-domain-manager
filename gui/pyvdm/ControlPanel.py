@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from utils import (ASSETS, CONFIG, POSIX, MFWorker)
 from pathlib import Path
-import json
+import json, time
+from datetime import datetime
 from urllib import request as url_request
 from pyvdm.core.errcode import (CapabilityCode, )
 from pyvdm.core.manager import CoreManager
@@ -21,14 +22,6 @@ class MainTabWidget(QWidget):
         pass
     pass
 
-class DMTabWidget(QWidget):
-    def __init__(self, parent, dm):
-        super().__init__(parent)
-        self.parent = parent
-        self.dm = dm
-        pass
-    pass
-
 class InformationArea(QTableWidget):
     send_signal = pyqtSignal(str)
 
@@ -44,6 +37,9 @@ class InformationArea(QTableWidget):
         self.styleHelper()
         self.refresh()
         self.itemChanged.connect( self.onItemChanged )
+        self.itemClicked.connect( self.onItemClicked )
+        self.itemDoubleClicked.connect( self.onItemDoubleClicked )
+        self.itemSelectionChanged.connect( self.onItemSelectionChanged )
         pass
 
     def styleHelper(self):
@@ -66,8 +62,7 @@ class InformationArea(QTableWidget):
     def refresh(self):
         self.setRowCount(0)
 
-        for i,(key,value) in enumerate( self.loader() ):
-            _row = i
+        for _row,(key,value) in enumerate( self.loader() ):
             self.insertRow( _row )
             for j in range(self.length):
                 if j==self.entry:
@@ -82,7 +77,10 @@ class InformationArea(QTableWidget):
                 elif self.header[j][0] == '[':
                     _key = self.header[j].strip('[]')
                     _item = QTableWidgetItem( value[_key] )
-                    _status = value['status']
+                    if 'status' in value:
+                        _status = value['status']
+                    else:
+                        _status = 'Capable'
                     if _status in ['Capable', 'Incapable']:
                         _item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
                         _checked = Qt.Checked if _status in ['Capable'] else Qt.Unchecked
@@ -96,6 +94,14 @@ class InformationArea(QTableWidget):
                     _item = QTableWidgetItem( _item )
                     self.setItem(_row, j, _item)
             pass
+        pass
+
+    def select(self, name, col=-1):
+        if col==-1: col = self.entry
+        for row in range( self.rowCount() ):
+            _title = self.item(row, col).text()
+            if _title==name:
+                return self.setCurrentCell(row, col)
         pass
 
     @pyqtSlot()
@@ -116,6 +122,260 @@ class InformationArea(QTableWidget):
                 self.status[_name] = _status
             else:
                 item.setCheckState( self.status[_name] )
+        pass
+
+    @pyqtSlot(QTableWidgetItem)
+    def onItemClicked(self, item):
+        if 'onItemClicked' in self.slots:
+            self.slots['onItemClicked']( item.text() )
+        pass
+
+    @pyqtSlot(QTableWidgetItem)
+    def onItemDoubleClicked(self, item):
+        if 'onItemDoubleClicked' in self.slots:
+            self.slots['onItemDoubleClicked']( item.text() )
+        pass
+
+    @pyqtSlot()
+    def onItemSelectionChanged(self):
+        if 'onItemSelectionChanged' in self.slots:
+            self.slots['onItemSelectionChanged']()
+        pass
+
+    pass
+
+class DetailsArea(QWidget):
+    def __init__(self, parent, pm):
+        super().__init__(parent)
+        self.parent = parent
+        self.pm = pm
+        self.config = None
+        #
+        self.styleHelper()
+        self.setVisible(False)
+        pass
+
+    def styleHelper(self):
+        _name_layout = QHBoxLayout()
+        _name_layout.addWidget( QLabel('Name:') )
+        self.name = QLineEdit()
+        _name_layout.addWidget(self.name)
+        #
+        self.created_time = QLabel()
+        self.last_update_time = QLabel()
+        self.info_box = InformationArea(self,
+            loader = lambda: self.pm.list().items(),
+            header = ['[name]', 'version'],
+            slots  = {'name':self.checkPlugins},
+            entry  = -1
+        )
+        #
+        save_btn = QPushButton('Save')
+        save_btn.clicked.connect( self.parent.updateDomain )
+        cancel_btn = QPushButton('Cancel')
+        cancel_btn.clicked.connect( self.cancelEdit )
+        _btn_layout = QHBoxLayout()
+        _btn_layout.addWidget(save_btn)
+        _btn_layout.addWidget(cancel_btn)
+        #
+        layout = QFormLayout()
+        layout.addRow( _name_layout )
+        layout.addRow( self.created_time )
+        layout.addRow( self.last_update_time )
+        layout.addRow( self.info_box )
+        layout.addRow( _btn_layout )
+        self.setLayout( layout )
+        pass
+
+    def initDefaultConfig(self):
+        self.config = None
+        #
+        self.name.setText('')
+        _created_time = time.strftime('%Y-%m-%d %H:%M', time.localtime())
+        self.created_time.setText( f'Created Time\t: {_created_time}' )
+        _last_update_time = time.strftime('%Y-%m-%d %H:%M', time.localtime())
+        self.last_update_time.setText( f'Last Update Time : {_last_update_time}' )
+        #
+        for idx in range( self.info_box.rowCount()  ):
+            _item = self.info_box.item(idx, 0)
+            _item.setCheckState( Qt.Checked )
+        #
+        self.setEnabled(True)
+        self.setVisible(True)
+        pass
+
+    def loadFromConfig(self, config):
+        self.config = config
+        #
+        self.name.setText( config['name'] )
+        _created_time = time.strftime('%Y-%m-%d %H:%M', time.localtime(config['created_time']))
+        self.created_time.setText( f'Created Time\t: {_created_time}' )
+        _last_update_time = time.strftime('%Y-%m-%d %H:%M', time.localtime(config['last_update_time']))
+        self.last_update_time.setText( f'Last Update Time : {_last_update_time}' )
+        #
+        for idx in range( self.info_box.rowCount()  ):
+            _item = self.info_box.item(idx, 0)
+            if _item.text() in config['plugins'].keys():
+                _item.setCheckState( Qt.Checked )
+            else:
+                _item.setCheckState( Qt.Unchecked )
+        #
+        self.setEnabled(False)
+        self.setVisible(True)
+        pass
+
+    def saveConfig(self):
+        self.config = {}
+        # domain name validation
+        _name = self.name.text().strip()
+        if not _name:
+            QMessageBox.critical(self, "ERROR", "Name should not be empty.", QMessageBox.Ok)
+            return False
+        #
+        self.config['name'] = _name
+        _created_time = self.created_time.text().removeprefix('Created Time\t: ')
+        _created_time = datetime.strptime(_created_time, '%Y-%m-%d %H:%M')
+        self.config['created_time'] = _created_time.timestamp()
+        self.config['last_update_time'] = time.time()
+        self.config['plugins'] = dict()
+        for idx in range( self.info_box.rowCount() ):
+            _item = self.info_box.item(idx, 0)
+            if _item.checkState()==Qt.Checked:
+                _name = _item.text()
+                _version = self.info_box.item(idx, 1).text()
+                self.config['plugins'].update({ _name : _version })
+        return True
+
+    @pyqtSlot(str)
+    def checkPlugins(self, name:str):
+        return True
+
+    @pyqtSlot()
+    def cancelEdit(self):
+        if self.config:
+            self.loadFromConfig( self.config )
+        else:
+            self.setEnabled(False)
+            self.setVisible(False)
+        pass
+
+    pass
+
+class DMTabWidget(QWidget):
+    def __init__(self, parent, dm, pm):
+        super().__init__(parent)
+        self.parent = parent
+        self.dm = dm
+        self.pm = pm
+        #
+        self.styleHelper()
+        pass
+
+    def styleHelper(self):
+        layout = QGridLayout()
+        # add domain area (10x5)
+        _box = QGroupBox('Domains')
+        _sub_layout = QVBoxLayout()
+        self.info_box = InformationArea(self,
+            loader = lambda: self.dm.list_domain().items(),
+            header = ['name'],
+            slots  = {
+                        'onItemDoubleClicked':self.editDetails,
+                        'onItemSelectionChanged':self.showDetails}
+        )
+        _sub_layout.addWidget( self.info_box )
+        ##
+        _btn_layout = QGridLayout()
+        self.add_button = QPushButton('Add ...');
+        self.add_button.clicked.connect( self.addDomain )
+        _btn_layout.addWidget( self.add_button, 0, 0, 1, 2 )
+        self.edit_button = QPushButton('Edit'); self.edit_button.setVisible(False)
+        self.edit_button.clicked.connect( self.editDetails )
+        _btn_layout.addWidget( self.edit_button, 0, 0, 1, 1 )
+        self.remove_button = QPushButton('Remove'); self.remove_button.setVisible(False)
+        # self.remove_button.setEnabled(False)
+        self.remove_button.clicked.connect( self.removeDomain )
+        _btn_layout.addWidget( self.remove_button, 0, 1, 1, 1 )
+        _sub_layout.addLayout( _btn_layout )
+        ##
+        _box.setLayout( _sub_layout )
+        layout.addWidget( _box, 0, 0, 10, 5 )
+        # add detail area (10x5)
+        _box = QGroupBox('Details')
+        _sub_layout = QVBoxLayout()
+        self.details = DetailsArea(self, self.pm)
+        _sub_layout.addWidget( self.details )
+        _box.setLayout( _sub_layout )
+        layout.addWidget( _box, 0, 5, 10, 5 )
+        #
+        self.setLayout( layout )
+        pass
+
+    @pyqtSlot()
+    def showDetails(self):
+        _item = self.info_box.currentItem()
+        if _item and _item.isSelected():
+            _name = _item.text()
+            _config = self.dm.list_domain(_name)[_name]
+            self.details.loadFromConfig(_config)
+            #
+            self.add_button.setVisible(False)
+            self.edit_button.setVisible(True)
+            self.remove_button.setVisible(True)
+        else:
+            self.details.setVisible(False)
+            #
+            self.add_button.setVisible(True)
+            self.edit_button.setVisible(False)
+            self.remove_button.setVisible(False)
+        pass
+
+    @pyqtSlot()
+    def editDetails(self, name=None):
+        if not name:
+            name = self.info_box.currentItem().text()
+        self.details.setEnabled(True)
+        pass
+
+    @pyqtSlot()
+    def addDomain(self):
+        self.details.initDefaultConfig()
+        pass
+
+    @pyqtSlot()
+    def removeDomain(self):
+        name = self.info_box.currentItem().text()
+        #
+        confirm_box = QMessageBox()
+        confirm_box.setText(f'Are you sure you want to remove domain "{name}"?')
+        confirm_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        confirm_box.setDefaultButton(QMessageBox.No)
+        if confirm_box.exec() != QMessageBox.Yes: return
+        #
+        ret = self.dm.delete_domain(name)
+        if ret==True:
+            self.info_box.refresh()
+        else:
+            QMessageBox.critical(self, "ERROR", ret.name, QMessageBox.Ok)
+        pass
+
+    @pyqtSlot()
+    def updateDomain(self):
+        if not self.details.config:     # new domain
+            _func = self.dm.create_domain
+        else:                           # update domain
+            _func = self.dm.update_domain
+        #
+        if not self.details.saveConfig(): return
+        _config = self.details.config
+        ret = _func(_config['name'], _config)
+        #
+        if ret==True:
+            self.info_box.refresh()
+            self.info_box.select(_config['name'], col=0)
+        else:
+            if _func==self.dm.create_domain: self.details.config=None
+            QMessageBox.critical(self, "ERROR", ret.name, QMessageBox.Ok)
         pass
 
     pass
@@ -367,7 +627,7 @@ class ControlPanelWindow(QTabWidget):
         self.main_tab = MainTabWidget(self, self.core)
         self.addTab(self.main_tab, "Dashboard")
         #
-        self.dm_tab = DMTabWidget(self, self.core.dm)
+        self.dm_tab = DMTabWidget(self, self.core.dm, self.core.pm)
         self.addTab(self.dm_tab, 'Domain Manager')
         #
         self.cm_tab = CMTabWidget(self, self.core.cm)
