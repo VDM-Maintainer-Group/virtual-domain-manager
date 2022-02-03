@@ -62,7 +62,8 @@ class InformationArea(QTableWidget):
     def refresh(self):
         self.setRowCount(0)
 
-        for _row,(key,value) in enumerate( self.loader() ):
+        self.raw_items = self.loader()
+        for _row,(key,value) in enumerate( self.raw_items ):
             self.insertRow( _row )
             for j in range(self.length):
                 if j==self.entry:
@@ -98,6 +99,8 @@ class InformationArea(QTableWidget):
 
     def select(self, name, col=-1):
         if col==-1: col = self.entry
+        # _keys = list(zip( *list(self.info_box.raw_items) ))[0]
+        # row = _keys.index(name)
         for row in range( self.rowCount() ):
             _title = self.item(row, col).text()
             if _title==name:
@@ -166,7 +169,7 @@ class DetailsArea(QWidget):
         self.info_box = InformationArea(self,
             loader = lambda: self.pm.list().items(),
             header = ['[name]', 'version'],
-            slots  = {'name':self.checkPlugins},
+            slots  = {'name':self.checkPlugins, 'onItemDoubleClicked':self.jumpToPMTab},
             entry  = -1
         )
         #
@@ -257,6 +260,13 @@ class DetailsArea(QWidget):
         else:
             self.setEnabled(False)
             self.setVisible(False)
+        pass
+
+    @pyqtSlot(str)
+    def jumpToPMTab(self, name:str):
+        _keys = list(zip( *list(self.info_box.raw_items) ))[0]
+        if name in _keys:
+            self.parent.parent.route(f'PMTab://{name}')
         pass
 
     pass
@@ -639,6 +649,18 @@ class ControlPanelWindow(QTabWidget):
         pass
 
     def route(self, uri):
+        _tab, name = uri.split('://')
+        if _tab=='MainTab':
+            pass
+        elif _tab=='DMTab':
+            pass
+        elif _tab=='CMTab':
+            pass
+        elif _tab=='PMTab':
+            self.pm_tab.info_box.select(name)
+            self.setCurrentWidget( self.pm_tab )
+        else:
+            pass
         pass
 
     pass
