@@ -4,10 +4,10 @@ import sys, signal, socket
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
-from utils import CONFIG
+from utils import (CONFIG, MFWorker)
 from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager
-from PyQt5.QtCore import (QObject, QThread, Qt, QSize, QUrl,
+from PyQt5.QtCore import (Qt, QSize, QUrl,
                 QTimer, pyqtSignal, pyqtSlot)
 from PyQt5.QtGui import (QIcon, )
 from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu, QAction)
@@ -15,33 +15,6 @@ from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
 global app
 NONE_DOMAIN = '<None>'
-
-class MFWorker(QObject):
-    def __init__(self, func, args=()):
-        super().__init__(None)
-        self.func = func
-        self.args = args
-        self.thread = QThread()
-        self.moveToThread(self.thread)
-        self.thread.started.connect(self.run)
-        pass
-
-    def isRunning(self):
-        return self.thread.isRunning()
-
-    def start(self):
-        self.thread.start()
-        pass
-    
-    def terminate(self):
-        self.thread.exit(0)
-        pass
-
-    def run(self):
-        self.func(*self.args)
-        self.terminate()
-        pass
-    pass
 
 class TrayIcon(QSystemTrayIcon):
     start_signal = pyqtSignal()

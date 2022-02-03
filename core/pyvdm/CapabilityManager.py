@@ -73,7 +73,7 @@ class CapabilityManager:
         else:
             return ERR.ALL_CLEAN
 
-    def disable(self, name) -> ERR:
+    def disable(self, name:str) -> ERR:
         vcd = CapabilityDaemon( root=self.root.as_posix() )
         ret = vcd.disable(name)
         if ret:
@@ -88,11 +88,16 @@ class CapabilityManager:
             ret = dict()
             for name,_,content in os.walk(CAPABILITY_DIRECTORY):
                 if '.conf' in content:
-                    ret.update({ Path(name).name : vcd.query(name) })
+                    _name = Path(name).name
+                    ret.update({
+                        _name : {
+                            "name": _name,
+                            "status": vcd.query(name)
+                        }
+                    })
             pass
         else:
             ret = vcd.query(name)
-        print( json.dumps(ret, indent=4) )
         return ret
 
     def daemon(self, option) -> ERR:
@@ -135,7 +140,9 @@ def execute(cm, command, args, verbose=False):
     elif command=='disable':
         return cm.disable(args.name)
     elif command=='query':
-        return cm.query(args.name)
+        ret = cm.query(args.name)
+        print( json.dumps(ret, indent=4) )
+        return ret
     elif command==None:
         return cm.query()
     else:

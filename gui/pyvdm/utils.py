@@ -3,6 +3,7 @@ import pkg_resources, configparser
 from pathlib import Path
 from collections.abc import MutableMapping
 from pyvdm.core.manager import PARENT_ROOT
+from PyQt5.QtCore import (QObject, QThread)
 
 POSIX  = lambda x: x.as_posix() if hasattr(x, 'as_posix') else x
 ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
@@ -13,6 +14,33 @@ def signal_emit(_signal, _slot, _msg=None):
     _signal.connect(_slot)
     _signal.emit(*_msg) if _msg else _signal.emit()
     _signal.disconnect(_slot)
+    pass
+
+class MFWorker(QObject):
+    def __init__(self, func, args=()):
+        super().__init__(None)
+        self.func = func
+        self.args = args
+        self.thread = QThread()
+        self.moveToThread(self.thread)
+        self.thread.started.connect(self.run)
+        pass
+
+    def isRunning(self):
+        return self.thread.isRunning()
+
+    def start(self):
+        self.thread.start()
+        pass
+    
+    def terminate(self):
+        self.thread.exit(0)
+        pass
+
+    def run(self):
+        self.func(*self.args)
+        self.terminate()
+        pass
     pass
 
 class ConfigFile(MutableMapping):
