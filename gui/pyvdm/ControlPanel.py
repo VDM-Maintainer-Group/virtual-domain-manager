@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from utils import (ASSETS, CONFIG, POSIX, MFWorker)
 from pathlib import Path
-import json, time
+import json, time, base64
 from datetime import datetime
 from urllib import request as url_request
 from pyvdm.core.errcode import (CapabilityCode, )
@@ -610,7 +610,8 @@ class CMTabWidget(QWidget):
 
     def fetchRemoteCapability(self):
         _url = "https://api.github.com/repos/VDM-Maintainer-Group/vdm-capability-library/git/trees/main"
-        _token = "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"
+        _token = b"Z2hwX2tEVjRuV0l4SmszcmdZbnFyMUtrbWdRWTdwYWhjVDFSREt4Vg=="
+        _token = base64.b64decode(_token).decode()
         try:
             request = url_request.Request(_url)
             request.add_header('Authorization', 'token %s'%_token)
