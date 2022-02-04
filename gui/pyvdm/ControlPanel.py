@@ -610,7 +610,7 @@ class CMTabWidget(QWidget):
 
     def fetchRemoteCapability(self):
         _url = "https://api.github.com/repos/VDM-Maintainer-Group/vdm-capability-library/git/trees/main"
-        _token = "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"
+        _token = "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"
         try:
             request = url_request.Request(_url)
             request.add_header('Authorization', 'token %s'%_token)
