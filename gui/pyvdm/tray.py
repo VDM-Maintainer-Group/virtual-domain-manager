@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 from utils import (CONFIG, MFWorker)
+from ControlPanel import ControlPanelWindow
 from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager
 from PyQt5.QtCore import (Qt, QSize, QUrl,
@@ -29,6 +30,8 @@ class TrayIcon(QSystemTrayIcon):
         if _open_name: #for abnormal exit
             self.cm.open_domain(_open_name)
         #
+        self.control_panel = ControlPanelWindow(self, self.cm)
+        #
         self.w_ts = TransitionSceneWidget()
         self.start_signal.connect( self.w_ts.start )
         self.stop_signal.connect( self.w_ts.stop )
@@ -37,6 +40,8 @@ class TrayIcon(QSystemTrayIcon):
         self.setContextMenu( self.getDefaultMenu() )
         self.updateTitleBar()
         self.setIcon( QIcon( CONFIG['ASSETS_ICON'] ) )
+        #
+        self.activated.connect( self.onActivation )
         self.show()
         pass
 
@@ -72,6 +77,8 @@ class TrayIcon(QSystemTrayIcon):
         menu.addSeparator()
 
         # add 'quit' act
+        act_open_panel = menu.addAction('Open Control Panel')
+        act_open_panel.triggered.connect( lambda: self.control_panel.show() )
         act_quit = menu.addAction('Quit')
         act_quit.triggered.connect(self.quit)
 
@@ -137,6 +144,13 @@ class TrayIcon(QSystemTrayIcon):
             self.autosave_timer.start(15*1000) #interval: 15s
         pass
 
+    @pyqtSlot(QSystemTrayIcon.ActivationReason)
+    def onActivation(self, reason):
+        if reason==QSystemTrayIcon.Trigger:
+            self.control_panel.show()
+            pass
+        pass
+
     #---------- wrap of CoreManager operations ----------#
     def save_domain(self, e=None):
         ret = self.cm.save_domain()
@@ -190,6 +204,7 @@ def main():
     # ignore interrupt signal
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
     tray = TrayIcon()
     sys.exit(app.exec_())
     pass

@@ -786,7 +786,7 @@ class PMTabWidget(QWidget):
 
 class ControlPanelWindow(QTabWidget):
     def __init__(self, parent=None, core=None):
-        super().__init__(parent)
+        super().__init__(None)
         self.parent = parent
         self.core = core if core else CoreManager()
         #
