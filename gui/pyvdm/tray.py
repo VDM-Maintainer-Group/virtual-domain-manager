@@ -70,10 +70,7 @@ class TrayIcon(QSystemTrayIcon):
         # and 'switch' submenu
         self.switch_menu = menu.addMenu('Switch') #leave empty for default
         self.switch_menu.triggered.connect( self.switch_domain )
-        self.switch_menu.aboutToShow.connect( self.onShow )
-        self.switch_menu.aboutToHide.connect( self.onHide )
         self.updateSwitchMenu()
-        self.update_timer = None
         menu.addSeparator()
 
         # add 'quit' act
@@ -82,6 +79,7 @@ class TrayIcon(QSystemTrayIcon):
         act_quit = menu.addAction('Quit')
         act_quit.triggered.connect(self.quit)
 
+        menu.aboutToShow.connect( self.updateSwitchMenu )
         return menu
 
     def updateTitleBar(self):
@@ -98,15 +96,6 @@ class TrayIcon(QSystemTrayIcon):
             self.act_save.setEnabled(False)
             self.act_close.setEnabled(False)
         return _open_name
-
-    @pyqtSlot()
-    def onShow(self):
-        if self.update_timer:
-            self.update_timer.stop()
-
-    @pyqtSlot()
-    def onHide(self):
-        self.update_timer = QTimer.singleShot(300, self.updateSwitchMenu)
 
     @pyqtSlot(str)
     def playSoundEffect(self, _file):
