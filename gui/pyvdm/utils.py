@@ -79,6 +79,8 @@ class ConfigFile(MutableMapping):
         sec, key = self._getsection(key)
         self.global_config[sec][key] = value
         #
+        if sec not in self.user_config:
+            self.user_config[sec] = {}
         self.user_config[sec][key] = value
         with open(self.config_file, 'w+') as fh:
             self.user_config.write(fh)

@@ -6,12 +6,13 @@ from datetime import datetime
 from urllib import request as url_request
 from pyvdm.core.errcode import (CapabilityCode, )
 from pyvdm.core.manager import CoreManager
-from PyQt5.QtCore import (Qt, QThread, QUrl, pyqtSignal, pyqtSlot)
-from PyQt5.QtGui import (QIcon, )
+from PyQt5.QtCore import (Qt, QTimer, QUrl, QMargins, pyqtSignal, pyqtSlot)
+from PyQt5.QtGui import (QIcon, QDesktopServices)
 from PyQt5.QtWidgets import (QApplication, QTabWidget, QDesktopWidget, QAbstractItemView, QHeaderView,
-            QWidget, QGroupBox,  QPushButton, QLabel, QDialog, QFileDialog, QMessageBox, QComboBox, QLineEdit)
+            QWidget, QGroupBox,  QPushButton, QLabel, QDialog, QFileDialog, QMessageBox, QComboBox, QLineEdit, QButtonGroup, QRadioButton, QAbstractButton)
 from PyQt5.QtWidgets import (QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem, )
-from PyQt5.QtWidgets import ( QGridLayout, QFormLayout, QHBoxLayout, QVBoxLayout, )
+from PyQt5.QtWidgets import (QGridLayout, QFormLayout, QHBoxLayout, QVBoxLayout, QLayout,
+            QScrollArea)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
 class MainTabWidget(QWidget):
@@ -19,7 +20,174 @@ class MainTabWidget(QWidget):
         super().__init__(parent)
         self.parent = parent
         self.core = core
+        #
+        self.styleHelper()
         pass
+
+    def styleHelper(self):
+        overview_area = self.styleOverviewArea()
+        theme_area = self.styleThemeArea()
+        misc_area = self.styleMiscArea()
+        #
+        layout = QGridLayout()
+        layout.addWidget( overview_area, 0, 0, 3, 5 )
+        layout.addWidget( theme_area, 0, 5, 3, 5 )
+        layout.addWidget( misc_area, 3, 0, 7, 10 )
+        self.setLayout( layout )
+        pass
+
+    def styleOverviewArea(self):
+        box = QGroupBox('Overview')
+        self.label1 = QLabel('Current Domain')
+        self.label2 = QLabel('Total Domains')
+        self.label3 = QLabel('Total Capability')
+        self.label4 = QLabel('Total Plugins')
+        #
+        layout = QVBoxLayout()
+        layout.addWidget(self.label1); layout.addStretch()
+        layout.addWidget(self.label2); layout.addSpacing(0)
+        layout.addWidget(self.label3); layout.addSpacing(0)
+        layout.addWidget(self.label4)
+        box.setLayout( layout )
+        #
+        def ReloadOverviews():
+            open_domain = self.core.stat.getStat()
+            num_domain  = len( self.core.dm.list_domain() )
+            num_cap     = len( self.core.cm.query() )
+            num_plugin  = len( self.core.pm.list() )
+            #
+            self.label1.setText(f'''
+            <table width="100%">
+                <tr><td width="100%" align="left">Current Domain:</td></tr>
+                <tr><td width="100%" align="center" style="font-size:25px">
+                    {open_domain}
+                </td></tr>
+            </table>
+            ''')
+            self.label2.setText(f'''
+            <table width="100%">
+                <tr> <td width="50%"><u>Total Domains: </u></td> <td>{num_domain}</td> </tr>
+            </table>
+            ''')
+            self.label3.setText(f'''
+            <table width="100%">
+                <tr> <td width="50%"><u>Total Capability: </u></td> <td>{num_cap}</td> </tr>
+            </table>
+            ''')
+            self.label4.setText(f'''
+            <table width="100%">
+                <tr> <td width="50%"><u>Total Plugins: </u></td> <td>{num_plugin}</td> </tr>
+            </table>
+            ''')
+            pass
+        ReloadOverviews()
+        self.update_timer = QTimer(self)
+        self.update_timer.timeout.connect( ReloadOverviews )
+        self.update_timer.start(3*1000) #interval: 3s
+        #
+        return box
+
+    def styleThemeArea(self):
+        box = QGroupBox('Themes')
+        #
+        _white_option = QVBoxLayout()
+        _label = QLabel(); _label.setPixmap( QIcon(ASSETS('VD_icon_white.png')).pixmap(100,100) )
+        _white_option.addWidget( _label )
+        _white_button = QRadioButton('White Icon')
+        _white_button.setObjectName('VD_icon_white.png')
+        _white_option.addWidget( _white_button )
+        #
+        _black_option = QVBoxLayout()
+        _label = QLabel(); _label.setPixmap( QIcon(ASSETS('VD_icon_black.png')).pixmap(100,100) )
+        _black_option.addWidget( _label )
+        _black_button = QRadioButton('Black Icon')
+        _black_button.setObjectName('VD_icon_black.png')
+        _black_option.addWidget( _black_button )
+        #
+        _name = CONFIG['ASSETS_ICON']
+        if 'black' in _name:
+            _black_button.setChecked(True)
+        elif 'white' in _name:
+            _white_button.setChecked(True)
+        #
+        btn_group = QButtonGroup(box)
+        btn_group.addButton(_black_button, 0); btn_group.addButton(_white_button, 1)
+        btn_group.buttonToggled.connect( self.toggleIcon )
+        #
+        layout = QGridLayout()
+        layout.addLayout(_black_option, 0, 0, 2, 1)
+        layout.addLayout(_white_option, 0, 1, 2, 1)
+        _theme_btn = QPushButton('Theme Configuration ...')
+        _theme_btn.clicked.connect( self.configureThemes )
+        layout.addWidget(_theme_btn, 2, 0, 1, 2)
+        box.setLayout(layout)
+        #
+        return box
+
+    def styleMiscArea(self):
+        box = QGroupBox('Miscs')
+        #
+        NUM_PER_ROW = 5
+        buttons = self.getButtonList()
+        layout = QGridLayout()
+        for i, btn in enumerate(buttons):
+            row, col = i//NUM_PER_ROW, i%NUM_PER_ROW
+            layout.addWidget( btn, row, col, 1, 1 )
+        #
+        scroll_area = QScrollArea(self)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setWidgetResizable(True)
+        inner_widget = QWidget( scroll_area )
+        inner_widget.setLayout( layout )
+        scroll_area.setWidget( inner_widget )
+        #
+        _fake_layout = QHBoxLayout()
+        _fake_layout.setContentsMargins(0,0,0,0)
+        _fake_layout.setSpacing(0)
+        _fake_layout.addWidget( scroll_area )
+        box_margins = box.contentsMargins(); _margin = box_margins.left()
+        _offset = QMargins(_margin, _margin, _margin, _margin)
+        box.setContentsMargins( box_margins - _offset )
+        box.setLayout( _fake_layout )
+        #
+        return box
+
+    def getButtonList(self):
+        buttons = list()
+        #
+        btn = QPushButton('Plugin Market')
+        buttons.append(btn)
+        btn.clicked.connect(
+            lambda: QDesktopServices.openUrl( QUrl('https://github.com/VDM-Maintainer-Group') )
+        )
+        #
+        btn = QPushButton('Update Check')
+        btn.clicked.connect(
+            lambda: QDesktopServices.openUrl( QUrl('https://github.com/VDM-Maintainer-Group/virtual-domain-manager/releases') )
+        )
+        buttons.append(btn)
+        #
+        btn = QPushButton('Open Data Folder')
+        btn.clicked.connect(
+            lambda: QDesktopServices.openUrl( QUrl.fromLocalFile(POSIX(self.core.root.parent)) )
+        )
+        buttons.append(btn)
+        #
+        return buttons
+
+    @pyqtSlot(QAbstractButton, bool)
+    def toggleIcon(self, btn, checked):
+        if checked:
+            CONFIG['ASSETS_ICON'] = btn.objectName()
+            self.parent.reloadIcon()
+        pass
+
+    @pyqtSlot()
+    def configureThemes(self):
+        #TODO: popup configuration window
+        pass
+
     pass
 
 class InformationArea(QTableWidget):
@@ -350,6 +518,7 @@ class DMTabWidget(QWidget):
     @pyqtSlot()
     def addDomain(self):
         self.details.initDefaultConfig()
+        self.details.name.setFocus()
         pass
 
     @pyqtSlot()
@@ -441,8 +610,12 @@ class CMTabWidget(QWidget):
 
     def fetchRemoteCapability(self):
         _url = "https://api.github.com/repos/VDM-Maintainer-Group/vdm-capability-library/git/trees/main"
+        _token = "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"
         try:
-            res = url_request.urlopen(_url).read().decode('utf-8')
+            request = url_request.Request(_url)
+            request.add_header('Authorization', 'token %s'%_token)
+            res = url_request.urlopen(request).read().decode('utf-8')
+            # res = url_request.urlopen(_url).read().decode('utf-8')
             res = json.loads(res)
             res = [ x['path'] for x in res['tree'] if x['mode']=='040000' ]
             if '__wrapper__' in res: res.remove('__wrapper__')
@@ -613,6 +786,7 @@ class PMTabWidget(QWidget):
 class ControlPanelWindow(QTabWidget):
     def __init__(self, parent=None, core=None):
         super().__init__(parent)
+        self.parent = parent
         self.core = core if core else CoreManager()
         #
         self.styleHelper()
@@ -651,16 +825,24 @@ class ControlPanelWindow(QTabWidget):
     def route(self, uri):
         _tab, name = uri.split('://')
         if _tab=='MainTab':
-            pass
+            self.setCurrentWidget( self.main_tab )
         elif _tab=='DMTab':
-            pass
+            self.dm_tab.info_box.select(name)
+            self.setCurrentWidget( self.dm_tab )
         elif _tab=='CMTab':
-            pass
+            self.cm_tab.info_box.select(name)
+            self.setCurrentWidget( self.cm_tab )
         elif _tab=='PMTab':
             self.pm_tab.info_box.select(name)
             self.setCurrentWidget( self.pm_tab )
         else:
             pass
+        pass
+
+    def reloadIcon(self):
+        self.setWindowIcon( QIcon(CONFIG['ASSETS_ICON']) )
+        if self.parent:
+            self.parent.setIcon( QIcon(CONFIG['ASSETS_ICON']) )
         pass
 
     pass

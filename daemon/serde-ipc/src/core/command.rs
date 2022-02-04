@@ -20,15 +20,15 @@ impl Commander {
         let result = Command::new("bash")
                     .current_dir( self.work.clone() )
                     .args(&["-c", &command])
-                    .status();
+                    .output();
         match result {
             Err(_) => Err(None),
-            Ok(status) => {
-                if status.success() {
+            Ok(output) => {
+                if output.status.success() {
                     Ok(())
                 }
                 else {
-                    Err(status.code())
+                    Err(output.status.code())
                 }
             }
         }
