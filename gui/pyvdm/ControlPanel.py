@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from utils import (ASSETS, CONFIG, POSIX, MFWorker)
+from utils import (ASSETS, CONFIG, THEMES, THEMES_FOLDER, POSIX, MFWorker)
 from pathlib import Path
 import json, time, base64
 from datetime import datetime
@@ -14,6 +14,110 @@ from PyQt5.QtWidgets import (QListWidget, QListWidgetItem, QTableWidget, QTableW
 from PyQt5.QtWidgets import (QGridLayout, QFormLayout, QHBoxLayout, QVBoxLayout, QLayout,
             QScrollArea)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
+
+class ThemeConfigWindow(QWidget):
+    play_signal = pyqtSignal(str)
+
+    def __init__(self, parent):
+        super().__init__(None)
+        self.parent = parent
+        #
+        self.styleHelper()
+        self.setVisible(False)
+        pass
+
+    def styleHelper(self):
+        se_box = QGroupBox('Sound Effect')
+        _sub_layout = QVBoxLayout()
+        _sub_layout.addLayout( self.styleFileSelect('<b>Save Domain</b>',
+                        key='THEME_SE_SAVE', is_se=True) )
+        _sub_layout.addLayout( self.styleFileSelect('<b>Save Failure</b>',
+                        key='THEME_SE_SAVE_FAIL', is_se=True) )
+        _sub_layout.addLayout( self.styleFileSelect('<b>Close Domain</b>',
+                        key='THEME_SE_CLOSE', is_se=True) )
+        _sub_layout.addLayout( self.styleFileSelect('<b>Quit</b>',
+                        key='THEME_SE_QUIT', is_se=True) )
+        se_box.setLayout( _sub_layout )
+        #
+        trans_box = QGroupBox('Transition Scene')
+        _sub_layout = QVBoxLayout()
+        _sub_layout.addLayout( self.styleFileSelect('<b>Transition Movie</b>',
+                        key='THEME_MOV_TRANS') )
+        _sub_layout.addLayout( self.styleFileSelect('<b>Transition Sound Effect</b>',
+                        key='THEME_SE_TRANS') )
+        trans_box.setLayout( _sub_layout )
+        #
+        layout = QVBoxLayout()
+        layout.addWidget( se_box )
+        layout.addWidget( trans_box )
+        self.setLayout( layout )
+        #
+        self.setMinimumWidth(480)
+        self.setWindowTitle('Theme Configuration')
+        self.setWindowFlags( self.windowFlags() & (~Qt.WindowMaximizeButtonHint) )
+        pass
+
+    def styleFileSelect(self, title, key='', is_se=False):
+        _label = QLabel(f'{title}: ')
+        _default = Path( CONFIG[key] ) #relative_to
+        try:
+            _default = _default.relative_to(THEMES_FOLDER)
+        except:
+            _default = _default.relative_to( THEMES('') )
+        _path_edit = QLineEdit( POSIX(_default) )
+        _path_edit.setObjectName(key)
+        #
+        _browse_btn = QPushButton('Browse')
+        _browse_btn.clicked.connect( lambda: self.browseFile(_path_edit) )
+        #
+        _layout = QGridLayout()
+        _layout.addWidget( _label, 0, 0, 1, 10 )
+        _layout.addWidget( _browse_btn, 1, 0, 1, 2 )
+        _layout.addWidget( _path_edit, 1, 2, 1, 8 )
+        #
+        if is_se:
+            _btn = QPushButton(); _btn.setIcon( QIcon(ASSETS('icons/icon_play_se.png')) )
+            _btn.clicked.connect( lambda: self.playSoundEffect(_path_edit) )
+            _layout.addWidget(_btn, 1, 10, 1, 1)
+        #
+        return _layout
+
+    @pyqtSlot(object)
+    def browseFile(self, path_edit):
+        _key = path_edit.objectName()
+        #
+        if 'SE' in _key:
+            _filter = "Wave Sound file (*.wav)"
+        elif 'MOV' in _key:
+            _filter = "Movie file (*.gif *.mp4)"
+        else:
+            _filter = "(*)"
+        #
+        _selected = QFileDialog.getOpenFileName(self, caption=f"{_key} File Selection",
+                directory=POSIX(THEMES_FOLDER),
+                filter=_filter )
+        _filename, _type = _selected
+        if _filename:
+            try:
+                _file = POSIX( Path(_filename).relative_to(THEMES_FOLDER) )
+                CONFIG[_key] = _file
+                path_edit.setText(_file)
+            except Exception as e:
+                pass
+        pass
+
+    @pyqtSlot(object)
+    def playSoundEffect(self, path_edit):
+        _key = path_edit.objectName()
+        _filepath = CONFIG[_key]
+        #
+        _url = QUrl.fromLocalFile(_filepath)
+        se = QSoundEffect( self )
+        se.setSource(_url)
+        se.play()
+        pass
+
+    pass
 
 class MainTabWidget(QWidget):
     def __init__(self, parent, core):
@@ -59,7 +163,7 @@ class MainTabWidget(QWidget):
             self.label1.setText(f'''
             <table width="100%">
                 <tr><td width="100%" align="left">Current Domain:</td></tr>
-                <tr><td width="100%" align="center" style="font-size:25px">
+                <tr><td width="100%" align="center" style="font-size:17pt">
                     {open_domain}
                 </td></tr>
             </table>
@@ -83,7 +187,7 @@ class MainTabWidget(QWidget):
         ReloadOverviews()
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect( ReloadOverviews )
-        self.update_timer.start(3*1000) #interval: 3s
+        self.update_timer.start(1500) #interval: 1.5s
         #
         return box
 
@@ -114,11 +218,13 @@ class MainTabWidget(QWidget):
         btn_group.addButton(_black_button, 0); btn_group.addButton(_white_button, 1)
         btn_group.buttonToggled.connect( self.toggleIcon )
         #
+        self.theme_widget = ThemeConfigWindow(self)
+        _theme_btn = QPushButton('Theme Configuration ...')
+        _theme_btn.clicked.connect( self.theme_widget.show )
+        #
         layout = QGridLayout()
         layout.addLayout(_black_option, 0, 0, 2, 1)
         layout.addLayout(_white_option, 0, 1, 2, 1)
-        _theme_btn = QPushButton('Theme Configuration ...')
-        _theme_btn.clicked.connect( self.configureThemes )
         layout.addWidget(_theme_btn, 2, 0, 1, 2)
         box.setLayout(layout)
         #
@@ -181,11 +287,6 @@ class MainTabWidget(QWidget):
         if checked:
             CONFIG['ASSETS_ICON'] = btn.objectName()
             self.parent.reloadIcon()
-        pass
-
-    @pyqtSlot()
-    def configureThemes(self):
-        #TODO: popup configuration window
         pass
 
     pass
