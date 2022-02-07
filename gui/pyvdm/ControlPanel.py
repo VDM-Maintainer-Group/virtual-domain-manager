@@ -142,6 +142,7 @@ class MainTabWidget(QWidget):
 
     def styleOverviewArea(self):
         box = QGroupBox('Overview')
+        #
         self.label1 = QLabel('Current Domain')
         self.label2 = QLabel('Total Domains')
         self.label3 = QLabel('Total Capability')
@@ -152,42 +153,7 @@ class MainTabWidget(QWidget):
         layout.addWidget(self.label2); layout.addSpacing(0)
         layout.addWidget(self.label3); layout.addSpacing(0)
         layout.addWidget(self.label4)
-        box.setLayout( layout )
-        #
-        def ReloadOverviews():
-            open_domain = self.core.stat.getStat()
-            num_domain  = len( self.core.dm.list_domain() )
-            num_cap     = len( self.core.cm.query() )
-            num_plugin  = len( self.core.pm.list() )
-            #
-            self.label1.setText(f'''
-            <table width="100%">
-                <tr><td width="100%" align="left">Current Domain:</td></tr>
-                <tr><td width="100%" align="center" style="font-size:17pt">
-                    {open_domain}
-                </td></tr>
-            </table>
-            ''')
-            self.label2.setText(f'''
-            <table width="100%">
-                <tr> <td width="50%"><u>Total Domains: </u></td> <td>{num_domain}</td> </tr>
-            </table>
-            ''')
-            self.label3.setText(f'''
-            <table width="100%">
-                <tr> <td width="50%"><u>Total Capability: </u></td> <td>{num_cap}</td> </tr>
-            </table>
-            ''')
-            self.label4.setText(f'''
-            <table width="100%">
-                <tr> <td width="50%"><u>Total Plugins: </u></td> <td>{num_plugin}</td> </tr>
-            </table>
-            ''')
-            pass
-        ReloadOverviews()
-        self.update_timer = QTimer(self)
-        self.update_timer.timeout.connect( ReloadOverviews )
-        self.update_timer.start(1500) #interval: 1.5s
+        box.setLayout( layout ) 
         #
         return box
 
@@ -289,6 +255,36 @@ class MainTabWidget(QWidget):
             self.parent.reloadIcon()
         pass
 
+    def refreshOverview(self, open_domain=None, num_domain=None, num_cap=None, num_plugin=None):
+        if open_domain is not None:
+            self.label1.setText(f'''
+            <table width="100%">
+                <tr><td width="100%" align="left">Current Domain:</td></tr>
+                <tr><td width="100%" align="center" style="font-size:17pt">
+                    {open_domain}
+                </td></tr>
+            </table>
+            ''')
+        if num_domain is not None:
+            self.label2.setText(f'''
+            <table width="100%">
+                <tr> <td width="50%"><u>Total Domains: </u></td> <td>{num_domain}</td> </tr>
+            </table>
+            ''')
+        if num_cap is not None:
+            self.label3.setText(f'''
+            <table width="100%">
+                <tr> <td width="50%"><u>Total Capability: </u></td> <td>{num_cap}</td> </tr>
+            </table>
+            ''')
+        if num_plugin is not None:
+            self.label4.setText(f'''
+            <table width="100%">
+                <tr> <td width="50%"><u>Total Plugins: </u></td> <td>{num_plugin}</td> </tr>
+            </table>
+            ''')
+        pass
+
     pass
 
 class InformationArea(QTableWidget):
@@ -303,6 +299,8 @@ class InformationArea(QTableWidget):
         self.entry = entry
         #
         self.status = dict()
+        self.raw_items = None
+        #
         self.styleHelper()
         self.refresh()
         self.itemChanged.connect( self.onItemChanged )
@@ -328,10 +326,13 @@ class InformationArea(QTableWidget):
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         pass
 
-    def refresh(self):
+    def prefetch(self):
+        return self.loader()
+
+    def refresh(self, raw_items=None):
         self.setRowCount(0)
 
-        self.raw_items = self.loader()
+        self.raw_items = raw_items if raw_items else self.loader() 
         for _row,(key,value) in enumerate( self.raw_items ):
             self.insertRow( _row )
             for j in range(self.length):
@@ -541,6 +542,8 @@ class DetailsArea(QWidget):
     pass
 
 class DMTabWidget(QWidget):
+    refresh_signal = pyqtSignal()
+
     def __init__(self, parent, dm, pm):
         super().__init__(parent)
         self.parent = parent
@@ -548,6 +551,7 @@ class DMTabWidget(QWidget):
         self.pm = pm
         #
         self.styleHelper()
+        self.refresh_signal.connect( self.parent.refresh )
         pass
 
     def styleHelper(self):
@@ -634,7 +638,7 @@ class DMTabWidget(QWidget):
         #
         ret = self.dm.delete_domain(name)
         if ret==True:
-            self.info_box.refresh()
+            self.refresh_signal.emit()
         else:
             QMessageBox.critical(self, "ERROR", ret.name, QMessageBox.Ok)
         pass
@@ -651,7 +655,7 @@ class DMTabWidget(QWidget):
         ret = _func(_config['name'], _config)
         #
         if ret==True:
-            self.info_box.refresh()
+            self.refresh_signal.emit()
             self.info_box.select(_config['name'], col=0)
         else:
             if _func==self.dm.create_domain: self.details.config=None
@@ -780,12 +784,15 @@ class CMTabWidget(QWidget):
     pass
 
 class PMTabWidget(QWidget):
+    refresh_signal = pyqtSignal()
+
     def __init__(self, parent, pm):
         super().__init__(parent)
         self.parent = parent
         self.pm = pm
         #
         self.styleHelper()
+        self.refresh_signal.connect( self.parent.refresh )
         pass
 
     def styleHelper(self):
@@ -838,7 +845,7 @@ class PMTabWidget(QWidget):
         if res==True:
             _name = Path(_filename).name
             self.info(f'Success: installed from "{_name}".')
-            self.info_box.refresh()
+            self.refresh_signal.emit()
         else:
             self.info(f'Installation failed: {res.name}.')
         pass
@@ -855,7 +862,7 @@ class PMTabWidget(QWidget):
         res = self.pm.uninstall(name)
         if res==True:
             self.info(f'Uninstalled: "{name}".')
-            self.info_box.refresh()
+            self.refresh_signal.emit()
         else:
             self.info(f'Uninstall failed: {res.name}.')
         pass
@@ -892,6 +899,7 @@ class ControlPanelWindow(QTabWidget):
         self.core = core if core else CoreManager()
         #
         self.styleHelper()
+        self.refresh()
         pass
 
     def styleHelper(self):
@@ -901,6 +909,10 @@ class ControlPanelWindow(QTabWidget):
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move( qr.topLeft() )
+        # setup refresh timer
+        self.refresh_timer = QTimer(self)
+        self.refresh_timer.timeout.connect( self.refresh )
+        self.refresh_timer.start(1500) #interval: 1.5s
         # set window style
         self.setAttribute( Qt.WA_InputMethodEnabled )
         self.setMinimumSize(600, 360)
@@ -945,6 +957,31 @@ class ControlPanelWindow(QTabWidget):
         self.setWindowIcon( QIcon(CONFIG['ASSETS_ICON']) )
         if self.parent:
             self.parent.setIcon( QIcon(CONFIG['ASSETS_ICON']) )
+        pass
+
+    @pyqtSlot()
+    def refresh(self):
+        def Refresh(tab, key):
+            raw_items = tab.info_box.prefetch()
+            if not (raw_items==tab.info_box.raw_items):
+                tab.info_box.refresh( raw_items )
+            #
+            val = len( tab.info_box.raw_items )
+            self.main_tab.refreshOverview( **{key:val} )
+        #
+        _executor = {
+            self.dm_tab: lambda : Refresh(self.dm_tab, 'num_domain'),
+            self.cm_tab: lambda : Refresh(self.cm_tab, 'num_cap'),
+            self.pm_tab: lambda : Refresh(self.pm_tab, 'num_plugin'),
+        }
+        #
+        try:
+            _executor[ self.sender() ]()
+        except:
+            # triggered by timer
+            open_domain = self.core.stat.getStat()
+            self.main_tab.refreshOverview(open_domain=open_domain)
+            [ _func() for _func in _executor.values() ]
         pass
 
     pass
