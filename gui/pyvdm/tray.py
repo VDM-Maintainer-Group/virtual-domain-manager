@@ -192,6 +192,7 @@ def main():
         exit()
     # ignore interrupt signal
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    QApplication.setAttribute( Qt.AA_EnableHighDpiScaling )
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     tray = TrayIcon()

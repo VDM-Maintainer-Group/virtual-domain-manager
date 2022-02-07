@@ -77,7 +77,13 @@ class ThemeConfigWindow(QWidget):
         self.setMaximumHeight(1024)
         self.setMinimumWidth(480)
         self.setWindowTitle('Theme Configuration')
-        self.setWindowFlags( self.windowFlags() & (~Qt.WindowMaximizeButtonHint) )
+        self.setWindowFlags( self.windowFlags() & (~Qt.WindowMinMaxButtonsHint) )
+        #
+        # move to desktop center
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move( qr.topLeft() )
         pass
 
     def styleFileSelect(self, title, key='', is_se=False):
@@ -207,7 +213,7 @@ class MainTabWidget(QWidget):
         btn_group.addButton(_black_button, 0); btn_group.addButton(_white_button, 1)
         btn_group.buttonToggled.connect( self.toggleIcon )
         #
-        self.theme_widget = ThemeConfigWindow(self)
+        self.theme_widget = ThemeConfigWindow( self.parent )
         _theme_btn = QPushButton('Theme Configuration ...')
         _theme_btn.clicked.connect( self.theme_widget.show )
         #
@@ -995,6 +1001,7 @@ class ControlPanelWindow(QTabWidget):
 
 if __name__== '__main__':
     import sys
+    QApplication.setAttribute( Qt.AA_EnableHighDpiScaling )
     app = QApplication(sys.argv)
     main_window = ControlPanelWindow()
     main_window.show()
