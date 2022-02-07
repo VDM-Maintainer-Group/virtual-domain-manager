@@ -15,6 +15,28 @@ from PyQt5.QtWidgets import (QGridLayout, QFormLayout, QHBoxLayout, QVBoxLayout,
             QScrollArea)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
+def setVerticalScrollLayout(container, layout):
+    scroll_area = QScrollArea( container )
+    scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    scroll_area.setWidgetResizable(True)
+    #
+    inner_widget = QWidget( scroll_area )
+    inner_widget.setLayout( layout )
+    scroll_area.setWidget( inner_widget )
+    #
+    _fake_layout = QHBoxLayout()
+    _fake_layout.setContentsMargins(0,0,0,0)
+    _fake_layout.setSpacing(0)
+    _fake_layout.addWidget( scroll_area )
+    #
+    box_margins = container.contentsMargins()
+    _margin = box_margins.left()
+    _offset = QMargins(_margin, _margin, _margin, _margin)
+    container.setContentsMargins( box_margins - _offset )
+    container.setLayout( _fake_layout )
+    pass
+
 class ThemeConfigWindow(QWidget):
     play_signal = pyqtSignal(str)
 
@@ -50,8 +72,9 @@ class ThemeConfigWindow(QWidget):
         layout = QVBoxLayout()
         layout.addWidget( se_box )
         layout.addWidget( trans_box )
-        self.setLayout( layout )
+        setVerticalScrollLayout(self, layout)
         #
+        self.setMaximumHeight(1024)
         self.setMinimumWidth(480)
         self.setWindowTitle('Theme Configuration')
         self.setWindowFlags( self.windowFlags() & (~Qt.WindowMaximizeButtonHint) )
@@ -205,23 +228,7 @@ class MainTabWidget(QWidget):
         for i, btn in enumerate(buttons):
             row, col = i//NUM_PER_ROW, i%NUM_PER_ROW
             layout.addWidget( btn, row, col, 1, 1 )
-        #
-        scroll_area = QScrollArea(self)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setWidgetResizable(True)
-        inner_widget = QWidget( scroll_area )
-        inner_widget.setLayout( layout )
-        scroll_area.setWidget( inner_widget )
-        #
-        _fake_layout = QHBoxLayout()
-        _fake_layout.setContentsMargins(0,0,0,0)
-        _fake_layout.setSpacing(0)
-        _fake_layout.addWidget( scroll_area )
-        box_margins = box.contentsMargins(); _margin = box_margins.left()
-        _offset = QMargins(_margin, _margin, _margin, _margin)
-        box.setContentsMargins( box_margins - _offset )
-        box.setLayout( _fake_layout )
+        setVerticalScrollLayout(box, layout)
         #
         return box
 
@@ -978,7 +985,7 @@ class ControlPanelWindow(QTabWidget):
         try:
             _executor[ self.sender() ]()
         except:
-            # triggered by timer
+            # manually triggered
             open_domain = self.core.stat.getStat()
             self.main_tab.refreshOverview(open_domain=open_domain)
             [ _func() for _func in _executor.values() ]
