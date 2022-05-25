@@ -82,7 +82,7 @@ class CapabilityManager:
         else:
             return ERR.ALL_CLEAN
 
-    def query(self, name=''): #-> str or dict
+    def status(self, name=''): #-> str or dict
         vcd = CapabilityDaemon( root=self.root.as_posix() )
         if not name:
             ret = dict()
@@ -139,12 +139,12 @@ def execute(cm, command, args, verbose=False):
         return cm.enable(args.name)
     elif command=='disable':
         return cm.disable(args.name)
-    elif command=='query':
-        ret = cm.query(args.name)
+    elif command=='status':
+        ret = cm.status(args.name)
         print( json.dumps(ret, indent=4) )
         return ret
     elif command==None:
-        return cm.query()
+        return cm.status()
     else:
         print('The command <{}> is not supported.'.format(command))
     return
@@ -175,9 +175,9 @@ def init_subparsers(subparsers):
     p_daemon.add_argument('option', metavar='option', choices=['start','status','stop','restart'],
         help='[start,stop,restart,status]')
     #
-    p_query = subparsers.add_parser('query',
+    p_status = subparsers.add_parser('status',
         help='query the status of the installed capability(s).')
-    p_query.add_argument('name', metavar='name', nargs='?', default='',
+    p_status.add_argument('name', metavar='name', nargs='?', default='',
         help='the capability name')
     pass
 
