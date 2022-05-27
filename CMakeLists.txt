@@ -9,15 +9,15 @@ find_package(Python REQUIRED
 
 #default configurations
 file(READ "VERSION" ver)
-string(REGEX MATCH "VERSION_MAJOR.+=.+([0-9]+)" _ ${ver})
-set(ver_major ${CMAKE_MATCH_1})
-string(REGEX MATCH "VERSION_MINOR.+=.+([0-9]+)" _ ${ver})
-set(ver_minor ${CMAKE_MATCH_1})
-string(REGEX MATCH "VERSION_PATCH.+=.+([0-9]+)" _ ${ver})
-set(ver_patch ${CMAKE_MATCH_1})
+string(REGEX MATCH "VERSION_MAJOR[ \t]*=[ \t]*([0-9]*)" _ ${ver})
+set(_ver_major ${CMAKE_MATCH_1})
+string(REGEX MATCH "VERSION_MINOR[ \t]*=[ \t]*([0-9]*)" _ ${ver})
+set(_ver_minor ${CMAKE_MATCH_1})
+string(REGEX MATCH "VERSION_PATCH[ \t]*=[ \t]*([0-9]*)" _ ${ver})
+set(_ver_patch ${CMAKE_MATCH_1})
 #
-set(VERSION ${ver_major}.${ver_minor}.${ver_patch})
-# set(ENV{CARGO_PKG_VERSION} ${VERSION})
+set(VDM_VERSION ${_ver_major}.${_ver_minor}.${_ver_patch})
+# set(ENV{CARGO_PKG_VERSION} ${VDM_VERSION})
 set(VDM_INSTALL_DIR "/opt/vdm")
 
 # vdm capability build
@@ -66,5 +66,7 @@ add_custom_target(build-pyvdm
         #
         COMMAND ${CMAKE_COMMAND} -E touch ${PYVDM_DIST_DIR}/__init__.py
         COMMAND ${CMAKE_COMMAND} -E touch ${PYVDM_DIST_DIR}/daemon/__init__.py
+        COMMAND ${CMAKE_COMMAND} -E echo "__version__ = \\\"${VDM_VERSION}\\\"" >  ${PYVDM_DIST_DIR}/__init__.py
+        #
         COMMAND python3 setup.py bdist_wheel
 )

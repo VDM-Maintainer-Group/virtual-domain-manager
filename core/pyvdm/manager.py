@@ -12,6 +12,7 @@ import pyvdm.core.DomainManager as D_MAN
 import pyvdm.core.CapabilityManager as C_MAN
 from pyvdm.core.utils import *
 from pyvdm.core.errcode import *
+from .. import __version__
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 PLUGIN_DIRECTORY = PARENT_ROOT / 'plugins'
@@ -160,10 +161,11 @@ def main():
     parser = argparse.ArgumentParser(
         description = 'The VDM Core.'
     )
-    parser.add_argument('--save', dest='save_flag', action='store_true',
-        help='save the current open domain.')
+    parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     parser.add_argument('--open', dest='domain_name',
         help='open an existing domain.')
+    parser.add_argument('--save', dest='save_flag', action='store_true',
+        help='save the current open domain.')
     parser.add_argument('--close', dest='close_flag', action='store_true',
         help='close the current open domain.')
     subparsers = parser.add_subparsers(dest='command')
