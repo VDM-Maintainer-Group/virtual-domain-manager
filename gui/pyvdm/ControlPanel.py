@@ -695,7 +695,7 @@ class CMTabWidget(QWidget):
         _box = QGroupBox('Capability')
         _sub_layout = QVBoxLayout()
         self.info_box = InformationArea(None,
-            loader = lambda: self.cm.query().items(),
+            loader = lambda: self.cm.status().items(),
             header = ['[name]'],
             slots  = {'name':self.toggleCapability},
             entry  = -1
@@ -740,7 +740,7 @@ class CMTabWidget(QWidget):
             if '__wrapper__' in res: res.remove('__wrapper__')
             #
             self.cap_list.clear()
-            _installed = list( self.cm.query().keys() )
+            _installed = list( self.cm.status().keys() )
             for x in res:
                 _item = QListWidgetItem(x)
                 if x in _installed:
@@ -772,7 +772,7 @@ class CMTabWidget(QWidget):
 
     @pyqtSlot(str)
     def toggleCapability(self, name:str):
-        if self.cm.query(name)=='Capable':
+        if self.cm.status(name)=='Capable':
             _func = self.cm.disable
         else:
             _func = self.cm.enable
