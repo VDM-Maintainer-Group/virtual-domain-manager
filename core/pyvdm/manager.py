@@ -58,14 +58,19 @@ class CoreManager:
 
     #---------- online domain operations -----------#
     def executeBlade(self, executor, worker):
-        _futures = [ executor.submit(worker, _plugin, _stat)
-                                            for _plugin,_stat in self.plugins.items() ]
-        _results = [ x.result() for x in _futures ]
-        _results = list( filter(lambda x:x is not None, _results) )
-        if len(_results)!=0:
-            return _results
+        _futures = [ executor.submit(worker, _plugin, _stat) 
+                    for _plugin,_stat in self.plugins.items() ]
+        ##
+        try:
+            _results = [ x.result() for x in _futures ]
+            _results = list( filter(lambda x:x is not None, _results) )
+        except Exception as e:
+            _results = e
         else:
-            return None
+            _results = None if len(_results)==0 else _results
+        finally:
+            return _results
+        pass
 
     def save_domain(self, delayed=False):
         if not self.stat.getStat():

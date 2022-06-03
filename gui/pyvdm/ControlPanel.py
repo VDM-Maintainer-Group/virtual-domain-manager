@@ -658,20 +658,28 @@ class DMTabWidget(QWidget):
 
     @pyqtSlot()
     def updateDomain(self):
-        if not self.details.config:     # new domain
-            _func = self.dm.create_domain
-        else:                           # update domain
-            _func = self.dm.update_domain
-        #
-        if not self.details.saveConfig(): return
+        if not self.details.config:
+            new_flag = True
+        else:
+            _name = self.details.config['name']
+            new_flag = False
+        ##
+        if not self.details.saveConfig():
+            return
+        ##
         _config = self.details.config
-        ret = _func(_config['name'], _config)
-        #
+        if new_flag:
+            _name = self.details.config['name']
+            ret = self.dm.create_domain(_name, self.details.config)
+        else:
+            ret = self.dm.update_domain(_name, self.details.config)
+        ##
+        _config = self.details.config
         if ret==True:
             self.refresh_signal.emit()
             self.info_box.select(_config['name'], col=0)
         else:
-            if _func==self.dm.create_domain: self.details.config=None
+            if new_flag: self.details.config=None
             QMessageBox.critical(self, "ERROR", ret.name, QMessageBox.Ok)
         pass
 

@@ -8,7 +8,7 @@ import os, argparse, re
 import tempfile, shutil
 import ctypes
 import multiprocessing as mp
-# from importlib.machinery import SourceFileLoader
+from importlib import import_module
 from distutils.version import LooseVersion
 from functools import partial, wraps
 from pyvdm.interface import SRC_API
@@ -75,7 +75,13 @@ class PluginWrapper():
 
     def load_python(self, entry):
         self.obj = None
-        self._module = __import__( Path(entry).stem )
+        ##
+        module_name = Path(entry).stem
+        print( module_name, module_name in sys.modules )
+        if module_name in sys.modules:
+            sys.modules.pop(module_name)
+        self._module = import_module(module_name)
+        ##
         for _,obj in inspect.getmembers(self._module):
             if inspect.isclass(obj) and issubclass(obj, SRC_API) and (obj is not SRC_API):
                 self.obj = obj() #instantiate the abstract class
