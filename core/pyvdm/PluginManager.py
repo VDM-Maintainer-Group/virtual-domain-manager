@@ -77,7 +77,6 @@ class PluginWrapper():
         self.obj = None
         ##
         module_name = Path(entry).stem
-        print( module_name, module_name in sys.modules )
         if module_name in sys.modules:
             sys.modules.pop(module_name)
         self._module = import_module(module_name)
