@@ -65,10 +65,9 @@ class CoreManager:
             _results = [ x.result() for x in _futures ]
             _results = list( filter(lambda x:x is not None, _results) )
         except Exception as e:
-            _results = e
+            return _results
         else:
             _results = None if len(_results)==0 else _results
-        finally:
             return _results
         pass
 
