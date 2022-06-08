@@ -1003,6 +1003,11 @@ class ControlPanelWindow(QTabWidget):
             open_domain = self.core.stat.getStat()
             self.main_tab.refreshOverview(open_domain=open_domain)
             [ _func() for _func in _executor.values() ]
+            # refresh DetailsArea in `dm_tab`
+            _tab = self.dm_tab.details
+            raw_items = _tab.info_box.prefetch()
+            if not (raw_items==_tab.info_box.raw_items):
+                _tab.info_box.refresh( raw_items )
         pass
 
     pass
