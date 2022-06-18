@@ -4,7 +4,7 @@ import sys, signal, socket
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
-from utils import (CONFIG, MFWorker)
+from pyvdm.gui.utils import (CONFIG, MFWorker)
 from ControlPanel import ControlPanelWindow
 from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager

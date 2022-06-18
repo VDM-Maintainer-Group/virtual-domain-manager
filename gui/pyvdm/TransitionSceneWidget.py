@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from utils import CONFIG
+from pyvdm.gui.utils import CONFIG
 import sys, time
 from PyQt5.QtCore import (QEasingCurve, QPropertyAnimation, Qt, QSize, QRect, QTimer, QUrl,
                     QThread, pyqtSignal, pyqtSlot)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from utils import (ASSETS, CONFIG, THEMES, THEMES_FOLDER, POSIX, MFWorker)
+from pyvdm.gui.utils import (ASSETS, CONFIG, THEMES, THEMES_FOLDER, POSIX, MFWorker)
 from pathlib import Path
 import json, time, base64
 from datetime import datetime
