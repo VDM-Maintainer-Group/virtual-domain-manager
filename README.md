@@ -1,22 +1,11 @@
 # Virtual Domain Manager
 
+This project may stop forever ... until there is some one cares.
 
-https://user-images.githubusercontent.com/9068301/171314911-ac6e9794-105d-409d-98da-9222b7dc53b5.mp4
-
-
-## Introduction
 [中文简介 - deepin论坛](https://bbs.deepin.org/zh/post/219493)
-<!-- How to take a snapshot of a running operating system, and somehow restore from it?
 
-- **Plan A**: request status of *hardwares* (CPU, Memory, Storage) and record them all.
-- **Plan B**: request status of *softwares* (users' applications) and record them all.
-
-As "Plan A" is straightforward (e.g., virtual machine) but always with high overhead, we believe "Plan B" (e.g., [CRIU](https://github.com/checkpoint-restore/criu)) is the future.
-
-This project, VDM, is a non-serious-but-effective "Plan B" design. Focusing on the running status of all your GUI applications on **multiple-desktop / multiple-screen / multiple-device**, VDM would like to arrange them according to your **working domain** definition.
-
-In the open working domain, VDM would request all the support applications to report their necessary running status (open files, window status and etc.), record them for future restore. Unfortunately, while there are no such status-report APIs, VDM proposes a **plugin mechanism** to implement such support and provides **capability library** to simplify the development.-->
-
+<!--
+## Introduction
 <p align="center">
   <img src="./previews/structure.png" width="650px" />
 </p>
@@ -103,6 +92,9 @@ Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-
 ## Plugin Development
 
 Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
+
+
+-->
 
 ## License
 
