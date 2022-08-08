@@ -1,16 +1,14 @@
 # Virtual Domain Manager
 
-This project may stop forever ... until there is some one cares.
-
 [中文简介 - deepin论坛](https://bbs.deepin.org/zh/post/219493)
 
-<!--
+
 ## Introduction
 <p align="center">
   <img src="./previews/structure.png" width="650px" />
 </p>
 
-> Currently, we are seeking for help on: plugin development, capability library contribution, and any suggestions. If you want to join the maintainer team, please [contact me](mailto:sudofree_at_163_com). 
+> Currently, we are seeking for help on: application development or modification for VDM. If you are interested, please try to [contact me](mailto:sudofree_at_163_com). 
 
 ## Installation
 
@@ -93,8 +91,6 @@ Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-
 
 Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
 
-
--->
 
 ## License
 
