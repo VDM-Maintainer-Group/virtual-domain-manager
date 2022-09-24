@@ -1,4 +1,4 @@
 __all__ = [
     'manager', 'utils', 'errcode',
-    'CapabilityManager', 'DomainManager', 'PluginManager'
+    'ApplicationManager', 'CapabilityManager', 'DomainManager', 'PluginManager'
 ]

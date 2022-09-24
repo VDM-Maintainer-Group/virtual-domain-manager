@@ -47,7 +47,7 @@ class DomainManager():
             config['name'] = name
         else:
             config['name'] = Tui.ask('Domain Name', default=name)
-        # ask for plugins selection
+        # ask for plugins selection #FIXME: ask from AM white-list
         _plugins = P_MAN.PluginManager().list()
         all_plugin_names = list( _plugins.keys() )
         _plugin_names = list( config['plugins'].keys() ) if 'plugins' in config else None

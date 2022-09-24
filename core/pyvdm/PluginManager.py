@@ -4,7 +4,7 @@ import sys, inspect
 from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
-import os, argparse, re
+import os, argparse, re, dbus
 import tempfile, shutil
 import ctypes
 import multiprocessing as mp
@@ -23,9 +23,36 @@ REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
 
-class PluginWrapper():
+class MetaPlugin(SRC_API):
+    def __init__(self, name, cmd):
+        self.name = name
+        self.exec = cmd
+
+    def onStart(self):
+        return 0
+
+    def onStop(self):
+        return 0
+
+    def __getInstances(self):
+        sess = dbus.SessionBus()
+        _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
+        #TODO: get interface 'org.vdm-compatible' from 'org/vdm-compatible' of f'{name}'
+        pass
+
+    def onSave(self, stat_file):
+
+        return 0
+
+    def onResume(self, stat_file):
+        return 0
+
+    def onClose(self):
+        return 0
+    pass
+
+class PluginWrapper(MetaPlugin):
     def __init__(self, config, entry):
-        self.config = config
         self.name = config['name']
         self.root = Path.cwd()
         if entry.endswith('.py'):

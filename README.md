@@ -6,9 +6,7 @@
 ## Introduction
 <p align="center">
   <img src="./previews/structure.png" width="650px" />
-</p>
-
-> Currently, we are seeking for help on: application development or modification for VDM. If you are interested, please try to [contact me](mailto:sudofree_at_163_com). 
+</p> 
 
 ## Installation
 

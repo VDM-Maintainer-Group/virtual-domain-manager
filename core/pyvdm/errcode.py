@@ -43,6 +43,9 @@ class CapabilityCode(ErrorCode):
     DAEMON_IS_STOPPED     = 0x1600
     pass
 
+class ApplicationCode(ErrorCode):
+    pass
+
 ## Bare Code Section
 # for plugin use
 CONFIG_REQUIRED_FIELD_MISSING   = 0x1001
