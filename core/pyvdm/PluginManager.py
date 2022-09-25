@@ -138,7 +138,6 @@ class PluginManager:
         self.temp = Path( tempfile.mkdtemp() )
         pass
 
-    @staticmethod
     def test_config(self, config):
         # test required config fields
         for key in REQUIRED_FIELDS:

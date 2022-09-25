@@ -7,6 +7,7 @@ from configparser import RawConfigParser
 import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.PluginManager import MetaPlugin
 from pyvdm.core.errcode import ApplicationCode as ERR
+from pyvdm.interface import CapabilityLibrary
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 
@@ -24,12 +25,6 @@ def _compatibility_filter(conf) -> bool:
         return ('VDM' in _cat)
     else:
         return False
-    pass
-
-def __getInstances(self):
-    sess = dbus.SessionBus()
-    _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
-    #TODO: get interface 'org.vdm-compatible' from 'org/vdm-compatible' of f'{name}'
     pass
 
 class ApplicationManager:
@@ -70,6 +65,8 @@ class ApplicationManager:
             assert( isinstance(pm, P_MAN.PluginManager) )
             self.pm = pm
         ##
+        self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
+        ##
         self.applications = dict()
         self.refresh()
         # self.supported = self.probe_compatibility()
@@ -77,7 +74,7 @@ class ApplicationManager:
         pass
 
     @staticmethod
-    def _plugin_supported(plugins:dict, app_name) -> str:
+    def __plugin_supported(plugins:dict, app_name) -> str:
         for plugin_name,targets in plugins.items():
             if isinstance(targets, list) and (app_name in targets):
                 return plugin_name
@@ -90,8 +87,9 @@ class ApplicationManager:
         pass
 
     def probe_compatibility(self, app_name) -> MetaPlugin:
-        #TODO: first try dbus interface
-        #TODO: then try application file section
+        # sess = dbus.SessionBus()
+        # _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
+        #TODO: get interface 'org.vdm-compatible' from 'org/vdm-compatible' of f'{name}'
         pass
 
     def refresh(self):
