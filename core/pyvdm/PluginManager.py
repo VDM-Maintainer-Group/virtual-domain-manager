@@ -14,47 +14,51 @@ from functools import partial, wraps
 from pyvdm.interface import SRC_API
 from pyvdm.core.utils import *
 from pyvdm.core.errcode import PluginCode as ERR
+from pyvdm.core.CapabilityManager import CapabilityManager
 
 PLUGIN_BUILD_LEVEL = 'release'
 CONFIG_FILENAME    = 'package.json'
 PARENT_ROOT = Path('~/.vdm').expanduser()
 PLUGIN_DIRECTORY= PARENT_ROOT / 'plugins'
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
-OPTIONAL_FIELDS = ['description', 'keywords', 'capability', 'scripts']
-OPTIONAL_SCRIPTS= ['pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
+OPTIONAL_FIELDS = ['target', 'description', 'keywords', 'capability', 'scripts']
+OPTIONAL_SCRIPTS= ['test', 'pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
 
 class MetaPlugin(SRC_API):
-    def __init__(self, name, cmd):
+    def __init__(self, name:str, obj):
         self.name = name
-        self.exec = cmd
+        self.obj = obj
 
     def onStart(self):
+        if hasattr(self.obj, 'onStart'):
+            return self.onStart()
         return 0
 
     def onStop(self):
+        if hasattr(self.obj, 'onStop'):
+            return self.onStop()
         return 0
 
-    def __getInstances(self):
-        sess = dbus.SessionBus()
-        _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
-        #TODO: get interface 'org.vdm-compatible' from 'org/vdm-compatible' of f'{name}'
-        pass
-
     def onSave(self, stat_file):
-
+        if hasattr(self.obj, 'onSave'):
+            return self.onSave(stat_file)
         return 0
 
     def onResume(self, stat_file):
+        if hasattr(self.obj, 'onResume'):
+            return self.onResume(stat_file)
         return 0
 
     def onClose(self):
+        if hasattr(self.obj, 'onClose'):
+            return self.onClose()
         return 0
     pass
 
 class PluginWrapper(MetaPlugin):
     def __init__(self, config, entry):
-        self.name = config['name']
         self.root = Path.cwd()
+        ##
         if entry.endswith('.py'):
             self.load_python(entry)
             self.type = 'python'
@@ -62,18 +66,17 @@ class PluginWrapper(MetaPlugin):
             self.load_cdll(entry)
             self.type = 'cdll'
         else:
+            self.obj = None
             raise Exception('Unsupported plugin entry.')
+        ##
+        super().__init__(config['name'], self.obj)
         pass
 
     def __getattribute__(self, name):
-        try:
-            _func = getattr(self.obj, name)
-            _func = self.wrap_call_in_workspace(_func)
-            return _func
-        except:
-            return super().__getattribute__(name)
-            # print('%s is an illegal function name.'%name)
-        pass
+        ret = super().__getattribute__(name)
+        if callable(ret):
+            ret = self.wrap_call_in_workspace(ret)
+        return ret
 
     @staticmethod
     def wrap_call_on_string(func):
@@ -136,7 +139,7 @@ class PluginManager:
         pass
 
     @staticmethod
-    def test_config(config):
+    def test_config(self, config):
         # test required config fields
         for key in REQUIRED_FIELDS:
             if key not in config:
@@ -150,9 +153,11 @@ class PluginManager:
         if not (_pre_built or _post_built):
             return ERR.CONFIG_MAIN_ENTRY_MISSING
         # test capability requirement
+        cm = CapabilityManager( self.root )
         if ('capability' in config) and isinstance(config['capability'], list):
             for item in config['capability']:
-                #TODO: invoke dependency check from `CapabilityManager`
+                if cm.status(item) == 'N/A':
+                    return ERR.PLUGIN_CAPABILITY_MISSING
                 pass
             pass
         # test build command and build plugin
@@ -163,7 +168,7 @@ class PluginManager:
         # all test pass
         return True
 
-    def getInstalledPlugin(self, name, required_version=None):
+    def getInstalledPlugin(self, name, required_version=None) -> MetaPlugin:
         _installed = list(sorted(self.root.glob( '%s-*.*'%name ), reverse=True))
         # select the only plugin
         _selected  = None
@@ -194,6 +199,16 @@ class PluginManager:
                 return ERR.PLUGIN_WRAPPER_FAILED
             pass
         return _plugin
+
+    def getPluginsWithTarget(self) -> tuple:
+        gui_plugins, other_plugins = dict(), dict()
+        info = self.list()
+        for k,v in info.items():
+            if 'target' in v:
+                gui_plugins[k] = v['target']
+            else:
+                other_plugins[k] = v
+        return (gui_plugins, other_plugins)
 
     def install(self, url):
         #TODO: if with online url, download as file in _path
@@ -261,7 +276,7 @@ class PluginManager:
             pass
         return True #always
 
-    def list(self, names=[]):
+    def list(self, names=[]) -> dict:
         _regex = re.compile('(?P<name>.+)-(?P<version>\d\.\d.*)')
         _installed = sorted( self.root.glob( '*-*.*' ) )
         result = dict()
@@ -270,11 +285,8 @@ class PluginManager:
             (_name, _version) = _regex.findall(item.name)[0]
             if len(names)==0 or (_name in names):
                 _config = json_load( POSIX(item / CONFIG_FILENAME) )
-                if _name not in result:
+                if _name not in result: #ignore duplicate plugins
                     result[_name] = _config
-                else:
-                    # result[_name].append(_config)
-                    pass
             pass
 
         return result

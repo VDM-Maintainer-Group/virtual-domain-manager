@@ -8,6 +8,8 @@ import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.PluginManager import MetaPlugin
 from pyvdm.core.errcode import ApplicationCode as ERR
 
+PARENT_ROOT = Path('~/.vdm').expanduser()
+
 def _non_gui_filter(conf) -> bool:
     _flag = False
     _flag = _flag or 'NoDisplay' in conf['Desktop Entry']
@@ -24,9 +26,11 @@ def _compatibility_filter(conf) -> bool:
         return False
     pass
 
-def _plugin_supported(conf) -> bool:
-    #TODO: invoke plugin manager
-    return False
+def __getInstances(self):
+    sess = dbus.SessionBus()
+    _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
+    #TODO: get interface 'org.vdm-compatible' from 'org/vdm-compatible' of f'{name}'
+    pass
 
 class ApplicationManager:
     @staticmethod
@@ -34,8 +38,8 @@ class ApplicationManager:
         applications = dict()
         ##
         data_dirs = os.environ['XDG_DATA_DIRS'].split(':')
-        for _path in data_dirs:
-            app_dir = Path(_path) / 'applications'
+        for xdg_path in data_dirs:
+            app_dir = Path(xdg_path) / 'applications'
             if app_dir.exists():
                 for app_file in app_dir.glob('*.desktop'):
                     app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
@@ -45,8 +49,8 @@ class ApplicationManager:
                             applications[ app_file.stem ] = {
                                 "name": app_conf['Desktop Entry']['Name'],
                                 "exec": app_conf['Desktop Entry']['Exec'],
-                                "type": app_conf['Desktop Entry']['Type'],
-                                "compatible":  _compatibility_filter(app_conf) 
+                                "icon": app_conf['Desktop Entry']['Icon'],
+                                "compatible": _compatibility_filter(app_conf) 
                             }
                         except Exception as e:
                             pass
@@ -54,30 +58,32 @@ class ApplicationManager:
             pass
         return applications
 
-    def __init__(self):
+    def __init__(self, root='', pm=None):
+        if root:
+            self.root = Path(root).resolve()
+        else:
+            self.root = PARENT_ROOT
+        ##
+        if not pm:
+            self.pm = P_MAN.PluginManager(root)
+        else:
+            assert( isinstance(pm, P_MAN.PluginManager) )
+            self.pm = pm
+        ##
         self.applications = dict()
         self.refresh()
         # self.supported = self.probe_compatibility()
         # self.generated = self.applications / self.supported
         pass
 
-    def refresh(self):
-        _apps = self.list_all_applications()
-        for app in _apps:
-            app_name = app['name']
-            if app_name not in self.applications:
-                if app['compatible']:
-                    _plugin = self.probe_compatibility(app)
-                elif _plugin_supported(app):
-                    _plugin = None #TODO: PM.getInstalledPlugin(app_name)
-                    app['compatible'] = 'plugin'
-                else:
-                    _plugin = self.default_compatibility(app)
-                ##
-                self.applications[app_name] = app
-                self.applications[app_name]['plugin'] = _plugin
-        pass
-        pass
+    @staticmethod
+    def _plugin_supported(plugins:dict, app_name) -> str:
+        for plugin_name,targets in plugins.items():
+            if isinstance(targets, list) and (app_name in targets):
+                return plugin_name
+            elif isinstance(targets, str) and (app_name==targets):
+                return plugin_name
+        return None
 
     def default_compatibility(self, app_name) -> MetaPlugin:
         #TODO: generate 
@@ -86,6 +92,26 @@ class ApplicationManager:
     def probe_compatibility(self, app_name) -> MetaPlugin:
         #TODO: first try dbus interface
         #TODO: then try application file section
+        pass
+
+    def refresh(self):
+        _apps = self.list_all_applications()
+        _plugins,_ = self.pm.getPluginsWithTarget()
+
+        for app_name,app in _apps.items():
+            if app_name not in self.applications:
+                if app['compatible']:
+                    _plugin = self.probe_compatibility(app)
+                else:
+                    plugin_name = self.__plugin_supported(_plugins, app_name)
+                    if plugin_name:
+                        _plugin = self.pm.getInstalledPlugin(plugin_name)
+                        app['compatible'] = True # or the plugin's name
+                    else:
+                        _plugin = self.default_compatibility(app)
+                ##
+                self.applications[app_name] = app
+                self.applications[app_name]['plugin'] = _plugin
         pass
 
     pass
