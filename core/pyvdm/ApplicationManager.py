@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import os, json
 import dbus
+import time, psutil
 import argparse
+import subprocess as sp
 from pathlib import Path
 from configparser import RawConfigParser
 import pyvdm.core.PluginManager as P_MAN
@@ -25,6 +27,82 @@ def _compatibility_filter(conf) -> bool:
         return ('VDM' in _cat)
     else:
         return False
+    pass
+
+class DefaultCompatibility:
+    def __init__(self, name, conf):
+        self.name = name
+        self.conf = conf
+        self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
+        pass
+
+    def onClose(self):
+        os.system(f'killall {self.cmd}')
+    
+    def onSave(self, stat_file):
+        record = list()
+        ##
+        for proc in psutil.process_iter(['name', 'pid', 'cmdline']):
+            if proc.name==self.name:
+                _windows = self.xm.get_windows_by_pid(proc.pid)
+                if len(_windows)==1: #only record one-to-one (pid,xid) mapping
+                    record.append({
+                        'cmdline': proc.cmdline,
+                        'window': {
+                            'desktop': _windows[0]['desktop'],
+                            'states':  _windows[0]['states'],
+                            'xyhw':    _windows[0]['xyhw']
+                        }
+                    })
+            pass
+        ##
+        with open(stat_file, 'w') as f:
+            json.dump(record, f)
+        pass
+
+    def onResume(self, stat_file):
+        ## load stat file with failure check
+        with open(stat_file, 'r') as f:
+            _file = f.read().strip()
+        if len(_file)==0:
+            return 0
+        else:
+            try:
+                record = json.loads(_file)
+            except:
+                return -1
+        ## rearrange windows by pid
+        for item in record:
+            proc = sp.Popen(item['cmdline'], start_new_session=True)
+            time.sleep(0.1)
+            ##
+            _window = self.xm.get_windows_by_pid(proc.pid)[0]
+            s = record['window']
+            self.xm.set_window_by_xid(_window['xid'], s['desktop'], s['states'], s['xyhw'])
+        pass
+
+    pass
+
+class ProbedCompatibility:
+    def __init__(self, name, conf):
+        self.name = name
+        self.conf = conf
+        self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
+        ##
+        sess = dbus.SessionBus()
+        _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
+        #TODO: get interface 'org.vdm-compatible' from 'org/vdm-compatible' of f'{name}'
+        pass
+    
+    def onSave(self, stat_file):
+        pass
+    
+    def onResume(self, stat_file):
+        pass
+
+    def onClose(self):
+        pass
+
     pass
 
 class ApplicationManager:
@@ -65,12 +143,8 @@ class ApplicationManager:
             assert( isinstance(pm, P_MAN.PluginManager) )
             self.pm = pm
         ##
-        self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
-        ##
         self.applications = dict()
         self.refresh()
-        # self.supported = self.probe_compatibility()
-        # self.generated = self.applications / self.supported
         pass
 
     @staticmethod
@@ -82,31 +156,22 @@ class ApplicationManager:
                 return plugin_name
         return None
 
-    def default_compatibility(self, app_name) -> MetaPlugin:
-        #TODO: generate 
-        pass
-
-    def probe_compatibility(self, app_name) -> MetaPlugin:
-        # sess = dbus.SessionBus()
-        # _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
-        #TODO: get interface 'org.vdm-compatible' from 'org/vdm-compatible' of f'{name}'
-        pass
-
     def refresh(self):
         _apps = self.list_all_applications()
         _plugins,_ = self.pm.getPluginsWithTarget()
-
+        ##
         for app_name,app in _apps.items():
             if app_name not in self.applications:
-                if app['compatible']:
-                    _plugin = self.probe_compatibility(app)
+                if app['compatible']==True:
+                    _plugin = MetaPlugin( app_name, ProbedCompatibility(app_name, app) )
                 else:
                     plugin_name = self.__plugin_supported(_plugins, app_name)
                     if plugin_name:
                         _plugin = self.pm.getInstalledPlugin(plugin_name)
-                        app['compatible'] = True # or the plugin's name
+                        app['compatible'] = plugin_name
                     else:
-                        _plugin = self.default_compatibility(app)
+                        _plugin = MetaPlugin( app_name, DefaultCompatibility(app_name, app) )
+                        app['compatible'] = '(auto-generated)'
                 ##
                 self.applications[app_name] = app
                 self.applications[app_name]['plugin'] = _plugin

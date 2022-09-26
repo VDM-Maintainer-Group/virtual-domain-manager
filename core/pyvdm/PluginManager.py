@@ -31,27 +31,27 @@ class MetaPlugin(SRC_API):
 
     def onStart(self):
         if hasattr(self.obj, 'onStart'):
-            return self.onStart()
+            return self.obj.onStart()
         return 0
 
     def onStop(self):
         if hasattr(self.obj, 'onStop'):
-            return self.onStop()
+            return self.obj.onStop()
         return 0
 
     def onSave(self, stat_file):
         if hasattr(self.obj, 'onSave'):
-            return self.onSave(stat_file)
+            return self.obj.onSave(stat_file)
         return 0
 
     def onResume(self, stat_file):
         if hasattr(self.obj, 'onResume'):
-            return self.onResume(stat_file)
+            return self.obj.onResume(stat_file)
         return 0
 
     def onClose(self):
         if hasattr(self.obj, 'onClose'):
-            return self.onClose()
+            return self.obj.onClose()
         return 0
     pass
 
