@@ -83,24 +83,89 @@ class DefaultCompatibility:
 
     pass
 
+class CompatibleInterface:
+    def __init__(self, sess, dbus_name) -> None:
+        self.dbus_name = dbus_name
+        self.dbus_iface = dbus.Interface(
+            sess.get_object('org.freedesktop.DBus', '/'), 'org.freedesktop.DBus')
+        self.node = sess.get_object(dbus_name, '/')
+        self.iface = dbus.Interface(self.node, 'org.vdm-compatible.src')
+        self.props_iface = dbus.Interface(self.node, 'org.freedesktop.DBus.Properties')
+        pass
+
+    @property
+    def xid(self):
+        return self.props_iface.Get('org.vdm-compatible.src', 'xid')
+    
+    @property
+    def pid(self):
+        return self.dbus_iface.GetConnectionUnixProcessID(self.dbus_name)
+
+    def Save(self) -> str:
+        return self.iface.Save()
+    
+    def Resume(self, stat:str):
+        self.iface.Resume(stat)
+    
+    def Close(self):
+        self.iface.Close()
+    pass
+
 class ProbedCompatibility:
     def __init__(self, name, conf):
         self.name = name
         self.conf = conf
         self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
-        ##
-        sess = dbus.SessionBus()
-        _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
-        #TODO: get interface 'org.vdm-compatible' from 'org/vdm-compatible' of f'{name}'
         pass
     
+    @property
+    def app_ifaces(self):
+        sess = dbus.SessionBus()
+        _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
+        app_ifaces = [ CompatibleInterface(sess, x) for x in _names ]
+        return app_ifaces
+
     def onSave(self, stat_file):
+        record = list()
+        for app in self.app_ifaces:
+            if not app.xid:
+                _window = self.xm.get_windows_by_pid(app.pid)[0]
+            else:
+                _window = self.xm.get_windows_by_xid(app.xid)[0]
+            ##
+            record.append({
+                'stat': app.Save(),
+                'window': {
+                    'desktop': _window['desktop'],
+                    'states':  _window['states'],
+                    'xyhw':    _window['xyhw']
+                }
+            })
+        ##
+        with open(stat_file, 'w') as f:
+            json.dump(record, f)
         pass
     
     def onResume(self, stat_file):
+        ## load stat file with failure check
+        with open(stat_file, 'r') as f:
+            _file = f.read().strip()
+        if len(_file)==0:
+            return 0
+        else:
+            try:
+                record = json.loads(_file)
+            except:
+                return -1
+        ##
+        old_stats = [ x.Save() for x in self.app_ifaces ]
+        new_stats = [ x['stat'] for x in record ]
+        #TODO: only resume necessary windows
         pass
 
     def onClose(self):
+        for app in self.app_ifaces:
+            app.Close()
         pass
 
     pass

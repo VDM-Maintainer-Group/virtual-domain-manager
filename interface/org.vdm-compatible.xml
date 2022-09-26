@@ -1,0 +1,20 @@
+<?xml version="1.0" ?>
+<node xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
+    <interface name="org.vdm-compatible.src">
+
+        <method name="Save" tp:name-for-bindings="Save">
+            <arg direction="out" type="s" tp:type="status" name="status" />
+        </method>
+
+        <method name="Resume" tp:name-for-bindings="Resume">
+            <arg direction="in" type="s" tp:type="status" name="status" />
+        </method>
+
+        <method name="Close" tp:name-for-bindings="Close" />
+
+        <property name="xid" tp:name-for-bindings="xid" type="s" access="read">
+            <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="false"/>
+        </property>
+
+    </interface>
+</node>
