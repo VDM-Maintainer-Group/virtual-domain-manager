@@ -37,10 +37,11 @@ class DefaultCompatibility:
         self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
         pass
 
-    def onClose(self):
+    def onClose(self) -> int:
         os.system(f'killall {self.cmd}')
+        return 0
     
-    def onSave(self, stat_file):
+    def onSave(self, stat_file) -> int:
         record = list()
         ##
         for proc in psutil.process_iter(['name', 'pid', 'cmdline']):
@@ -59,9 +60,9 @@ class DefaultCompatibility:
         ##
         with open(stat_file, 'w') as f:
             json.dump(record, f)
-        pass
+        return 0
 
-    def onResume(self, stat_file):
+    def onResume(self, stat_file) -> int:
         ## load stat file with failure check
         with open(stat_file, 'r') as f:
             _file = f.read().strip()
@@ -80,7 +81,7 @@ class DefaultCompatibility:
             _window = self.xm.get_windows_by_pid(proc.pid)[0]
             sp = record['window']
             self.xm.set_window_by_xid(_window['xid'], sp['desktop'], sp['states'], sp['xyhw'])
-        pass
+        return 0
 
     pass
 
@@ -126,7 +127,7 @@ class ProbedCompatibility:
         app_ifaces = [ CompatibleInterface(sess, x) for x in _names ]
         return app_ifaces
 
-    def onSave(self, stat_file):
+    def onSave(self, stat_file) -> int:
         record = list()
         for app in self.app_ifaces:
             if not app.xid:
@@ -145,9 +146,9 @@ class ProbedCompatibility:
         ##
         with open(stat_file, 'w') as f:
             json.dump(record, f)
-        pass
+        return 0
     
-    def onResume(self, stat_file):
+    def onResume(self, stat_file) -> int:
         ## load stat file with failure check
         with open(stat_file, 'r') as f:
             _file = f.read().strip()
@@ -191,12 +192,12 @@ class ProbedCompatibility:
             ## close the no-needed old windows
             for app in old_stats.values():
                 app.Close()
-        pass
+        return 0
 
-    def onClose(self):
+    def onClose(self) -> int:
         for app in self.app_ifaces:
             app.Close()
-        pass
+        return 0
 
     pass
 
