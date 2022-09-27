@@ -12,6 +12,7 @@ from pyvdm.core.errcode import ApplicationCode as ERR
 from pyvdm.interface import CapabilityLibrary
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
+HINT_GENERATED = '(auto-generated)'
 
 def _non_gui_filter(conf) -> bool:
     _flag = False
@@ -232,7 +233,7 @@ class ApplicationManager:
             self.root = PARENT_ROOT
         ##
         if not pm:
-            self.pm = P_MAN.PluginManager(root)
+            self.pm = P_MAN.PluginManager( self.root/'plugins' )
         else:
             assert( isinstance(pm, P_MAN.PluginManager) )
             self.pm = pm
@@ -265,7 +266,7 @@ class ApplicationManager:
                         app['compatible'] = plugin_name
                     else:
                         _plugin = MetaPlugin( app_name, DefaultCompatibility(app_name, app) )
-                        app['compatible'] = '(auto-generated)'
+                        app['compatible'] = HINT_GENERATED
                 ##
                 self.applications[app_name] = app
                 self.applications[app_name]['plugin'] = _plugin
@@ -278,9 +279,14 @@ def execute(am, command, args, verbose=False):
     if command=='list':
         ret = { k:v['compatible'] for k,v in am.applications.items() }
         ret = dict(sorted(ret.items(), key=lambda x:x[1], reverse=True))
-        # print( list(ret.keys()) )
         print( json.dumps(ret, indent=4) )
-        pass
+    elif command==None:
+        _native, _none = 0, 0
+        _total = len(am.applications)
+        for k,v in am.applications.items():
+            if v['compatible']==True: _native += 1
+            if v['compatible']==HINT_GENERATED: _none+=1
+        print(f'{_native} native + {_total-_native-_none} by-plugin supported, out of {_total} GUI APPs.')
     else:
         print('The command <{}> is not supported.'.format(command))
     pass

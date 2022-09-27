@@ -10,6 +10,7 @@ import concurrent.futures
 import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
 import pyvdm.core.CapabilityManager as C_MAN
+import pyvdm.core.ApplicationManager as A_MAN
 from pyvdm.core.utils import *
 from pyvdm.core.errcode import *
 
@@ -154,6 +155,10 @@ def execute(command, args):
         cm = C_MAN.CapabilityManager(CAPABILITY_DIRECTORY)
         return C_MAN.execute(cm, args.capability_command, args)
 
+    if command in ['application', 'am']:
+        am = A_MAN.ApplicationManager(PARENT_ROOT)
+        return A_MAN.execute(am, args.application_command, args)
+
     cm = CoreManager()
     if args.save_flag:
         return cm.save_domain()
@@ -195,6 +200,12 @@ def main():
         help='Call VDM Capability Manager.')
     cm_subparsers = cm_parser.add_subparsers(dest='capability_command')
     C_MAN.init_subparsers(cm_subparsers)
+
+    # application_manager
+    am_parser = subparsers.add_parser('application', aliases=['am'],
+        help='Call VDM Application Manager.')
+    am_subparsers = am_parser.add_subparsers(dest='application_command')
+    A_MAN.init_subparsers(am_subparsers)
 
     # sync_manager
     #TODO: add sync_manager    
