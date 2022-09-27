@@ -33,28 +33,37 @@ class CoreManager:
         self.dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
         self.pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
         self.cm = C_MAN.CapabilityManager(CAPABILITY_DIRECTORY)
+        self.am = A_MAN.ApplicationManager(PARENT_ROOT, self.pm)
         #
         _domain = self.stat.getStat()
         if _domain:
-            # self.load(_domain)
             self.open_domain(_domain)
         pass
 
     def load(self, name):
-        if hasattr(self, 'plugins'):
-            del self.plugins #cleanup
-        self.plugins = dict()
-        #
+        ## load config
         _config = self.dm.getDomainConfig(name)
         if isinstance(_config, DomainCode):
             return _config
-        _config = _config['plugins']
-        for _name,_ver in _config.items():
-            _item = self.pm.getInstalledPlugin(_name, _ver)
-            if isinstance(_item, PluginCode):
-                return _item #return plugin error code
+        ## cleanup old plugins
+        if hasattr(self, 'plugins'):
+            del self.plugins #cleanup
+        self.plugins = dict()
+        ## load GUI APP plugins
+        for _name in _config['applications']:
+            _plugin = self.am.instantiate_plugin(_name)
+            if isinstance(_plugin, PluginCode):
+                return _plugin #return plugin error code
+            _stat = StatFile(DOMAIN_DIRECTORY/name, _name)
+            self.plugins.update( {_plugin: _stat} )
+            pass
+        ## load other plugins
+        for _name,_ver in _config['plugins'].items():
+            _plugin = self.pm.getInstalledPlugin(_name, _ver)
+            if isinstance(_plugin, PluginCode):
+                return _plugin #return plugin error code
             _stat   = StatFile(DOMAIN_DIRECTORY/name, _name)
-            self.plugins.update( {_item: _stat} )
+            self.plugins.update( {_plugin: _stat} )
         return True
 
     #---------- online domain operations -----------#

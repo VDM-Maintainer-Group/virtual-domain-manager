@@ -251,25 +251,34 @@ class ApplicationManager:
                 return plugin_name
         return None
 
+    def instantiate_plugin(self, app_name) -> MetaPlugin:
+        app = self.applications[app_name]
+        compatibility = app['compatible']
+        ##
+        if not compatibility:
+            return None 
+        elif compatibility==True:
+            return MetaPlugin( app_name, ProbedCompatibility(app_name, app) )
+        elif compatibility==HINT_GENERATED:
+            return MetaPlugin( app_name, DefaultCompatibility(app_name, app) )
+        else:
+            return self.pm.getInstalledPlugin(compatibility)
+        pass
+
     def refresh(self):
         _apps = self.list_all_applications()
         _plugins,_ = self.pm.getPluginsWithTarget()
         ##
         for app_name,app in _apps.items():
             if app_name not in self.applications:
-                if app['compatible']==True:
-                    _plugin = MetaPlugin( app_name, ProbedCompatibility(app_name, app) )
-                else:
+                if app['compatible']!=True:
                     plugin_name = self.__plugin_supported(_plugins, app_name)
                     if plugin_name:
-                        _plugin = self.pm.getInstalledPlugin(plugin_name)
                         app['compatible'] = plugin_name
                     else:
-                        _plugin = MetaPlugin( app_name, DefaultCompatibility(app_name, app) )
                         app['compatible'] = HINT_GENERATED
                 ##
                 self.applications[app_name] = app
-                self.applications[app_name]['plugin'] = _plugin
         pass
 
     pass
