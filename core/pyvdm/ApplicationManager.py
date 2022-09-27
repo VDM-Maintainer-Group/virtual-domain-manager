@@ -77,8 +77,8 @@ class DefaultCompatibility:
             time.sleep(0.1)
             ##
             _window = self.xm.get_windows_by_pid(proc.pid)[0]
-            s = record['window']
-            self.xm.set_window_by_xid(_window['xid'], s['desktop'], s['states'], s['xyhw'])
+            sp = record['window']
+            self.xm.set_window_by_xid(_window['xid'], sp['desktop'], sp['states'], sp['xyhw'])
         pass
 
     pass
@@ -157,10 +157,39 @@ class ProbedCompatibility:
                 record = json.loads(_file)
             except:
                 return -1
-        ##
-        old_stats = [ x.Save() for x in self.app_ifaces ]
-        new_stats = [ x['stat'] for x in record ]
-        #TODO: only resume necessary windows
+        
+        old_stats = { x.Save():x for x in self.app_ifaces }
+        new_stats = { x['stat']:x['window'] for x in record }
+        ## keep no-change-needed windows
+        _remaining = dict()
+        for stat,sp in new_stats.items():
+            if stat in old_stats:
+                app = old_stats.pop(stat)
+                if not app.xid:
+                    _window = self.xm.get_windows_by_pid(app.pid)[0]
+                else:
+                    _window = self.xm.get_windows_by_xid(app.xid)[0]
+                self.xm.set_window_by_xid(_window['xid'], sp['desktop'], sp['states'], sp['xyhw'])
+            else:
+                _remaining.update({ stat : sp })
+        ## manipulate with the remaining
+        if _remaining:
+            ## create new windows
+            for _ in range( len(_remaining)-len(old_stats) ):
+                sp.Popen(self.conf['exec'], start_new_session=True)
+                time.sleep(0.1)
+            ## resume stats and window positions
+            for (stat,sp), app in zip(_remaining.items(), self.app_ifaces):
+                app.Resume(stat)
+                if not app.xid:
+                    _window = self.xm.get_windows_by_pid(app.pid)[0]
+                else:
+                    _window = self.xm.get_windows_by_xid(app.xid)[0]
+                self.xm.set_window_by_xid(_window['xid'], sp['desktop'], sp['states'], sp['xyhw'])
+        else:
+            ## close the no-needed old windows
+            for app in old_stats.values():
+                app.Close()
         pass
 
     def onClose(self):
@@ -247,10 +276,11 @@ class ApplicationManager:
 def execute(am, command, args, verbose=False):
     assert( isinstance(am, ApplicationManager) )
     if command=='list':
-        ret = am.list_all_applications()
+        ret = { k:v['compatible'] for k,v in am.applications.items() }
+        ret = dict(sorted(ret.items(), key=lambda x:x[1], reverse=True))
         # print( list(ret.keys()) )
         print( json.dumps(ret, indent=4) )
-        return ret
+        pass
     else:
         print('The command <{}> is not supported.'.format(command))
     pass
