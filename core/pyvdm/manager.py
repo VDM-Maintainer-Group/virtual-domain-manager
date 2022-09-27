@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import os, argparse, re
-import tempfile, shutil
+import traceback
 import concurrent.futures
 import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
@@ -71,15 +71,26 @@ class CoreManager:
         _futures = [ executor.submit(worker, _plugin, _stat) 
                     for _plugin,_stat in self.plugins.items() ]
         ##
-        try:
-            _results = [ x.result() for x in _futures ]
-            _results = list( filter(lambda x:x is not None, _results) )
-        except Exception as e:
-            return _results
-        else:
-            _results = None if len(_results)==0 else _results
-            return _results
-        pass
+        results = list()
+        for task in _futures:
+            try:
+                ret = task.result()
+                if ret is not None:
+                    results.append(ret)
+            except Exception as e:
+                print( traceback.format_exc() )
+        results = None if len(results)==0 else results
+        return results
+
+        # try:
+        #     _results = [ x.result() for x in _futures ]
+        #     _results = list( filter(lambda x:x is not None, _results) )
+        # except Exception as e:
+        #     return _results
+        # else:
+        #     _results = None if len(_results)==0 else _results
+        #     return _results
+        # pass
 
     def save_domain(self, delayed=False):
         if not self.stat.getStat():

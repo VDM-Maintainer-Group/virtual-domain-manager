@@ -367,21 +367,23 @@ class InformationArea(QTableWidget):
         self.setRowCount(0)
 
         self.raw_items = raw_items if raw_items else self.loader() 
-        for _row,(key,value) in enumerate( self.raw_items ):
+        for _row,(row_key,value) in enumerate( self.raw_items ):
             self.insertRow( _row )
             for j in range(self.length):
                 if j==self.entry:
-                    _item = QTableWidgetItem(key)
+                    col_key = row_key
+                    _item = QTableWidgetItem(col_key)
                     self.setItem(_row, j, _item)
                 elif self.header[j][0] == '<': #<button>
-                    _title = self.header[j].strip('<>')
-                    _button = QPushButton(_title)
-                    _button.setObjectName(key)
+                    col_key = self.header[j].strip('<>')
+                    _item = QTableWidgetItem(col_key) #keep consistency
+                    _button = QPushButton(col_key)
+                    _button.setObjectName(row_key)
                     _button.clicked.connect( self.onButtonClicked )
                     self.setCellWidget(_row, j, _button)
                 elif self.header[j][0] == '[': #[checkable item]
-                    _key = self.header[j].strip('[]')
-                    _item = QTableWidgetItem( value[_key] )
+                    col_key = self.header[j].strip('[]')
+                    _item = QTableWidgetItem( value[col_key] )
                     if 'status' in value:
                         _status = value['status']
                     else:
@@ -390,14 +392,24 @@ class InformationArea(QTableWidget):
                         _item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
                         _checked = Qt.Checked if _status in ['Capable'] else Qt.Unchecked
                         _item.setCheckState( _checked )
-                        _item.setData(Qt.UserRole, _key)
-                        self.status.update({ value[_key]:_checked })
+                        _item.setData(Qt.UserRole, col_key)
+                        self.status.update({ value[col_key]:_checked })
                     self.setItem(_row, j, _item)
                 else:
-                    _item = value[ self.header[j] ]
+                    col_key = self.header[j]
+                    _item = value[ col_key ]
                     _item = str(_item) if _item is not str else _item
                     _item = QTableWidgetItem( _item )
                     self.setItem(_row, j, _item)
+                ##
+                _item.setData( Qt.UserRole, (row_key,col_key) )
+                if j==0 and ('icon' in value):
+                    if QIcon.hasThemeIcon(value['icon']):
+                        _item.setIcon( QIcon.fromTheme(value['icon']) )
+                    elif Path(value['icon']).exists():
+                        _item.setIcon( QIcon(value['icon']) )
+                    else:
+                        print( _item.text() )
             pass
         pass
 
@@ -424,8 +436,8 @@ class InformationArea(QTableWidget):
         _status = item.checkState()
         _name = item.text()
         if _name in self.status and _status!=self.status[_name]:
-            _key  = item.data(Qt.UserRole)
-            if self.slots[_key](_name):
+            _,col_key = item.data(Qt.UserRole)
+            if self.slots[col_key](_name):
                 self.status[_name] = _status
             else:
                 item.setCheckState( self.status[_name] )
@@ -483,7 +495,7 @@ class DetailsArea(QWidget):
             loader= lambda: self.am.applications.items(),
             header= ['[name]', 'compatible'],
             slots = {'name':self.checkPlugins},
-            entry = 0
+            entry = -1
         )
         self.select_area = QTabWidget()
         self.select_area.addTab( self.app_box, 'Applications' )
@@ -537,7 +549,7 @@ class DetailsArea(QWidget):
         #
         for idx in range( self.app_box.rowCount()  ):
             _item = self.app_box.item(idx, 0)
-            if _item.text() in config['applications']:
+            if _item.data(Qt.UserRole)[0] in config['applications']:
                 _item.setCheckState( Qt.Checked )
             else:
                 _item.setCheckState( Qt.Unchecked )
@@ -571,7 +583,7 @@ class DetailsArea(QWidget):
         for idx in range( self.app_box.rowCount() ):
             _item = self.app_box.item(idx, 0)
             if _item.checkState()==Qt.Checked:
-                _name = _item.text()
+                _name = _item.data(Qt.UserRole)[0]
                 self.config['applications'].append(_name)
         ##
         for idx in range( self.plugin_box.rowCount() ):

@@ -3,7 +3,7 @@ import os, json
 import dbus
 import time, psutil
 import argparse
-import subprocess as sp
+import subprocess
 from pathlib import Path
 from configparser import RawConfigParser
 import pyvdm.core.PluginManager as P_MAN
@@ -34,22 +34,23 @@ class DefaultCompatibility:
     def __init__(self, name, conf):
         self.name = name
         self.conf = conf
+        self.exec = conf['exec'].split()[0]
         self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
         pass
 
     def onClose(self) -> int:
-        os.system(f'killall {self.cmd}')
+        os.system(f'killall {self.exec}')
         return 0
     
     def onSave(self, stat_file) -> int:
         record = list()
         ##
         for proc in psutil.process_iter(['name', 'pid', 'cmdline']):
-            if proc.name==self.name:
-                _windows = self.xm.get_windows_by_pid(proc.pid)
+            if proc.name()==self.exec:
+                _windows = self.xm.get_windows_by_pid( proc.pid )
                 if len(_windows)==1: #only record one-to-one (pid,xid) mapping
                     record.append({
-                        'cmdline': proc.cmdline,
+                        'cmdline': proc.cmdline(),
                         'window': {
                             'desktop': _windows[0]['desktop'],
                             'states':  _windows[0]['states'],
@@ -75,11 +76,15 @@ class DefaultCompatibility:
                 return -1
         ## rearrange windows by pid
         for item in record:
-            proc = sp.Popen(item['cmdline'], start_new_session=True)
-            time.sleep(0.1)
+            proc = subprocess.Popen(item['cmdline'], start_new_session=True)
+            while True:
+                _windows = self.xm.get_windows_by_pid(proc.pid)
+                if _windows:
+                    _window = _windows[0]
+                    break
+                time.sleep(0.1)
             ##
-            _window = self.xm.get_windows_by_pid(proc.pid)[0]
-            sp = record['window']
+            sp = item['window']
             self.xm.set_window_by_xid(_window['xid'], sp['desktop'], sp['states'], sp['xyhw'])
         return 0
 
@@ -178,7 +183,7 @@ class ProbedCompatibility:
         if _remaining:
             ## create new windows
             for _ in range( len(_remaining)-len(old_stats) ):
-                sp.Popen(self.conf['exec'], start_new_session=True)
+                subprocess.Popen(self.conf['exec'], start_new_session=True)
                 time.sleep(0.1)
             ## resume stats and window positions
             for (stat,sp), app in zip(_remaining.items(), self.app_ifaces):
@@ -281,7 +286,10 @@ class ApplicationManager:
                 ##
                 self.applications[app_name] = app
         ##
-        self.applications = dict(sorted( self.applications.items(), key=lambda x:x[1]['compatible'], reverse=True ))
+        _applications = self.applications
+        _applications = dict(sorted( _applications.items(), key=lambda x:x[1]['name'], reverse=True ))
+        _applications = dict(sorted( _applications.items(), key=lambda x:x[1]['compatible'], reverse=True ))
+        self.applications = _applications
         pass
 
     def show_compatibility(self):
