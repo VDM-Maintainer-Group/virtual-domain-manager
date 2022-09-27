@@ -287,7 +287,7 @@ class ApplicationManager:
                 self.applications[app_name] = app
         ##
         _applications = self.applications
-        _applications = dict(sorted( _applications.items(), key=lambda x:x[1]['name'], reverse=True ))
+        _applications = dict(sorted( _applications.items(), key=lambda x:x[1]['name'] ))
         _applications = dict(sorted( _applications.items(), key=lambda x:x[1]['compatible'], reverse=True ))
         self.applications = _applications
         pass

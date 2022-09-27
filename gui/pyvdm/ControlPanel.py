@@ -409,7 +409,9 @@ class InformationArea(QTableWidget):
                     elif Path(value['icon']).exists():
                         _item.setIcon( QIcon(value['icon']) )
                     else:
-                        print( _item.text() )
+                        _path = Path('/usr/share/pixmaps', value['icon']+'.png')
+                        if _path.exists():
+                            _item.setIcon( QIcon(_path.as_posix()) )
             pass
         pass
 
