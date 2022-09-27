@@ -35,18 +35,19 @@ class DefaultCompatibility:
         self.name = name
         self.conf = conf
         self.exec = conf['exec'].split()[0]
+        self.name = Path(self.exec).name
         self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
         pass
 
     def onClose(self) -> int:
-        os.system(f'killall {self.exec}')
+        os.system(f'killall {self.name}')
         return 0
     
     def onSave(self, stat_file) -> int:
         record = list()
         ##
         for proc in psutil.process_iter(['name', 'pid', 'cmdline']):
-            if proc.name()==self.exec:
+            if proc.name()==self.name:
                 _windows = self.xm.get_windows_by_pid( proc.pid )
                 if len(_windows)==1: #only record one-to-one (pid,xid) mapping
                     record.append({
@@ -57,6 +58,7 @@ class DefaultCompatibility:
                             'xyhw':    _windows[0]['xyhw']
                         }
                     })
+                break
             pass
         ##
         with open(stat_file, 'w') as f:
@@ -76,7 +78,8 @@ class DefaultCompatibility:
                 return -1
         ## rearrange windows by pid
         for item in record:
-            proc = subprocess.Popen(item['cmdline'], start_new_session=True)
+            # proc = subprocess.Popen(item['cmdline'], start_new_session=True)
+            proc = subprocess.Popen(self.exec, start_new_session=True)
             while True:
                 _windows = self.xm.get_windows_by_pid(proc.pid)
                 if _windows:
