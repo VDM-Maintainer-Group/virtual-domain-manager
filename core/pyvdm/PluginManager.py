@@ -20,6 +20,7 @@ PLUGIN_BUILD_LEVEL = 'release'
 CONFIG_FILENAME    = 'package.json'
 PARENT_ROOT = Path('~/.vdm').expanduser()
 PLUGIN_DIRECTORY= PARENT_ROOT / 'plugins'
+CAPABILIT_DIRECTORY = PARENT_ROOT / 'capability'
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['target', 'description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['test', 'pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
@@ -55,8 +56,8 @@ class MetaPlugin(SRC_API):
         return 0
     pass
 
-class PluginWrapper(MetaPlugin):
-    def __init__(self, config, entry):
+class PluginWrapper:
+    def __init__(self, entry):
         self.root = Path.cwd()
         ##
         if entry.endswith('.py'):
@@ -68,15 +69,17 @@ class PluginWrapper(MetaPlugin):
         else:
             self.obj = None
             raise Exception('Unsupported plugin entry.')
-        ##
-        super().__init__(config['name'], self.obj)
         pass
 
     def __getattribute__(self, name):
-        ret = super().__getattribute__(name)
-        if callable(ret):
-            ret = self.wrap_call_in_workspace(ret)
-        return ret
+        try:
+            _func = getattr(self.obj, name)
+            _func = self.wrap_call_in_workspace(_func)
+            return _func
+        except:
+            return super().__getattribute__(name)
+            # print('%s is an illegal function name.'%name)
+        pass
 
     @staticmethod
     def wrap_call_on_string(func):
@@ -129,11 +132,15 @@ class PluginWrapper(MetaPlugin):
     pass
 
 class PluginManager:
-    def __init__(self, root=''):
+    def __init__(self, root='', cm=None):
         if root:
             self.root = Path(root).resolve()
         else:
             self.root = PLUGIN_DIRECTORY
+        if cm:
+            self.cm = cm
+        else:
+            self.cm = CapabilityManager()
         self.root.mkdir(exist_ok=True, parents=True) #ensure root existing
         self.temp = Path( tempfile.mkdtemp() )
         pass
@@ -152,10 +159,9 @@ class PluginManager:
         if not (_pre_built or _post_built):
             return ERR.CONFIG_MAIN_ENTRY_MISSING
         # test capability requirement
-        cm = CapabilityManager( self.root )
         if ('capability' in config) and isinstance(config['capability'], list):
             for item in config['capability']:
-                if cm.status(item) == 'N/A':
+                if self.cm.status(item) == 'N/A':
                     return ERR.PLUGIN_CAPABILITY_MISSING
                 pass
             pass
@@ -193,7 +199,8 @@ class PluginManager:
         #
         with WorkSpace(self.root, _selected, PLUGIN_BUILD_LEVEL) as ws:
             try:
-                _plugin = PluginWrapper(_config, _config['main'])
+                _obj = PluginWrapper(_config['main'])
+                _plugin = MetaPlugin( name, _obj )
             except Exception as e:
                 return ERR.PLUGIN_WRAPPER_FAILED
             pass
@@ -234,7 +241,7 @@ class PluginManager:
         # try to load plugin
         with WorkSpace(tmp_dir, PLUGIN_BUILD_LEVEL) as ws:
             try:
-                _plugin = PluginWrapper(_config, _config['main'])
+                _plugin = PluginWrapper(_config['main'])
             except Exception as e:
                 # raise e
                 return ERR.PLUGIN_WRAPPER_FAILED
@@ -292,7 +299,7 @@ class PluginManager:
 
     def run(self, name, function, args):
         ret = self.getInstalledPlugin(name)
-        if isinstance(ret, PluginWrapper):
+        if isinstance(ret, MetaPlugin):
             return getattr(ret, function)(*args)
         else:
             return ret

@@ -31,8 +31,8 @@ class CoreManager:
         #
         self.stat = StatFile(PARENT_ROOT)
         self.dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
-        self.pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
         self.cm = C_MAN.CapabilityManager(CAPABILITY_DIRECTORY)
+        self.pm = P_MAN.PluginManager(PLUGIN_DIRECTORY, self.cm)
         self.am = A_MAN.ApplicationManager(PARENT_ROOT, self.pm)
         #
         _domain = self.stat.getStat()

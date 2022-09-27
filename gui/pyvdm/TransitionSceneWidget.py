@@ -31,10 +31,10 @@ class RoundPixmapStyle(QProxyStyle):
         w,h = pixmap.width(), pixmap.height()
         _rect = QRect(pixmap.rect())
         if w>h:
-            d = (w-h) / 2
+            d = int( (w-h) / 2 )
             _rect.adjust(d, 0, -d, 0)
         else:
-            d = (h-w) / 2
+            d = int( (h-w) / 2 )
             _rect.adjust(0, d, 0, -d)
         p.setBrush(QBrush(pixmap))
         p.setPen(Qt.NoPen)

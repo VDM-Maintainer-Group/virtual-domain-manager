@@ -20,8 +20,8 @@ if __name__ == '__main__':
         author = 'iamhyc',
         author_email = 'sudofree@163.com',
         #
-        install_requires = ['PyQt5', 'posix-ipc', 'psutil', 'dbus-python',
-                            'halo', 'termcolor', 'pyyaml'],
+        install_requires = ['PyQt5', 'posix-ipc', 'psutil', 'requests',
+                            'dbus-python', 'halo', 'termcolor', 'pyyaml'],
         package_dir = {'': 'build'},
         packages = find_packages(where='build'),
         package_data = {

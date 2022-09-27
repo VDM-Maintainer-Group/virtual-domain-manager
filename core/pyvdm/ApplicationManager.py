@@ -279,23 +279,33 @@ class ApplicationManager:
                         app['compatible'] = HINT_GENERATED
                 ##
                 self.applications[app_name] = app
+        ##
+        self.applications = dict(sorted( self.applications.items(), key=lambda x:x[1]['compatible'], reverse=True ))
         pass
+
+    def show_compatibility(self):
+        ret = { k:v['compatible'] for k,v in self.applications.items() }
+        ret = dict(sorted(ret.items(), key=lambda x:x[1], reverse=True))
+        print( json.dumps(ret, indent=4) )
+        return ret
+
+    def overview_compatibility(self):
+        _native, _none = 0, 0
+        _total = len(self.applications)
+        for k,v in self.applications.items():
+            if v['compatible']==True: _native += 1
+            if v['compatible']==HINT_GENERATED: _none+=1
+        return (_total, _native, _total-_native-_none)
 
     pass
 
 def execute(am, command, args, verbose=False):
     assert( isinstance(am, ApplicationManager) )
     if command=='list':
-        ret = { k:v['compatible'] for k,v in am.applications.items() }
-        ret = dict(sorted(ret.items(), key=lambda x:x[1], reverse=True))
-        print( json.dumps(ret, indent=4) )
+        am.show_compatibility()
     elif command==None:
-        _native, _none = 0, 0
-        _total = len(am.applications)
-        for k,v in am.applications.items():
-            if v['compatible']==True: _native += 1
-            if v['compatible']==HINT_GENERATED: _none+=1
-        print(f'{_native} native + {_total-_native-_none} by-plugin supported, out of {_total} GUI APPs.')
+        _total, _native, _plugin = am.overview_compatibility()
+        print(f'{_native} native + {_total-_native-_plugin} by-plugin supported, out of {_total} GUI APPs.')
     else:
         print('The command <{}> is not supported.'.format(command))
     pass

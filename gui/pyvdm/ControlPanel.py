@@ -176,12 +176,14 @@ class MainTabWidget(QWidget):
         self.label2 = QLabel('Total Domains')
         self.label3 = QLabel('Total Capability')
         self.label4 = QLabel('Total Plugins')
+        self.label5 = QLabel('Application Compatibility')
         #
         layout = QVBoxLayout()
         layout.addWidget(self.label1); layout.addStretch()
         layout.addWidget(self.label2); layout.addSpacing(0)
         layout.addWidget(self.label3); layout.addSpacing(0)
-        layout.addWidget(self.label4)
+        layout.addWidget(self.label4); layout.addSpacing(0)
+        layout.addWidget(self.label5)
         box.setLayout( layout ) 
         #
         return box
@@ -281,19 +283,37 @@ class MainTabWidget(QWidget):
         if num_domain is not None:
             self.label2.setText(f'''
             <table width="100%">
-                <tr> <td width="50%"><u>Total Domains: </u></td> <td>{num_domain}</td> </tr>
+                <tr>
+                    <td width="60%"><u>Total Domains: </u></td>
+                    <td width="40%">{num_domain}</td> </tr>
             </table>
             ''')
         if num_cap is not None:
             self.label3.setText(f'''
             <table width="100%">
-                <tr> <td width="50%"><u>Total Capability: </u></td> <td>{num_cap}</td> </tr>
+                <tr>
+                    <td width="60%"><u>Total Capability: </u></td>
+                    <td width="40%">{num_cap}</td>
+                </tr>
             </table>
             ''')
         if num_plugin is not None:
             self.label4.setText(f'''
             <table width="100%">
-                <tr> <td width="50%"><u>Total Plugins: </u></td> <td>{num_plugin}</td> </tr>
+                <tr>
+                    <td width="60%"><u>Total Plugins: </u></td>
+                    <td width="40%">{num_plugin}</td>
+                </tr>
+            </table>
+            ''')
+            ##
+            _total, _native, _plugin = self.core.am.overview_compatibility()
+            self.label5.setText(f'''
+            <table width="100%">
+                <tr>
+                    <td width="50%"><u>Compatibility: </u></td>
+                    <td width="50%">{_native} native, {_plugin} by-plugin.</td>
+                </tr>
             </table>
             ''')
         pass
@@ -336,6 +356,7 @@ class InformationArea(QTableWidget):
             self.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
         #
         self.verticalHeader().hide()
+        self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         pass
 
@@ -352,13 +373,13 @@ class InformationArea(QTableWidget):
                 if j==self.entry:
                     _item = QTableWidgetItem(key)
                     self.setItem(_row, j, _item)
-                elif self.header[j][0] == '<':
+                elif self.header[j][0] == '<': #<button>
                     _title = self.header[j].strip('<>')
                     _button = QPushButton(_title)
                     _button.setObjectName(key)
                     _button.clicked.connect( self.onButtonClicked )
                     self.setCellWidget(_row, j, _button)
-                elif self.header[j][0] == '[':
+                elif self.header[j][0] == '[': #[checkable item]
                     _key = self.header[j].strip('[]')
                     _item = QTableWidgetItem( value[_key] )
                     if 'status' in value:
@@ -431,10 +452,11 @@ class InformationArea(QTableWidget):
     pass
 
 class DetailsArea(QWidget):
-    def __init__(self, parent, pm):
+    def __init__(self, parent, pm, am):
         super().__init__(parent)
         self.parent = parent
         self.pm = pm
+        self.am = am
         self.config = None
         #
         self.styleHelper()
@@ -449,13 +471,24 @@ class DetailsArea(QWidget):
         #
         self.created_time = QLabel()
         self.last_update_time = QLabel()
-        self.info_box = InformationArea(self,
-            loader = lambda: self.pm.list().items(),
-            header = ['[name]', 'version'],
+        ##
+        self.plugin_box = InformationArea(self,
+            # loader = lambda: self.pm.list().items(),
+            loader = lambda: self.pm.getPluginsWithTarget()[1].items(),
+            header = ['[name]', 'version', 'description'],
             slots  = {'name':self.checkPlugins, 'onItemDoubleClicked':self.jumpToPMTab},
             entry  = -1
         )
-        #
+        self.app_box = InformationArea(self,
+            loader= lambda: self.am.applications.items(),
+            header= ['[name]', 'compatible'],
+            slots = {'name':self.checkPlugins},
+            entry = 0
+        )
+        self.select_area = QTabWidget()
+        self.select_area.addTab( self.app_box, 'Applications' )
+        self.select_area.addTab( self.plugin_box, 'Others' )
+        ##
         save_btn = QPushButton('Save')
         save_btn.clicked.connect( self.parent.updateDomain )
         cancel_btn = QPushButton('Cancel')
@@ -468,7 +501,7 @@ class DetailsArea(QWidget):
         layout.addRow( _name_layout )
         layout.addRow( self.created_time )
         layout.addRow( self.last_update_time )
-        layout.addRow( self.info_box )
+        layout.addRow(self.select_area) # layout.addRow( self.info_box )
         layout.addRow( _btn_layout )
         self.setLayout( layout )
         pass
@@ -482,9 +515,12 @@ class DetailsArea(QWidget):
         _last_update_time = time.strftime('%Y-%m-%d %H:%M', time.localtime())
         self.last_update_time.setText( f'Last Update Time : {_last_update_time}' )
         #
-        for idx in range( self.info_box.rowCount()  ):
-            _item = self.info_box.item(idx, 0)
-            _item.setCheckState( Qt.Checked )
+        for idx in range( self.app_box.rowCount()  ):
+            _item = self.app_box.item(idx, 0)
+            _item.setCheckState( Qt.Unchecked )
+        for idx in range( self.plugin_box.rowCount()  ):
+            _item = self.plugin_box.item(idx, 0)
+            _item.setCheckState( Qt.Unchecked )
         #
         self.setEnabled(True)
         self.setVisible(True)
@@ -499,8 +535,14 @@ class DetailsArea(QWidget):
         _last_update_time = time.strftime('%Y-%m-%d %H:%M', time.localtime(config['last_update_time']))
         self.last_update_time.setText( f'Last Update Time : {_last_update_time}' )
         #
-        for idx in range( self.info_box.rowCount()  ):
-            _item = self.info_box.item(idx, 0)
+        for idx in range( self.app_box.rowCount()  ):
+            _item = self.app_box.item(idx, 0)
+            if _item.text() in config['applications']:
+                _item.setCheckState( Qt.Checked )
+            else:
+                _item.setCheckState( Qt.Unchecked )
+        for idx in range( self.plugin_box.rowCount()  ):
+            _item = self.plugin_box.item(idx, 0)
             if _item.text() in config['plugins'].keys():
                 _item.setCheckState( Qt.Checked )
             else:
@@ -523,12 +565,20 @@ class DetailsArea(QWidget):
         _created_time = datetime.strptime(_created_time, '%Y-%m-%d %H:%M')
         self.config['created_time'] = _created_time.timestamp()
         self.config['last_update_time'] = time.time()
+        self.config['applications'] = list()
         self.config['plugins'] = dict()
-        for idx in range( self.info_box.rowCount() ):
-            _item = self.info_box.item(idx, 0)
+        ##
+        for idx in range( self.app_box.rowCount() ):
+            _item = self.app_box.item(idx, 0)
             if _item.checkState()==Qt.Checked:
                 _name = _item.text()
-                _version = self.info_box.item(idx, 1).text()
+                self.config['applications'].append(_name)
+        ##
+        for idx in range( self.plugin_box.rowCount() ):
+            _item = self.plugin_box.item(idx, 0)
+            if _item.checkState()==Qt.Checked:
+                _name = _item.text()
+                _version = self.plugin_box.item(idx, 1).text()
                 self.config['plugins'].update({ _name : _version })
         return True
 
@@ -547,7 +597,7 @@ class DetailsArea(QWidget):
 
     @pyqtSlot(str)
     def jumpToPMTab(self, name:str):
-        _keys = list(zip( *list(self.info_box.raw_items) ))[0]
+        _keys = list(zip( *list(self.plugin_box.raw_items) ))[0]
         if name in _keys:
             self.parent.parent.route(f'PMTab://{name}')
         pass
@@ -557,11 +607,12 @@ class DetailsArea(QWidget):
 class DMTabWidget(QWidget):
     refresh_signal = pyqtSignal()
 
-    def __init__(self, parent, dm, pm):
+    def __init__(self, parent, dm, pm, am):
         super().__init__(parent)
         self.parent = parent
         self.dm = dm
         self.pm = pm
+        self.am = am
         #
         self.styleHelper()
         self.refresh_signal.connect( self.parent.refresh )
@@ -599,7 +650,7 @@ class DMTabWidget(QWidget):
         # add detail area (10x5)
         _box = QGroupBox('Details')
         _sub_layout = QVBoxLayout()
-        self.details = DetailsArea(self, self.pm)
+        self.details = DetailsArea(self, self.pm, self.am)
         _sub_layout.addWidget( self.details )
         _box.setLayout( _sub_layout )
         layout.addWidget( _box, 0, 5, 10, 5 )
@@ -946,7 +997,7 @@ class ControlPanelWindow(QTabWidget):
         self.main_tab = MainTabWidget(self, self.core)
         self.addTab(self.main_tab, "Dashboard")
         #
-        self.dm_tab = DMTabWidget(self, self.core.dm, self.core.pm)
+        self.dm_tab = DMTabWidget(self, self.core.dm, self.core.pm, self.core.am)
         self.addTab(self.dm_tab, 'Domain Manager')
         #
         self.cm_tab = CMTabWidget(self, self.core.cm)
@@ -1004,10 +1055,10 @@ class ControlPanelWindow(QTabWidget):
             self.main_tab.refreshOverview(open_domain=open_domain)
             [ _func() for _func in _executor.values() ]
             # refresh DetailsArea in `dm_tab`
-            _tab = self.dm_tab.details
-            raw_items = _tab.info_box.prefetch()
-            if not (raw_items==_tab.info_box.raw_items):
-                _tab.info_box.refresh( raw_items )
+            _details = self.dm_tab.details
+            raw_items = _details.plugin_box.prefetch()
+            if not (raw_items==_details.plugin_box.raw_items):
+                _details.plugin_box.refresh( raw_items )
         pass
 
     pass
