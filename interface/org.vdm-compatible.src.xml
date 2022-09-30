@@ -12,7 +12,7 @@
 
         <method name="Close" tp:name-for-bindings="Close" />
 
-        <property name="xid" tp:name-for-bindings="xid" type="s" access="read">
+        <property name="xid" tp:name-for-bindings="xid" type="t" access="read">
             <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="false"/>
         </property>
 
