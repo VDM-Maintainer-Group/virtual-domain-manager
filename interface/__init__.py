@@ -17,7 +17,7 @@ class SRC_API(metaclass=ABCMeta):
         return 0
 
     @abstractmethod
-    def onResume(self, stat_file):
+    def onResume(self, stat_file, replace=True):
         return 0
 
     @abstractmethod

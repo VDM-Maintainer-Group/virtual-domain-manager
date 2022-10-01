@@ -8,6 +8,7 @@
 
         <method name="Resume" tp:name-for-bindings="Resume">
             <arg direction="in" type="s" tp:type="status" name="status" />
+            <arg direction="in" type="b" tp:type="replace" name="replace" />
         </method>
 
         <method name="Close" tp:name-for-bindings="Close" />
