@@ -352,8 +352,7 @@ class InformationArea(QTableWidget):
                 self.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
             else:
                 self.horizontalHeader().setSectionResizeMode(i, QHeaderView.Interactive)
-        if self.length == 1:
-            self.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+        self.horizontalHeader().setStretchLastSection(True)
         #
         self.verticalHeader().hide()
         self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
