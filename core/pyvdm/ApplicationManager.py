@@ -214,7 +214,11 @@ class ApplicationManager:
     def list_all_applications() -> dict:
         applications = dict()
         ##
-        data_dirs = os.environ['XDG_DATA_DIRS'].split(':')
+        try:
+            data_dirs = os.environ['XDG_DATA_DIRS'].split(':')
+        except:
+            data_dirs = ['/usr/local/share', '/usr/share']
+        ##
         for xdg_path in data_dirs:
             app_dir = Path(xdg_path) / 'applications'
             if app_dir.exists():
