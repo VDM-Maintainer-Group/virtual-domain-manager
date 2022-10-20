@@ -1,11 +1,9 @@
-cmake_minimum_required(VERSION 3.12) #for FindPython feature
+cmake_minimum_required(VERSION 3.10)
 #specify the C++ standard
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 project(virtual-domain-manager)
-find_package(Python REQUIRED
-            COMPONENTS Interpreter Development)
 
 #default configurations
 file(READ "VERSION" ver)
@@ -53,7 +51,7 @@ file(GLOB PYVDM_SBS "./capability/build.py")
 set(PYVDM_DAEMON "./daemon/target/release/libvdm_capability_daemon.so")
 add_custom_target(build-pyvdm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMAND ${CMAKE_COMMAND} -E rm -rf ${PYVDM_DIST_DIR}
+        COMMAND ${CMAKE_COMMAND} -E remove_directory ${PYVDM_DIST_DIR}
         # copy and gather files
         COMMAND ${CMAKE_COMMAND} -E make_directory ${PYVDM_DIST_DIR}/interface
         COMMAND ${CMAKE_COMMAND} -E copy ${PYVDM_API} ${PYVDM_DIST_DIR}/interface
