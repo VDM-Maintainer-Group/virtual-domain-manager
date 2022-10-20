@@ -8,6 +8,16 @@
   <img src="./previews/structure.png" width="650px" />
 </p> 
 
+## Dependencies
+
+- System-related dependencies
+  ```bash
+  # for Debian-based distributions
+  sudo apt install build-essential curl cmake git python3-pip libdbus-1-dev libglib2.0-dev
+  ```
+
+- [Rust toolchain](https://www.rust-lang.org/tools/install)
+
 ## Installation
 
 1. **clone this repository**
