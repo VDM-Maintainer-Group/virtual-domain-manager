@@ -46,58 +46,38 @@
     cd capability; sbs build; sbs install
     ```
 
-## Usage for Command Line
+## Usage
 
-> Currently, the VDM main program is `pyvdm`, the GUI entry is a tray icon `pyvdm-tray`.
+Currently, the VDM command-line entry is `pyvdm`, and the GUI entry is `pyvdm-tray`.
 
-- **Workload Manipulation**
+The overview of command-line usage is listed below.
 
-  `pyvdm --open <domain-name>` to open an existing domain;
-
-  `pyvdm --save` to save current domain;
-
-  `pyvdm --close` to close current domain;
-
-  Or, you can easily apply above operations via `pyvdm-tray` on your dock.
-
-- **Plugin Management** `pyvdm plugin`
-
-  - `install` a plugin with the "*.zip" file
-  - `uninstall` existing plugin(s) with `name(s)`
-  - `list` plugin details (list all by default)
-  - `run` plugin functions with:
-
-    `pyvdm plugin run <plugin-name> <function-name>`
+- **Domain Switch** `pyvdm [--open] [--save] [--close]`
 
 - **Domain Management** `pyvdm domain`
 
-  - `add` a domain via TUI with `name`
-  - `update` an existing domain with `name`
-  - `remove` an existing domain with `name`
-  - `list` domain details (list all by default)
+- **Plugin Management** `pyvdm plugin`
 
 - **Capability Management** `pyvdm capability`
 
-  - `install` capability from folder or "*.zip" file
-  - `uninstall` capability with `name`
-  - `enable`/`disable`/`query` capability status
-  - capability daemon status:
-
-    `pyvdm capability daemon start/stop/restart/status`
+- **Compatibility Report** `pyvdm application`
 
 - **Sync Management** `pyvdm sync`
-
-  > Manage synchronization of domain status files.
-
-  (To be updated ...)
+  > (Not implemented) Manage synchronization of domain status files and data files.
 
 ## Capability Development
 
-Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/blob/main/CONTRIBUTING.md).
+> The `VDM Capability Library` is developed to be invoked by `VDM Plugin` for alleviation of complicated development.
+> The library should provide a entry with functions exported with specific type of signature.
+
+Please refer to the contribution guidance [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/blob/main/CONTRIBUTING.md).
 
 ## Plugin Development
 
-Please refer to the guidance [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
+> The `VDM Plugin` implements `SRC interface` and is invoked by `VDM Core`.
+> The plugin is developed to support GUI application compatibility, or define the actions to be taken when switch the domain.
+
+Please refer to the development guidance [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
 
 
 ## License
