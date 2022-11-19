@@ -10,6 +10,7 @@ import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.PluginManager import MetaPlugin
 from pyvdm.core.errcode import ApplicationCode as ERR
 from pyvdm.interface import CapabilityLibrary
+from pyvdm.core.utils import retry_with_timeout
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 HINT_GENERATED = '(auto-generated)'
@@ -81,12 +82,8 @@ class DefaultCompatibility:
         for item in record:
             # proc = subprocess.Popen(item['cmdline'], start_new_session=True)
             proc = subprocess.Popen(self.exec, start_new_session=True)
-            while True:
-                _windows = self.xm.get_windows_by_pid(proc.pid)
-                if _windows:
-                    _window = _windows[0]
-                    break
-                time.sleep(0.1)
+            _lambda_fn = lambda: self.xm.get_windows_by_pid(proc.pid)
+            _window = retry_with_timeout(_lambda_fn)[0]
             ##
             sp = item['window']
             self.xm.set_window_by_xid(_window['xid'], sp['desktop'], sp['states'], sp['xyhw'])
@@ -191,14 +188,14 @@ class ProbedCompatibility:
             ## create new windows
             for _ in range( len(_remaining)-len(old_stats) ):
                 subprocess.Popen(self.exec, start_new_session=True)
-                time.sleep(0.1) #FIXME: loop wait with ddl
             ## resume stats and window positions
             for (stat,sp), app in zip(_remaining.items(), self.app_ifaces):
-                app.Resume(stat, new) #FIXME: loop wait with ddl
+                app.Resume(stat, new)
                 if not app.xid:
-                    _window = self.xm.get_windows_by_pid(app.pid)[0]
+                    _lambda_fn = lambda: self.xm.get_windows_by_pid(app.pid)
                 else:
-                    _window = self.xm.get_windows_by_xid(app.xid)[0]
+                    _lambda_fn = lambda: self.xm.get_windows_by_xid(app.xid)
+                _window = retry_with_timeout(_lambda_fn)[0]
                 self.xm.set_window_by_xid(_window['xid'], sp['desktop'], sp['states'], sp['xyhw'])
         else:
             ## close the no-needed old windows

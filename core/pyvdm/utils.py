@@ -157,6 +157,16 @@ def json_dump(filename, config):
     fd.close()
     pass
 
+
+def retry_with_timeout(lamb_fn, timeout=1):
+    import time
+    _now = time.time()
+    ret = lamb_fn()
+    while not ret and time.time()-_now<timeout:
+        ret = lamb_fn()
+        time.sleep(0.1)
+    return ret
+
 # def getRandomSerial(len, dtype='hex'):
 #     if dtype=='hex':
 #         return ''.join(random.choice(string.hexdigits.upper()) for _ in range(len))
