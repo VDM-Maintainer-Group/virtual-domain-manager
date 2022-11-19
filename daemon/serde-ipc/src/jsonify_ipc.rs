@@ -37,7 +37,7 @@ impl Serde for ffi::FFIManager
 impl JsonifyIPC
 {
     /// Return JsonifyIPC handle configured with given:
-    /// - (Optional) **path**: the working directory for capability, default is `~/.vdm/libs`
+    /// - (Optional) **path**: the working directory for capability.
     pub fn new(root:Option<String>, server_port:Option<u16>) -> Self {
         let root = root.unwrap_or( "~/.serde_ipc".into() );
         let root = PathBuf::from( shellexpand::tilde(&root).into_owned() );
