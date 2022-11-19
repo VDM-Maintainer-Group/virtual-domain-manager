@@ -100,23 +100,23 @@ class CompatibleInterface:
         self.dbus_iface = dbus.Interface(
             sess.get_object('org.freedesktop.DBus', '/'), 'org.freedesktop.DBus')
         self.node = sess.get_object(dbus_name, '/')
-        self.iface = dbus.Interface(self.node, 'org.vdm-compatible.src')
+        self.iface = dbus.Interface(self.node, 'org.VDMCompatible.src')
         self.props_iface = dbus.Interface(self.node, 'org.freedesktop.DBus.Properties')
         pass
 
     @property
     def xid(self):
-        return self.props_iface.Get('org.vdm-compatible.src', 'xid')
+        return self.props_iface.Get('org.VDMCompatible.src', 'xid')
     
     @property
     def pid(self):
         return self.dbus_iface.GetConnectionUnixProcessID(self.dbus_name)
 
     def Save(self) -> str:
-        return self.iface.Save()
+        return str( self.iface.Save() )
     
     def Resume(self, stat:str):
-        self.iface.Resume(stat)
+        self.iface.Resume(stat) #FIXME: TypeError: More items found in D-Bus signature than in Python arguments
     
     def Close(self):
         self.iface.Close()
@@ -126,26 +126,29 @@ class ProbedCompatibility:
     def __init__(self, name, conf):
         self.name = name
         self.conf = conf
+        self.exec = conf['exec'].split()[0]
         self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
         pass
     
     @property
     def app_ifaces(self):
         sess = dbus.SessionBus()
-        _names = filter(lambda x:f'org.vdm-compatible.{self.name}' in x, sess.list_names())
+        _names = filter(lambda x:f'org.VDMCompatible.{self.name}' in x, sess.list_names())
         app_ifaces = [ CompatibleInterface(sess, x) for x in _names ]
         return app_ifaces
 
     def onSave(self, stat_file) -> int:
         record = list()
         for app in self.app_ifaces:
+            stat = app.Save()
+            ##
             if not app.xid:
                 _window = self.xm.get_windows_by_pid(app.pid)[0]
             else:
                 _window = self.xm.get_windows_by_xid(app.xid)[0]
             ##
             record.append({
-                'stat': app.Save(),
+                'stat': stat,
                 'window': {
                     'desktop': _window['desktop'],
                     'states':  _window['states'],
@@ -187,9 +190,10 @@ class ProbedCompatibility:
         if _remaining:
             ## create new windows
             for _ in range( len(_remaining)-len(old_stats) ):
-                subprocess.Popen(self.conf['exec'], start_new_session=True)
-                time.sleep(0.1)
+                subprocess.Popen(self.exec, start_new_session=True)
+                time.sleep(1.0)
             ## resume stats and window positions
+            print(self.app_ifaces)
             for (stat,sp), app in zip(_remaining.items(), self.app_ifaces):
                 app.Resume(stat)
                 if not app.xid:
