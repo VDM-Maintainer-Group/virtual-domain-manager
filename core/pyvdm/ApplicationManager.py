@@ -66,7 +66,7 @@ class DefaultCompatibility:
             json.dump(record, f)
         return 0
 
-    def onResume(self, stat_file) -> int:
+    def onResume(self, stat_file, _new:bool) -> int:
         ## load stat file with failure check
         with open(stat_file, 'r') as f:
             _file = f.read().strip()
@@ -115,8 +115,8 @@ class CompatibleInterface:
     def Save(self) -> str:
         return str( self.iface.Save() )
     
-    def Resume(self, stat:str):
-        self.iface.Resume(stat) #FIXME: TypeError: More items found in D-Bus signature than in Python arguments
+    def Resume(self, stat:str, new:bool):
+        self.iface.Resume(stat, new)
     
     def Close(self):
         self.iface.Close()
@@ -160,7 +160,7 @@ class ProbedCompatibility:
             json.dump(record, f)
         return 0
     
-    def onResume(self, stat_file) -> int:
+    def onResume(self, stat_file, new:bool) -> int:
         ## load stat file with failure check
         with open(stat_file, 'r') as f:
             _file = f.read().strip()
@@ -191,11 +191,10 @@ class ProbedCompatibility:
             ## create new windows
             for _ in range( len(_remaining)-len(old_stats) ):
                 subprocess.Popen(self.exec, start_new_session=True)
-                time.sleep(1.0)
+                time.sleep(0.1) #FIXME: loop wait with ddl
             ## resume stats and window positions
-            print(self.app_ifaces)
             for (stat,sp), app in zip(_remaining.items(), self.app_ifaces):
-                app.Resume(stat)
+                app.Resume(stat, new) #FIXME: loop wait with ddl
                 if not app.xid:
                     _window = self.xm.get_windows_by_pid(app.pid)[0]
                 else:

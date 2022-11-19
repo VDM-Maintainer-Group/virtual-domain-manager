@@ -45,9 +45,9 @@ class MetaPlugin(SRC_API):
             return self.obj.onSave(stat_file)
         return 0
 
-    def onResume(self, stat_file):
+    def onResume(self, stat_file, new=False):
         if hasattr(self.obj, 'onResume'):
-            return self.obj.onResume(stat_file)
+            return self.obj.onResume(stat_file, new)
         return 0
 
     def onClose(self):

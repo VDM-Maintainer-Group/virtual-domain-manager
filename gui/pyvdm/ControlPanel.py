@@ -574,7 +574,7 @@ class DetailsArea(QWidget):
             return False
         #
         self.config['name'] = _name
-        _created_time = self.created_time.text().removeprefix('Created Time\t: ')
+        _created_time = self.created_time.text()[ len('Created Time\t: '): ] #removeprefix('Created Time\t: ')
         _created_time = datetime.strptime(_created_time, '%Y-%m-%d %H:%M')
         self.config['created_time'] = _created_time.timestamp()
         self.config['last_update_time'] = time.time()
