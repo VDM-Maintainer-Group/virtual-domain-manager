@@ -13,6 +13,7 @@ from pyvdm.interface import CapabilityLibrary
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 HINT_GENERATED = '(auto-generated)'
+CHECKED_SYMBOL = '✔'
 
 def _non_gui_filter(conf) -> bool:
     _flag = False
@@ -22,12 +23,12 @@ def _non_gui_filter(conf) -> bool:
     _flag = _flag or ('Terminal' in conf['Desktop Entry'] and conf['Desktop Entry']['Terminal']=='true')
     return _flag
 
-def _compatibility_filter(conf) -> bool:
+def _compatibility_filter(conf):
     if 'Categories' in conf['Desktop Entry']:
         _cat = conf['Desktop Entry']['Categories'].split(';')
-        return ('VDM' in _cat)
+        return CHECKED_SYMBOL if ('VDM' in _cat) else None
     else:
-        return False
+        return None
     pass
 
 class DefaultCompatibility:
@@ -270,7 +271,7 @@ class ApplicationManager:
         ##
         if not compatibility:
             return None 
-        elif compatibility==True:
+        elif compatibility==CHECKED_SYMBOL:
             return MetaPlugin( app_name, ProbedCompatibility(app_name, app) )
         elif compatibility==HINT_GENERATED:
             return MetaPlugin( app_name, DefaultCompatibility(app_name, app) )
@@ -284,7 +285,7 @@ class ApplicationManager:
         ##
         for app_name,app in _apps.items():
             if app_name not in self.applications:
-                if app['compatible']!=True:
+                if app['compatible']!=CHECKED_SYMBOL:
                     plugin_name = self.__plugin_supported(_plugins, app_name)
                     if plugin_name:
                         app['compatible'] = plugin_name
@@ -309,7 +310,7 @@ class ApplicationManager:
         _native, _none = 0, 0
         _total = len(self.applications)
         for k,v in self.applications.items():
-            if v['compatible']==True: _native += 1
+            if v['compatible']==CHECKED_SYMBOL: _native += 1
             if v['compatible']==HINT_GENERATED: _none+=1
         return (_total, _native, _total-_native-_none)
 

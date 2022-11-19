@@ -659,14 +659,14 @@ class DMTabWidget(QWidget):
         _sub_layout.addLayout( _btn_layout )
         ##
         _box.setLayout( _sub_layout )
-        layout.addWidget( _box, 0, 0, 10, 5 )
+        layout.addWidget( _box, 0, 0, 10, 2 )
         # add detail area (10x5)
         _box = QGroupBox('Details')
         _sub_layout = QVBoxLayout()
         self.details = DetailsArea(self, self.pm, self.am)
         _sub_layout.addWidget( self.details )
         _box.setLayout( _sub_layout )
-        layout.addWidget( _box, 0, 5, 10, 5 )
+        layout.addWidget( _box, 0, 2, 10, 8 )
         #
         self.setLayout( layout )
         pass
