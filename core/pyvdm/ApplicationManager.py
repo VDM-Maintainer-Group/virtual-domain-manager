@@ -99,6 +99,9 @@ class CompatibleInterface:
         self.node = sess.get_object(dbus_name, '/')
         self.iface = dbus.Interface(self.node, 'org.VDMCompatible.src')
         self.props_iface = dbus.Interface(self.node, 'org.freedesktop.DBus.Properties')
+        ##
+        _iface = dbus.Interface(self.node, 'org.freedesktop.DBus.Introspectable')
+        self.available = ( '<node name="/">' in _iface.Introspect() )
         pass
 
     @property
@@ -132,6 +135,7 @@ class ProbedCompatibility:
         sess = dbus.SessionBus()
         _names = filter(lambda x:f'org.VDMCompatible.{self.name}' in x, sess.list_names())
         app_ifaces = [ CompatibleInterface(sess, x) for x in _names ]
+        app_ifaces = [ x for x in app_ifaces if x.available ]
         return app_ifaces
 
     def onSave(self, stat_file) -> int:
