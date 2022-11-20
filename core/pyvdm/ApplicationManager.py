@@ -188,9 +188,12 @@ class ProbedCompatibility:
             ## create new windows
             for _ in range( len(_remaining)-len(old_stats) ):
                 subprocess.Popen(self.exec, start_new_session=True)
+            retry_with_timeout( lambda: len(self.app_ifaces)==len(_remaining), 3 )
             ## resume stats and window positions
             for (stat,sp), app in zip(_remaining.items(), self.app_ifaces):
                 app.Resume(stat, new)
+            for (stat,sp), app in zip(_remaining.items(), self.app_ifaces):
+                app.Save() #for possible xid update
                 if not app.xid:
                     _lambda_fn = lambda: self.xm.get_windows_by_pid(app.pid)
                 else:
