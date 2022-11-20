@@ -93,7 +93,7 @@ class DefaultCompatibility:
 
 class CompatibleInterface:
     def __init__(self, sess, dbus_name) -> None:
-        self.dbus_name = dbus_name
+        self.dbus_name = str( dbus_name )
         self.dbus_iface = dbus.Interface(
             sess.get_object('org.freedesktop.DBus', '/'), 'org.freedesktop.DBus')
         self.node = sess.get_object(dbus_name, '/')
@@ -102,12 +102,12 @@ class CompatibleInterface:
         pass
 
     @property
-    def xid(self):
-        return self.props_iface.Get('org.VDMCompatible.src', 'xid')
+    def xid(self) -> int:
+        return int( self.props_iface.Get('org.VDMCompatible.src', 'xid') )
     
     @property
-    def pid(self):
-        return self.dbus_iface.GetConnectionUnixProcessID(self.dbus_name)
+    def pid(self) -> int:
+        return int( self.dbus_iface.GetConnectionUnixProcessID(self.dbus_name) )
 
     def Save(self) -> str:
         return str( self.iface.Save() )
