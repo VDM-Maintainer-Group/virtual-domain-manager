@@ -228,7 +228,7 @@ class ApplicationManager:
         ##
         for xdg_path in data_dirs:
             app_file = Path(xdg_path) / 'applications' / f'{name}.desktop'
-            if app_file.exists:
+            if app_file.exists():
                 app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
                 app_conf.read( app_file.as_posix() )
                 try:
