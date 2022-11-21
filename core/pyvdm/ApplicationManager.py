@@ -219,6 +219,30 @@ class ProbedCompatibility:
 
 class ApplicationManager:
     @staticmethod
+    def get_application(name:str) -> dict:
+        ##
+        try:
+            data_dirs = os.environ['XDG_DATA_DIRS'].split(':')
+        except:
+            data_dirs = ['/usr/local/share', '/usr/share']
+        ##
+        for xdg_path in data_dirs:
+            app_file = Path(xdg_path) / 'applications' / f'{name}.desktop'
+            if app_file.exists:
+                app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
+                app_conf.read( app_file.as_posix() )
+                try:
+                    return {
+                        "name": app_conf['Desktop Entry']['Name'],
+                        "exec": app_conf['Desktop Entry']['Exec'],
+                        "icon": app_conf['Desktop Entry']['Icon'],
+                    }
+                except:
+                    return None
+        ##
+        return dict()
+
+    @staticmethod
     def list_all_applications() -> dict:
         applications = dict()
         ##
