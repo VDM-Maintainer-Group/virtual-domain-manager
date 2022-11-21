@@ -18,8 +18,8 @@ CHECKED_SYMBOL = '✔'
 
 def _non_gui_filter(conf) -> bool:
     _flag = False
-    _flag = _flag or 'NoDisplay' in conf['Desktop Entry']
-    _flag = _flag or 'OnlyShowIn' in conf['Desktop Entry']
+    _flag = _flag or ('NoDisplay' in conf['Desktop Entry'] and conf['Desktop Entry']['NoDisplay']=='true')
+    # _flag = _flag or 'OnlyShowIn' in conf['Desktop Entry']
     _flag = _flag or 'NotShowIn' in conf['Desktop Entry']
     _flag = _flag or ('Terminal' in conf['Desktop Entry'] and conf['Desktop Entry']['Terminal']=='true')
     return _flag
