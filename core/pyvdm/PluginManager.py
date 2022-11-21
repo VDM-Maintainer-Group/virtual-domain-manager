@@ -20,7 +20,7 @@ PLUGIN_BUILD_LEVEL = 'release'
 CONFIG_FILENAME    = 'package.json'
 PARENT_ROOT = Path('~/.vdm').expanduser()
 PLUGIN_DIRECTORY= PARENT_ROOT / 'plugins'
-CAPABILIT_DIRECTORY = PARENT_ROOT / 'capability'
+CAPABILITY_DIRECTORY = PARENT_ROOT / 'capability'
 REQUIRED_FIELDS = ['name', 'version', 'author', 'main', 'license']
 OPTIONAL_FIELDS = ['target', 'description', 'keywords', 'capability', 'scripts']
 OPTIONAL_SCRIPTS= ['test', 'pre-install', 'post-install', 'pre-uninstall', 'post-uninstall']
@@ -160,11 +160,12 @@ class PluginManager:
             return ERR.CONFIG_MAIN_ENTRY_MISSING
         # test capability requirement
         if ('capability' in config) and isinstance(config['capability'], list):
-            for item in config['capability']:
-                if self.cm.status(item) == 'N/A':
-                    return ERR.PLUGIN_CAPABILITY_MISSING
+            with WorkSpace('.') as ws:
+                for item in config['capability']:
+                    if self.cm.status(item) == 'N/A':
+                        return ERR.PLUGIN_CAPABILITY_MISSING
+                    pass
                 pass
-            pass
         # test build command and build plugin
         if not _pre_built and _post_built:
             ret = os.system(config['scripts']['pre-install'])
