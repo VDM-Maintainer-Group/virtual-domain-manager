@@ -6,9 +6,6 @@ https://user-images.githubusercontent.com/9068301/203792081-b69e406d-8283-4e0f-b
 
 
 
-[中文简介 - deepin论坛](https://bbs.deepin.org/zh/post/219493)
-
-
 ## Introduction
 <p align="center">
   <img src="./previews/structure.png" width="650px" />
