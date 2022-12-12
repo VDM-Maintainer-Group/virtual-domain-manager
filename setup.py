@@ -11,6 +11,19 @@ except:
     _patch = '0'
 _version = '.'.join((_major, _minor, _patch))
 
+from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+class bdist_wheel(_bdist_wheel):
+    def finalize_options(self):
+        _bdist_wheel.finalize_options(self)
+        self.root_is_pure = False
+        pass
+
+    def get_tag(self):
+        (impl, abi, plat_name) = _bdist_wheel.get_tag(self)
+        impl, abi = 'py3', 'none'
+        return (impl, abi, plat_name)
+    pass
+
 if __name__ == '__main__':
     setup(
         name = 'pyvdm',
@@ -35,5 +48,8 @@ if __name__ == '__main__':
                 'pyvdm-tray = pyvdm.gui.tray:main',
                 'sbs = pyvdm.build:main'
             ]
+        },
+        cmdclass={
+            'bdist_wheel': bdist_wheel,
         }
     )
