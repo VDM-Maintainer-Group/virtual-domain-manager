@@ -301,7 +301,7 @@ class ApplicationManager:
         compatibility = app['compatible']
         ##
         if not compatibility:
-            return None 
+            return None
         elif compatibility==CHECKED_SYMBOL:
             return MetaPlugin( app_name, ProbedCompatibility(app_name, app) )
         elif compatibility==HINT_GENERATED:
@@ -353,7 +353,7 @@ def execute(am, command, args, verbose=False):
         am.show_compatibility()
     elif command==None:
         _total, _native, _plugin = am.overview_compatibility()
-        print(f'{_native} native + {_total-_native-_plugin} by-plugin supported, out of {_total} GUI APPs.')
+        print(f'{_native} native + {_plugin} by-plugin supported, out of {_total} GUI APPs.')
     else:
         print('The command <{}> is not supported.'.format(command))
     pass
