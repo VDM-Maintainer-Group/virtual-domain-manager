@@ -297,6 +297,7 @@ class CapabilityHandleLocal:
             self.spec = result['spec']
             self.vcd = vcd
         except Exception as e:
+            print(f'Capability loading failure: {name}.', file=sys.stderr)
             raise e
 
     def __getattribute__(self, name: str):
@@ -338,6 +339,10 @@ class CapabilityHandle:
         self._spec = res['spec']
         #
         self._sig_func_args_table = None #for lazy response
+        pass
+
+    def __del__(self):
+        self.drop()
         pass
 
     def __getattribute__(self, name: str):
