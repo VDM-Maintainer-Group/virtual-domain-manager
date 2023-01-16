@@ -32,6 +32,31 @@ def _compatibility_filter(conf):
         return None
     pass
 
+class AppOps:
+    @staticmethod
+    def exec_parse(exec):
+        #TODO: aware of exec command (e.g., other bootstrap like python)
+        pass
+
+    @staticmethod
+    def exec_switch(exec):
+        pass
+
+    @staticmethod
+    def open(exec, open_op, window_info=None):
+        AppOps.exec_switch(exec)
+        #TODO: aware of window creation and resume completion
+        pass
+
+    @staticmethod
+    def save(name, dump_data, stat_file, window_info=None):
+        #TODO: generate formatted data to stat_file
+        pass
+
+    def exit(exec):
+        #TODO: elegantly kill process tree
+        pass
+
 class DefaultCompatibility:
     def __init__(self, name, conf):
         self.name = name
