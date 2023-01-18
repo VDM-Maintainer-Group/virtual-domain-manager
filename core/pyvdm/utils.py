@@ -167,18 +167,13 @@ def retry_with_timeout(lamb_fn, timeout=1):
         time.sleep(0.1)
     return ret
 
-# def getRandomSerial(len, dtype='hex'):
-#     if dtype=='hex':
-#         return ''.join(random.choice(string.hexdigits.upper()) for _ in range(len))
-#     elif dtype=='dec':
-#         return ''.join(random.choice(string.digits) for _ in range(len))
-#     elif dtype=='char':
-#         return ''.join(random.choice(string.uppercase) for _ in range(len))
-#     else:
-#         return ''
-#     pass
-
-# def getChecksum(obj, dtype='crc-16'):
-#     _csm = ''
-#     # to support crc-16/md5/sha1
-#     return _csm
+def getRandomSerial(len, dtype='hex'):
+    if dtype=='hex':
+        return ''.join(random.choice(string.hexdigits.upper()) for _ in range(len))
+    elif dtype=='dec':
+        return ''.join(random.choice(string.digits) for _ in range(len))
+    elif dtype=='char':
+        return ''.join(random.choice(string.uppercase) for _ in range(len))
+    else:
+        return ''
+    pass

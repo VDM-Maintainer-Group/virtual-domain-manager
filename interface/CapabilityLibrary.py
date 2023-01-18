@@ -66,11 +66,11 @@ class AnyType(str):
             raise Exception('Invalid value for AnyType')
     pass
 
-set_mask   = lambda x: x | 0x80
-unset_mask = lambda x: x & 0x7F
-test_mark  = lambda x: not (x & 0x80 == 0)
-
 class ShmContext:
+    set_mask   = lambda x: x | 0x80
+    unset_mask = lambda x: x & 0x7F
+    test_mark  = lambda x: not (x & 0x80 == 0)
+
     def __init__(self, sem, shm, write:bool) -> None:
         self.write_flag = write
         self.sem = sem
@@ -81,7 +81,7 @@ class ShmContext:
         shm_buf = mmap.mmap(self.shm.fd, self.shm.size)
         while True:
             self.sem.acquire()
-            if test_mark(shm_buf[3])==self.write_flag:
+            if self.test_mark(shm_buf[3])==self.write_flag:
                 self.sem.release()
                 time.sleep(0)
                 continue
@@ -91,9 +91,9 @@ class ShmContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         shm_buf = mmap.mmap(self.shm.fd, self.shm.size)
         if self.write_flag:
-            shm_buf[3] = set_mask(shm_buf[3])
+            shm_buf[3] = self.set_mask(shm_buf[3])
         else:
-            shm_buf[3] = unset_mask(shm_buf[3])
+            shm_buf[3] = self.unset_mask(shm_buf[3])
         self.sem.release()
         pass
     pass

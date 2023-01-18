@@ -25,7 +25,7 @@ class SRC_API(metaclass=ABCMeta):
         return 0
     
     # @abstractmethod
-    def onTrigger(self, *args):
-        return 0
+    # def onTrigger(self, *args):
+    #     return 0
 
     pass
