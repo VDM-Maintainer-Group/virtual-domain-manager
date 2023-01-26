@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.append( Path(__file__).resolve().parent.as_posix() )
 # normal import
 import os, argparse, re
+import json
 import traceback
 import concurrent.futures
 import pyvdm.core.PluginManager as P_MAN
@@ -13,6 +14,7 @@ import pyvdm.core.CapabilityManager as C_MAN
 import pyvdm.core.ApplicationManager as A_MAN
 from pyvdm.core.utils import *
 from pyvdm.core.errcode import *
+from pyvdm.interface import SRC_API
 
 try:
     from .. import __version__
@@ -23,6 +25,35 @@ PARENT_ROOT = Path('~/.vdm').expanduser()
 PLUGIN_DIRECTORY = PARENT_ROOT / 'plugins'
 DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
 CAPABILITY_DIRECTORY = PARENT_ROOT / 'capability'
+
+class CoreMetaPlugin(SRC_API):
+    from pyvdm.interface import CapabilityLibrary
+    xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
+
+    def onSave(self, stat_file):
+        record = {
+            'current_desktop': self.xm.get_current_desktop()
+        }
+        with open(stat_file, 'w') as f:
+            json.dump(record, f)
+        return 0
+
+    def onResume(self, stat_file, new=False):
+        ## load stat file with failure check
+        with open(stat_file, 'r') as f:
+            _file = f.read().strip()
+        if len(_file)==0:
+            return 0
+        else:
+            try:
+                record = json.loads(_file)
+            except:
+                return -1
+        ##
+        self.xm.set_current_desktop( record['current_desktop'] )
+        return 0
+
+    pass
 
 class CoreManager:
     def __init__(self):
@@ -49,6 +80,7 @@ class CoreManager:
         if hasattr(self, 'plugins'):
             del self.plugins #cleanup
         self.plugins = dict()
+
         ## load GUI APP plugins
         for _name in _config['applications']:
             _plugin = self.am.instantiate_plugin(_name)
@@ -64,6 +96,11 @@ class CoreManager:
                 return _plugin #return plugin error code
             _stat   = StatFile(DOMAIN_DIRECTORY/name, _name)
             self.plugins.update( {_plugin: _stat} )
+        ## load global CoreMetaPlugin
+        global_plugin = CoreMetaPlugin()
+        global_stat   = StatFile(DOMAIN_DIRECTORY/name, '.global')
+        self.plugins.update({ global_plugin : global_stat })
+
         return True
 
     #---------- online domain operations -----------#
@@ -81,16 +118,6 @@ class CoreManager:
                 print( traceback.format_exc() )
         results = None if len(results)==0 else results
         return results
-
-        # try:
-        #     _results = [ x.result() for x in _futures ]
-        #     _results = list( filter(lambda x:x is not None, _results) )
-        # except Exception as e:
-        #     return _results
-        # else:
-        #     _results = None if len(_results)==0 else _results
-        #     return _results
-        # pass
 
     def save_domain(self, delayed=False):
         if not self.stat.getStat():
