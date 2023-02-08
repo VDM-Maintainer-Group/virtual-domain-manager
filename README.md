@@ -7,11 +7,12 @@ https://user-images.githubusercontent.com/9068301/203792081-b69e406d-8283-4e0f-b
 
 
 ## Introduction
+
+[Project Progress](https://github.com/VDM-Maintainer-Group/virtual-domain-manager/issues/3)
+
 <p align="center">
   <img src="./previews/structure.png" width="650px" />
-</p> 
-
-
+</p>
 
 ## Dependencies
 
