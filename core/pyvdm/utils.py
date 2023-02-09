@@ -157,13 +157,20 @@ def json_dump(filename, config):
     fd.close()
     pass
 
-
 def retry_with_timeout(lamb_fn, timeout=1):
     import time
     _now = time.time()
-    ret = lamb_fn()
-    while not ret and time.time()-_now<timeout:
+    ##
+    try:
         ret = lamb_fn()
+    except:
+        ret = None
+    ##
+    while not ret and time.time()-_now<timeout:
+        try:
+            ret = lamb_fn()
+        except:
+            ret = None
         time.sleep(0.1)
     return ret
 
