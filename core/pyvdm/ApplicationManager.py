@@ -233,6 +233,7 @@ class ApplicationManager:
                 app_conf.read( app_file.as_posix() )
                 try:
                     return {
+                        "path": app_file.as_posix(),
                         "name": app_conf['Desktop Entry']['Name'],
                         "exec": app_conf['Desktop Entry']['Exec'],
                         "icon": app_conf['Desktop Entry']['Icon'],
