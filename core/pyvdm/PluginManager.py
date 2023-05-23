@@ -12,7 +12,7 @@ from importlib import import_module
 from distutils.version import LooseVersion
 from functools import partial, wraps
 from pyvdm.interface import SRC_API
-from pyvdm.core.utils import *
+from pyvdm.core.utils import (POSIX, WorkSpace, json_load)
 from pyvdm.core.errcode import PluginCode as ERR
 from pyvdm.core.CapabilityManager import CapabilityManager
 
@@ -123,8 +123,10 @@ class PluginWrapper:
 
     def load_cdll(self, entry):
         obj = ctypes.CDLL( POSIX(Path(entry).resolve()) )
-        obj.onSave = self.wrap_call_on_string(obj.onSave)
-        obj.onResume = self.wrap_call_on_string(obj.onResume)
+        obj.onSave.argtypes = [ctypes.c_char_p, ctypes.c_int]
+        obj.onSave.restype = ctypes.c_int
+        obj.onResume.argtypes = [ctypes.c_char_p, ctypes.c_int]
+        obj.onResume.restype = ctypes.c_int
         #obj.onTrigger
         self.obj = obj
         pass
@@ -181,7 +183,7 @@ class PluginManager:
         if not required_version:
             _selected = _installed[0].name
         else:
-            _regex = re.compile( '%s-(\d\.\d.*)'%name )
+            _regex = re.compile( '%s-(\\d\\.\\d.*)'%name )
             for item in _installed:
                 _version = _regex.findall(item.name)[0]
                 if LooseVersion(_version) >= LooseVersion(required_version):
@@ -189,13 +191,13 @@ class PluginManager:
                     break
             pass
         if not _selected:
-            return ERR.PLUGIN_LOAD_FAILED
+            return ERR.PLUGIN_LOAD_FAILED # type: ignore
         #
         with WorkSpace(self.root, _selected) as ws:
             _config = json_load(CONFIG_FILENAME)
             ret = self.test_config(_config)
             if ret!=True:
-                return ret
+                return ret # type: ignore
             pass
         #
         with WorkSpace(self.root, _selected, PLUGIN_BUILD_LEVEL) as ws:
@@ -203,7 +205,7 @@ class PluginManager:
                 _obj = PluginWrapper(_config['main'])
                 _plugin = MetaPlugin( name, _obj )
             except Exception as e:
-                return ERR.PLUGIN_WRAPPER_FAILED
+                return ERR.PLUGIN_WRAPPER_FAILED # type: ignore
             pass
         return _plugin
 
@@ -248,7 +250,7 @@ class PluginManager:
                 return ERR.PLUGIN_WRAPPER_FAILED
             pass
         # move to root dir with new name
-        _regex = re.compile( '%s-(\d\.\d.*)'%_config['name'] )
+        _regex = re.compile( '%s-(\\d\\.\\d.*)'%_config['name'] )
         _installed = sorted(self.root.glob( '%s-*.*'%_config['name'] ))
         for item in _installed:
             _version = _regex.findall(item.name)[0]
@@ -257,7 +259,7 @@ class PluginManager:
                 print('Remove elder version: %s'%item.name)
             else:
                 print('Higher version already installed: %s'%item.name)
-                return ERR.PLUGIN_HIGHER_VERSION
+                return ERR.PLUGIN_HIGHER_VERSION_EXISTS
             pass
         _new_name = _config['name']+'-'+_config['version']
         shutil.move( POSIX(tmp_dir), POSIX(self.root / _new_name) )
@@ -273,7 +275,7 @@ class PluginManager:
         names = names if isinstance(names, list) else [names]
         with WorkSpace(self.root) as ws:
             for name in names:
-                _regex = re.compile( '%s-(\d\.\d.*)'%name )
+                _regex = re.compile( '%s-(\\d\\.\\d.*)'%name )
                 _installed = sorted(self.root.glob( '%s-*.*'%name ))
                 for item in _installed:
                     _version = _regex.findall(item.name)[0]
@@ -284,7 +286,7 @@ class PluginManager:
         return True #always
 
     def list(self, names=[]) -> dict:
-        _regex = re.compile('(?P<name>.+)-(?P<version>\d\.\d.*)')
+        _regex = re.compile('(?P<name>.+)-(?P<version>\\d\\.\\d.*)')
         _installed = sorted( self.root.glob( '*-*.*' ) )
         result = dict()
 
@@ -318,7 +320,7 @@ def execute(pm, command, args, verbose=False):
         _res = pm.list(args.names); print(_res)
         return _res
     elif command=='run':
-        return pm.run(args.plugin_name, args.plugin_function)
+        return pm.run(args.plugin_name, args.plugin_function) # type: ignore
     elif command==None:
         print('<Plugin Directory Status>')
     else:

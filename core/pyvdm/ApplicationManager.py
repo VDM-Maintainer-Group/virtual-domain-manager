@@ -10,11 +10,12 @@ import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.PluginManager import MetaPlugin
 from pyvdm.core.errcode import ApplicationCode as ERR
 from pyvdm.interface import CapabilityLibrary
-from pyvdm.core.utils import retry_with_timeout
+from pyvdm.core.utils import (POSIX, KeyringEnDec, retry_with_timeout)
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 HINT_GENERATED = '(auto-generated)'
 CHECKED_SYMBOL = '✔'
+GLOBAL_KEYRING = KeyringEnDec()
 
 def _non_gui_filter(conf) -> bool:
     _flag = False
@@ -64,7 +65,9 @@ class DefaultCompatibility:
             pass
         ##
         with open(stat_file, 'w') as f:
-            json.dump(record, f)
+            # json.dump(record, f)
+            data = GLOBAL_KEYRING.encrypt(self.name, json.dumps(record))
+            f.write(data)
         return 0
 
     def onResume(self, stat_file, _new:bool) -> int:
@@ -75,7 +78,9 @@ class DefaultCompatibility:
             return 0
         else:
             try:
-                record = json.loads(_file)
+                # json.dump(record, f)
+                data = GLOBAL_KEYRING.decrypt( self.name, f.read() )
+                record = json.loads(data)
             except:
                 return -1
         ## rearrange windows by pid
@@ -83,7 +88,7 @@ class DefaultCompatibility:
             # proc = subprocess.Popen(item['cmdline'], start_new_session=True)
             proc = subprocess.Popen(self.exec, start_new_session=True)
             _lambda_fn = lambda: self.xm.get_windows_by_pid(proc.pid)
-            _window = retry_with_timeout(_lambda_fn)[0]
+            _window = retry_with_timeout(_lambda_fn, default=[])[0]
             ##
             sp = item['window']
             self.xm.set_window_by_xid(_window['xid'], sp['desktop'], sp['states'], sp['xyhw'])
@@ -123,17 +128,18 @@ class CompatibleInterface:
     pass
 
 class ProbedCompatibility:
-    def __init__(self, name, conf):
+    def __init__(self, name, conf, encrypted=False):
         self.name = name
         self.conf = conf
         self.exec = conf['exec'].split()[0]
+        self.enc = encrypted
         self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
         pass
     
     @property
     def app_ifaces(self):
         sess = dbus.SessionBus()
-        _names = filter(lambda x:f'org.VDMCompatible.{self.name}' in x, sess.list_names())
+        _names = filter(lambda x:f'org.VDMCompatible.{self.name}' in x, sess.list_names()) # type: ignore
         app_ifaces = [ CompatibleInterface(sess, x) for x in _names ]
         app_ifaces = [ x for x in app_ifaces if x.available ]
         return app_ifaces
@@ -158,18 +164,26 @@ class ProbedCompatibility:
             })
         ##
         with open(stat_file, 'w') as f:
-            json.dump(record, f)
+            if self.enc:
+                data = GLOBAL_KEYRING.encrypt(self.name, json.dumps(record))
+                f.write(data)
+            else:
+                json.dump(record, f)
         return 0
     
     def onResume(self, stat_file, new:bool) -> int:
         ## load stat file with failure check
         with open(stat_file, 'r') as f:
-            _file = f.read().strip()
-        if len(_file)==0:
+            _content = f.read().strip()
+        if len(_content)==0:
             return 0
         else:
             try:
-                record = json.loads(_file)
+                if self.enc:
+                    data = GLOBAL_KEYRING.decrypt( self.name, _content )
+                    record = json.loads(data)
+                else:
+                    record = json.loads(_content)
             except:
                 return -1
         
@@ -194,15 +208,15 @@ class ProbedCompatibility:
                 subprocess.Popen(self.exec, start_new_session=True)
             retry_with_timeout( lambda: len(self.app_ifaces)==len(_remaining), 3 )
             ## resume stats and window positions
-            for (stat,sp), app in zip(_remaining.items(), self.app_ifaces):
+            for (stat,sp), app in zip(_remaining.items(), self.app_ifaces): # type: ignore
                 app.Resume(stat, new)
-            for (stat,sp), app in zip(_remaining.items(), self.app_ifaces):
+            for (stat,sp), app in zip(_remaining.items(), self.app_ifaces): # type: ignore
                 app.Save() #for possible xid update
                 if not app.xid:
                     _lambda_fn = lambda: self.xm.get_windows_by_pid(app.pid)
                 else:
                     _lambda_fn = lambda: self.xm.get_windows_by_xid(app.xid)
-                _window = retry_with_timeout(_lambda_fn)[0]
+                _window = retry_with_timeout(_lambda_fn, default=[])[0]
                 self.xm.set_window_by_xid(_window['xid'], sp['desktop'], sp['states'], sp['xyhw'])
         else:
             ## close the no-needed old windows
@@ -239,7 +253,7 @@ class ApplicationManager:
                         "icon": app_conf['Desktop Entry']['Icon'],
                     }
                 except:
-                    return None
+                    return dict()
         ##
         return dict()
 
@@ -279,7 +293,7 @@ class ApplicationManager:
             self.root = PARENT_ROOT
         ##
         if not pm:
-            self.pm = P_MAN.PluginManager( self.root/'plugins' )
+            self.pm = P_MAN.PluginManager( POSIX(self.root/'plugins') )
         else:
             assert( isinstance(pm, P_MAN.PluginManager) )
             self.pm = pm
@@ -295,14 +309,14 @@ class ApplicationManager:
                 return plugin_name
             elif isinstance(targets, str) and (app_name==targets):
                 return plugin_name
-        return None
+        return ''
 
     def instantiate_plugin(self, app_name) -> MetaPlugin:
         app = self.applications[app_name]
         compatibility = app['compatible']
         ##
         if not compatibility:
-            return None
+            return None # type: ignore
         elif compatibility==CHECKED_SYMBOL:
             return MetaPlugin( app_name, ProbedCompatibility(app_name, app) )
         elif compatibility==HINT_GENERATED:

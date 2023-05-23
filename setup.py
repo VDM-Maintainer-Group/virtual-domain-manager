@@ -34,7 +34,8 @@ if __name__ == '__main__':
         author_email = 'sudofree@163.com',
         #
         install_requires = ['PyQt5', 'posix-ipc', 'psutil', 'requests',
-                            'dbus-python', 'halo', 'termcolor', 'pyyaml'],
+                            'dbus-python', 'halo', 'termcolor', 'pyyaml',
+                            'keyring', 'cryptography'],
         package_dir = {'': 'build'},
         packages = find_packages(where='build'),
         package_data = {
@@ -50,6 +51,6 @@ if __name__ == '__main__':
             ]
         },
         cmdclass={
-            'bdist_wheel': bdist_wheel,
+            'bdist_wheel': bdist_wheel, # type: ignore
         }
     )
