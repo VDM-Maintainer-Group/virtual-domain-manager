@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-import signal
-import socket
-import sys
+import os
 from pathlib import Path
 import psutil
+import signal
+import socket
+import subprocess as sp
+import sys
 
 from pyvdm.gui.utils import (CONFIG, MFWorker, smooth_until)
 from ControlPanel import ControlPanelWindow
@@ -17,6 +19,45 @@ from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
 
 global app
 NONE_DOMAIN = '<None>'
+
+def is_autostart() -> bool:
+    try:
+        sp.check_output(['which', 'systemctl'])
+    except sp.CalledProcessError:
+        return False
+    ##
+    if not (Path.home() / '.config/systemd/user/pyvdm.service').exists():
+        return False
+    ##
+    try:
+        output = sp.check_output(['systemctl', '--user', 'is-active', 'pyvdm.service'])
+        return output.decode().strip() == 'active'
+    except sp.CalledProcessError:
+        return False
+    pass
+
+def enable_autostart():
+    ## write pyvdm.service file
+    with open(Path.home() / '.config/systemd/user/pyvdm.service', 'w') as f:
+        f.write(f'''[Unit]
+        Description=PyVDM Tray.
+        After=network.target
+        
+        [Service]
+        User={os.getlogin()}
+        ExecStart={sp.check_output(['which', 'pyvdm-tray']).decode().strip()}
+        
+        [Install]
+        WantedBy=default.target''')
+    ##reload daemon
+    sp.check_output(['systemctl', '--user', 'daemon-reload'])
+    sp.check_output(['systemctl', '--user', 'enable', 'pyvdm.service'])
+    pass
+
+def disable_auto_start():
+    if is_autostart():
+        sp.check_output(['systemctl', '--user', 'disable', 'pyvdm.service'])
+    pass
 
 class TrayIcon(QSystemTrayIcon):
     start_signal = pyqtSignal()
@@ -53,7 +94,7 @@ class TrayIcon(QSystemTrayIcon):
 
     def getDefaultMenu(self):
         menu = QMenu()
-        # set title bar and autosave act
+        # set title bar and 'autosave' act
         self.title_bar = menu.addAction(NONE_DOMAIN)
         self.title_bar.setEnabled(False)
         self.act_autosave = QAction('Autosave', self)
@@ -63,7 +104,7 @@ class TrayIcon(QSystemTrayIcon):
         self.autosave_timer = None
         menu.addSeparator()
 
-        # add 'save' and 'close' acts
+        # add 'save' / 'close' / 'switch' acts
         self.act_save = menu.addAction('Save')
         self.act_save.triggered.connect(self.save_domain)
         self.act_close = menu.addAction('Close')
@@ -74,6 +115,12 @@ class TrayIcon(QSystemTrayIcon):
         self.updateSwitchMenu()
         menu.addSeparator()
 
+        # add auto-start act
+        self.act_autostart = QAction('Autostart', self)
+        self.act_autostart.setCheckable(True)
+        self.act_autostart.setChecked( is_autostart() )
+        menu.addAction( self.act_autostart )
+        self.act_autostart.triggered.connect( self.onActAutostart )
         # add 'quit' act
         act_open_panel = menu.addAction('Open Control Panel')
         act_open_panel.triggered.connect( lambda: self.control_panel.show() )
@@ -116,6 +163,15 @@ class TrayIcon(QSystemTrayIcon):
             act_name = self.switch_menu.addAction(_name)
             if _name==_open_name:
                 act_name.setEnabled(False)
+        pass
+
+    @pyqtSlot(QAction)
+    def onActAutostart(self):
+        _checked = self.act_autostart.isChecked()
+        if _checked:
+            enable_autostart()
+        else:
+            disable_auto_start()
         pass
 
     @pyqtSlot()
