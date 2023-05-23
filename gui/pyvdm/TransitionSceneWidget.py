@@ -25,7 +25,7 @@ class RoundPixmapStyle(QProxyStyle):
     def drawItemPixmap(self, painter, rectangle, alignment, pixmap):
         painter.save()
         pix = QPixmap(pixmap.size()) #_rect.size()
-        pix.fill(Qt.transparent)
+        pix.fill(Qt.transparent) #type: ignore
         p = QPainter(pix)
         #
         w,h = pixmap.width(), pixmap.height()
@@ -37,7 +37,7 @@ class RoundPixmapStyle(QProxyStyle):
             d = int( (h-w) / 2 )
             _rect.adjust(0, d, 0, -d)
         p.setBrush(QBrush(pixmap))
-        p.setPen(Qt.NoPen)
+        p.setPen(Qt.NoPen) #type: ignore
         p.drawRoundedRect(_rect, self._radius, self._radius) #pixmap.rect()
         #
         p.end()
@@ -52,19 +52,19 @@ class SceneManager(QWidget):
     def __init__(self, parent, size=0, mask=True):
         super().__init__(parent)
         self.parent = parent
-        self.mask = mask
-        self.size = size
+        self.mask = mask # type: ignore
+        self.size = size # type: ignore
         self.styleHelper()
         #
         self.soundEffect = None
-        self.play_signal.connect(self.playSoundEffect)
+        self.play_signal.connect(self.playSoundEffect) # type: ignore
         pass
     
     def styleHelper(self):
         self.grid = QGridLayout()
         self.grid.setSpacing(0)
         self.grid.setContentsMargins(0,0,0,0)
-        self.grid.setAlignment(Qt.AlignCenter)
+        self.grid.setAlignment(Qt.AlignCenter) #type: ignore
         #
         self.label = QLabel('Transition Scene', self)
         if self.mask:
@@ -87,25 +87,25 @@ class SceneManager(QWidget):
         if _size==SIZE_ORIGINAL:
             self.movie_size = _movie_size
         elif _size==SIZE_FULLSCREEN:
-            _movie_size.scale( self.parent.size(), Qt.KeepAspectRatio )
+            _movie_size.scale( self.parent.size(), Qt.KeepAspectRatio ) #type: ignore
             self.movie.setScaledSize(_movie_size)
             pass
         else: #custom size
-            _movie_size.scale( QSize(_size, _size), Qt.KeepAspectRatio )
+            _movie_size.scale( QSize(_size, _size), Qt.KeepAspectRatio ) #type: ignore
             self.movie.setScaledSize(_movie_size)
             pass
         #
         self.label.setMovie(self.movie)
         self.label.setFixedSize( self.movie_size )
         if self.mask and _size!=SIZE_FULLSCREEN:
-            self.proxy_style.setRadius( self.movie_size.height() / 2 )
+            self.proxy_style.setRadius( self.movie_size.height() / 2 ) #type: ignore
         pass
 
     @pyqtSlot()
     def playSoundEffect(self):
         _url = QUrl.fromLocalFile( CONFIG['THEME_SE_TRANS'] )
         self.soundEffect = QSoundEffect( self )
-        self.soundEffect.setLoopCount( QSoundEffect.Infinite )
+        self.soundEffect.setLoopCount( QSoundEffect.Infinite ) #type: ignore
         self.soundEffect.setSource(_url)
         self.soundEffect.play()
         pass
@@ -118,7 +118,7 @@ class SceneManager(QWidget):
 
     def stop(self):
         if self.movie: self.movie.stop()
-        self.soundEffect.stop()
+        self.soundEffect.stop() #type: ignore
         pass
 
     pass
@@ -139,8 +139,8 @@ class TransitionSceneWidget(QWidget):
         self.resize(self.sizeHint())
         # set window style
         self.styleHelper()
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint) #type: ignore
+        self.setAttribute(Qt.WA_TranslucentBackground, True) #type: ignore
         self.setFocus()
         self.setVisible(False)
         pass
@@ -204,7 +204,7 @@ class TransitionSceneWidget(QWidget):
         _elapsed = time.time() - self.start_time
         if _elapsed < 0.5:
             _sleep = int( 1000*(0.5-_elapsed) )
-            QTimer.singleShot(_sleep, self.stop)
+            QTimer.singleShot(_sleep, self.stop) # type: ignore
         else:
             self.fadeOut( self.hideScene )
         pass
@@ -214,6 +214,6 @@ class TransitionSceneWidget(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main_ts = TransitionSceneWidget()
-    main_ts.start()
+    main_ts.start() # type: ignore
     # main_ts.fade_in.finished.connect( main_ts.stop )
     sys.exit(app.exec_())
