@@ -7,7 +7,7 @@ import socket
 import subprocess as sp
 import sys
 
-from pyvdm.gui.utils import (CONFIG, MFWorker, smooth_until)
+from pyvdm.gui.utils import (CONFIG, MFWorker, KeysReactor, smooth_until)
 from ControlPanel import ControlPanelWindow
 from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager
@@ -75,15 +75,19 @@ class TrayIcon(QSystemTrayIcon):
         self.control_panel = ControlPanelWindow(self, self.cm)
         #
         self.w_ts = TransitionSceneWidget()
-        self.start_signal.connect( self.w_ts.start )
-        self.stop_signal.connect( self.w_ts.stop )
-        self.play_signal.connect(self.playSoundEffect)
+        self.start_signal.connect( self.w_ts.start ) #type: ignore
+        self.stop_signal.connect( self.w_ts.stop ) #type: ignore
+        self.play_signal.connect(self.playSoundEffect) #type: ignore
         #
         self.setContextMenu( self.getDefaultMenu() )
         self.updateTitleBar()
         self.setIcon( QIcon( CONFIG['ASSETS_ICON'] ) )
+        # init key shortcuts
+        self.keysFn = KeysReactor(self)
+        self.keysFn.register(['Ctrl','Alt','Shift','S'], self.save_domain)
+        self.keysFn.register(['Ctrl','Alt','Shift','C'], self.close_domain)
         #
-        self.activated.connect( self.onActivation )
+        self.activated.connect( self.onActivation ) #type: ignore
         self.show()
         pass
 
@@ -100,7 +104,7 @@ class TrayIcon(QSystemTrayIcon):
         self.act_autosave = QAction('Autosave', self)
         self.act_autosave.setCheckable(True)
         menu.addAction( self.act_autosave )
-        self.act_autosave.triggered.connect( self.onActAutosave )
+        self.act_autosave.triggered.connect( self.onActAutosave ) #type: ignore
         self.autosave_timer = None
         menu.addSeparator()
 
@@ -112,7 +116,7 @@ class TrayIcon(QSystemTrayIcon):
         # and 'switch' submenu
         self.switch_menu = menu.addMenu('Switch') #leave empty for default
         self.switch_menu.triggered.connect( self.switch_domain )
-        self.updateSwitchMenu()
+        self.updateSwitchMenu() #type: ignore
         menu.addSeparator()
 
         # add auto-start act
@@ -120,14 +124,14 @@ class TrayIcon(QSystemTrayIcon):
         self.act_autostart.setCheckable(True)
         self.act_autostart.setChecked( is_autostart() )
         menu.addAction( self.act_autostart )
-        self.act_autostart.triggered.connect( self.onActAutostart )
+        self.act_autostart.triggered.connect( self.onActAutostart ) #type: ignore
         # add 'quit' act
         act_open_panel = menu.addAction('Open Control Panel')
         act_open_panel.triggered.connect( lambda: self.control_panel.show() )
         act_quit = menu.addAction('Quit')
         act_quit.triggered.connect(self.quit)
 
-        menu.aboutToShow.connect( self.updateSwitchMenu )
+        menu.aboutToShow.connect( self.updateSwitchMenu ) #type: ignore
         return menu
 
     def updateTitleBar(self):
@@ -185,34 +189,38 @@ class TrayIcon(QSystemTrayIcon):
         else:
             self.autosave_timer = QTimer(self)
             self.autosave_timer.timeout.connect(
-                lambda: self.cm.save_domain()
+                lambda: self.cm.save_domain() #type: ignore
             )
             self.autosave_timer.start(15*1000) #interval: 15s
         pass
 
     @pyqtSlot(QSystemTrayIcon.ActivationReason)
     def onActivation(self, reason):
-        if reason==QSystemTrayIcon.Trigger:
+        if reason==QSystemTrayIcon.Trigger: #type: ignore
             self.control_panel.show()
             pass
         pass
 
     #---------- wrap of CoreManager operations ----------#
     def save_domain(self, e=None):
+        _domain_name = self.getCurrentDomain()
         ret = self.cm.save_domain()
         if ret is not True:
             print(ret)
         else:
             self.play_signal.emit( CONFIG['THEME_SE_SAVE'] )
+            sp.run(['notify-send', 'pyvdm', f'{_domain_name} saved', '--icon', CONFIG['ASSETS_ICON'] ])
         pass
 
     def close_domain(self, e=None):
         self.play_signal.emit( CONFIG['THEME_SE_CLOSE'] )
+        ##
+        _domain_name = self.getCurrentDomain()
         ret = self.cm.close_domain()
         if ret is not True:
             print(ret)
-            print('Save... shi te na i.')
         else:
+            sp.run(['notify-send', 'pyvdm', f'{_domain_name} closed', '--icon', CONFIG['ASSETS_ICON'] ])
             self.updateTitleBar()
         pass
 
@@ -252,7 +260,7 @@ def main():
         exit()
     # ignore interrupt signal
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    QApplication.setAttribute( Qt.AA_EnableHighDpiScaling )
+    QApplication.setAttribute( Qt.AA_EnableHighDpiScaling ) #type: ignore
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     tray = TrayIcon()

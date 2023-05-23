@@ -180,7 +180,7 @@ def getRandomSerial(len, dtype='hex'):
     elif dtype=='dec':
         return ''.join(random.choice(string.digits) for _ in range(len))
     elif dtype=='char':
-        return ''.join(random.choice(string.uppercase) for _ in range(len))
+        return ''.join(random.choice(string.ascii_uppercase) for _ in range(len))
     else:
         return ''
     pass
