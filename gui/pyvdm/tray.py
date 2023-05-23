@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-# fix relative path import
-import sys, signal, socket
+import signal
+import socket
+import sys
 from pathlib import Path
-sys.path.append( Path(__file__).resolve().parent.as_posix() )
-# normal import
-from pyvdm.gui.utils import (CONFIG, MFWorker)
+import psutil
+
+from pyvdm.gui.utils import (CONFIG, MFWorker, smooth_until)
 from ControlPanel import ControlPanelWindow
 from TransitionSceneWidget import TransitionSceneWidget
 from pyvdm.core.manager import CoreManager
@@ -167,6 +168,9 @@ class TrayIcon(QSystemTrayIcon):
                 self.updateTitleBar()
             else:
                 print(ret)
+            
+            smooth_until(view=psutil.cpu_percent,
+                         avg_cond=lambda x:x<0.1 )
             self.stop_signal.emit()
             pass
         

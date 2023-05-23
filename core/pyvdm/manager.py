@@ -12,12 +12,12 @@ import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
 import pyvdm.core.CapabilityManager as C_MAN
 import pyvdm.core.ApplicationManager as A_MAN
-from pyvdm.core.utils import *
-from pyvdm.core.errcode import *
+from pyvdm.core.utils import (POSIX, StatFile)
+from pyvdm.core.errcode import (ErrorCode, DomainCode, PluginCode)
 from pyvdm.interface import SRC_API
 
 try:
-    from .. import __version__
+    from .. import __version__ # type: ignore
 except:
     __version__ = '0.0.0'
 
@@ -29,6 +29,10 @@ CAPABILITY_DIRECTORY = PARENT_ROOT / 'capability'
 class CoreMetaPlugin(SRC_API):
     from pyvdm.interface import CapabilityLibrary
     xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
+
+    def onStart(self): pass
+    def onStop(self): pass
+    def onClose(self): pass
 
     def onSave(self, stat_file):
         record = {
@@ -61,10 +65,10 @@ class CoreManager:
         self.root.mkdir(exist_ok=True, parents=True)
         #
         self.stat = StatFile(PARENT_ROOT)
-        self.dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
-        self.cm = C_MAN.CapabilityManager(CAPABILITY_DIRECTORY)
-        self.pm = P_MAN.PluginManager(PLUGIN_DIRECTORY, self.cm)
-        self.am = A_MAN.ApplicationManager(PARENT_ROOT, self.pm)
+        self.dm = D_MAN.DomainManager( POSIX(DOMAIN_DIRECTORY) )
+        self.cm = C_MAN.CapabilityManager( POSIX(CAPABILITY_DIRECTORY) )
+        self.pm = P_MAN.PluginManager( POSIX(PLUGIN_DIRECTORY), self.cm )
+        self.am = A_MAN.ApplicationManager( POSIX(PARENT_ROOT), self.pm )
         #
         _domain = self.stat.getStat()
         if _domain:
@@ -191,19 +195,19 @@ class CoreManager:
 
 def execute(command, args):
     if command in ['domain', 'dm']:
-        dm = D_MAN.DomainManager(DOMAIN_DIRECTORY)
+        dm = D_MAN.DomainManager( POSIX(DOMAIN_DIRECTORY) )
         return D_MAN.execute(dm, args.domain_command, args)
     
     if command in ['plugin', 'pm']:
-        pm = P_MAN.PluginManager(PLUGIN_DIRECTORY)
+        pm = P_MAN.PluginManager( POSIX(PLUGIN_DIRECTORY) )
         return P_MAN.execute(pm, args.plugin_command, args)
 
     if command in ['capability', 'cm']:
-        cm = C_MAN.CapabilityManager(CAPABILITY_DIRECTORY)
+        cm = C_MAN.CapabilityManager( POSIX(CAPABILITY_DIRECTORY) )
         return C_MAN.execute(cm, args.capability_command, args)
 
     if command in ['application', 'am']:
-        am = A_MAN.ApplicationManager(PARENT_ROOT)
+        am = A_MAN.ApplicationManager( POSIX(PARENT_ROOT) )
         return A_MAN.execute(am, args.application_command, args)
 
     cm = CoreManager()
