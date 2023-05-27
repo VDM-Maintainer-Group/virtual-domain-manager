@@ -1,13 +1,55 @@
 #!/usr/bin/env python3
-import random, math, string
-import shutil
-import sys, logging
-import json, tempfile
-from pathlib import Path
+import json
 from os import chdir
+from pathlib import Path
+import random
+import shutil
+import string
+import sys
+import tempfile
 
 STAT_FILENAME = 'stat'
 POSIX  = lambda x: x.as_posix() if hasattr(x, 'as_posix') else x
+
+class KeyringEnDec:
+    import crypt
+    from cryptography.fernet import Fernet
+    import keyring
+
+    def __init__(self, default_password='pyvdm'):
+        self.set_default_password( default_password )
+        pass
+
+    def salted_password(self, password:str) -> str:
+        _salt = self.crypt.mksalt( self.crypt.METHOD_SHA512 )
+        return self.crypt.crypt(password, _salt)
+
+    def set_default_password(self, password:str):
+        self.default_password = self.salted_password(password)
+        pass
+
+    def set_password(self, service:str, password:str):
+        # only support set password at first time
+        if self.keyring.get_password('pyvdm', service):
+            return
+        # store salted password
+        salted_password = self.salted_password( password )
+        self.keyring.set_password('pyvdm', service, salted_password)
+        pass
+
+    def encrypt(self, service:str, data:str) -> str:
+        password = self.keyring.get_password('pyvdm', service)
+        password = password if password else self.default_password
+        ##
+        data = self.Fernet(password).encrypt( data.encode() ).decode()
+        return data
+
+    def decrypt(self, service:str, data:str) -> str:
+        password = self.keyring.get_password('pyvdm', service)
+        password = password if password else self.default_password
+        ##
+        data = self.Fernet(password).decrypt( data.encode() ).decode()
+        return data
 
 class Tui:
     def __init__(self):
@@ -65,17 +107,14 @@ class Tui:
         _res = input('(split by space) >>> ').strip().split()
         if len(_res)==0 and defaults:
             return defaults
-        for idx,item in enumerate(_res):
-            try:
-                _res[idx] = int(item) - 1
-                if _res[idx]<0 or _res[idx]>=len(candidates):
-                    raise Exception
-            except:
-                print('Invalid Selection: \"%s\". Please try again.'%item)
-                return Tui(message, candidates, multi, retry=True)
-            pass
-        return _res
-
+        else:
+            _res = [ int(x)-1 for x in _res ]
+            _res = list( filter(lambda x: x>=0 and x<len(candidates), _res) )
+            if len(_res)==0:
+                print('Invalid Selection. Please try again.')
+                return Tui.select(message, candidates, defaults, multi, retry=True)
+            else:
+                return _res if multi else [_res[0]]
     pass
 
 class WorkSpace:
@@ -157,20 +196,20 @@ def json_dump(filename, config):
     fd.close()
     pass
 
-def retry_with_timeout(lamb_fn, timeout=1):
+def retry_with_timeout(lamb_fn, default=None, timeout=1):
     import time
     _now = time.time()
     ##
     try:
         ret = lamb_fn()
     except:
-        ret = None
+        ret = default
     ##
     while not ret and time.time()-_now<timeout:
         try:
             ret = lamb_fn()
         except:
-            ret = None
+            ret = default
         time.sleep(0.1)
     return ret
 

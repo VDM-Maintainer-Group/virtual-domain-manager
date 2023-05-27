@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-# fix relative path import
-import sys, time
+import argparse
 from pathlib import Path
-sys.path.append( Path(__file__).resolve().parent.as_posix() )
-# normal import
-import os, argparse, re, shutil
+import shutil
+import time
+
 import pyvdm.core.PluginManager as P_MAN
-from pyvdm.core.utils import *
+from pyvdm.core.utils import (Tui, POSIX, StatFile, json_load, json_dump)
 from pyvdm.core.errcode import DomainCode as ERR
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
