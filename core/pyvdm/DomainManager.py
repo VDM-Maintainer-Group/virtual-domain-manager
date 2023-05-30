@@ -85,7 +85,7 @@ class DomainManager():
 
     def update_domain(self, name, config):
         # check if domain open
-        if self.stat.getStat()==name:
+        if self.stat.getStat()['name']==name:
             return ERR.DOMAIN_IS_OPEN
         # check if domain exists
         if not (self.root / name).exists():
@@ -111,7 +111,7 @@ class DomainManager():
 
     def delete_domain(self, name):
         # check if domain open
-        if self.stat.getStat()==name:
+        if self.stat.getStat()['name']==name:
             return ERR.DOMAIN_IS_OPEN
         #
         shutil.rmtree( POSIX(self.root/name) )

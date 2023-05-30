@@ -170,15 +170,21 @@ class StatFile:
         shutil.move( self.temp_file, POSIX(self.stat_file) )
         pass
 
-    def getStat(self):
+    def getStat(self) -> dict:
         with open(POSIX(self.stat_file), 'r') as fd:
-            _name = fd.readline()
-        return _name
+            _name = fd.readline().strip()
+            try:
+                _stat = dict([ x.split('=') for x in fd.readlines() ])
+            except:
+                _stat = {}
+            _stat['name'] = _name
+        return _stat
 
-    def putStat(self, name):
+    def putStat(self, name:str, stat:dict={}) -> bool:
         try:
             with open(POSIX(self.stat_file), 'w') as fd:
-                fd.writelines([name])
+                _stat = [ f'{k}={v}' for k,v in stat.items() ]
+                fd.writelines([name, *_stat])
             return True
         except Exception as e:
             return False

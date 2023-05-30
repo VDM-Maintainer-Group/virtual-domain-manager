@@ -92,7 +92,7 @@ class TrayIcon(QSystemTrayIcon):
         pass
 
     def getCurrentDomain(self):
-        _name = self.cm.stat.getStat()
+        _name = self.cm.stat.getStat()['name']
         _name = None if not _name else _name
         return _name
 

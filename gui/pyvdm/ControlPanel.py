@@ -1064,7 +1064,7 @@ class ControlPanelWindow(QTabWidget):
             _executor[ self.sender() ]()
         except:
             # manually triggered
-            open_domain = self.core.stat.getStat()
+            open_domain = self.core.stat.getStat()['name']
             self.main_tab.refreshOverview(open_domain=open_domain)
             [ _func() for _func in _executor.values() ]
             # refresh DetailsArea in `dm_tab`

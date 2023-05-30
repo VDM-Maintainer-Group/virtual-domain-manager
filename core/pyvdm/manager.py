@@ -70,7 +70,7 @@ class CoreManager:
         self.pm = P_MAN.PluginManager( POSIX(PLUGIN_DIRECTORY), self.cm )
         self.am = A_MAN.ApplicationManager( POSIX(PARENT_ROOT), self.pm )
         #
-        _domain = self.stat.getStat()
+        _domain = self.stat.getStat()['name']
         if _domain:
             self.open_domain(_domain)
         pass
@@ -124,7 +124,7 @@ class CoreManager:
         return results
 
     def save_domain(self, delayed=False):
-        if not self.stat.getStat():
+        if not self.stat.getStat()['name']:
             return (DomainCode.DOMAIN_NOT_OPEN, '')
         # save to current open domain
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -140,6 +140,10 @@ class CoreManager:
             return True
 
     def open_domain(self, name):
+        ## not allow to open domain when one is open
+        if self.stat.getStat()['name']:
+            return (DomainCode.DOMAIN_IS_OPEN, '')
+        ##
         ret = self.load(name)
         if ret is not True:
             return (DomainCode.DOMAIN_LOAD_FAILED, ret)
@@ -159,7 +163,7 @@ class CoreManager:
             return True
 
     def close_domain(self):
-        if not self.stat.getStat():
+        if not self.stat.getStat()['name']:
             return (DomainCode.DOMAIN_NOT_OPEN, '')
         # onClose --> onStop
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -176,7 +180,7 @@ class CoreManager:
             return True
 
     def switch_domain(self, name):
-        if not self.stat.getStat():
+        if not self.stat.getStat()['name']:
             ret = self.open_domain(name)
             if ret is not True: return ret
         else:
@@ -194,6 +198,9 @@ class CoreManager:
     pass
 
 def execute(command, args):
+    if command=='run':
+        pass #TODO: run application
+
     if command in ['domain', 'dm']:
         dm = D_MAN.DomainManager( POSIX(DOMAIN_DIRECTORY) )
         return D_MAN.execute(dm, args.domain_command, args)
@@ -233,6 +240,11 @@ def main():
     parser.add_argument('--close', dest='close_flag', action='store_true',
         help='close the current open domain')
     subparsers = parser.add_subparsers(dest='command')
+
+    # run
+    run_parser = subparsers.add_parser('run', help='Run specified application.')
+    run_parser.add_argument('execute_command_line', nargs=argparse.REMAINDER,
+        help='execute command line')
 
     # domain_manager
     dm_parser = subparsers.add_parser('domain', aliases=['dm'],
