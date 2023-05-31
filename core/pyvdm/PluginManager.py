@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-# fix relative path import
-import sys, inspect
-from pathlib import Path
-sys.path.append( Path(__file__).resolve().parent.as_posix() )
-# normal import
-import os, argparse, re, dbus
-import tempfile, shutil
+import argparse
 import ctypes
-import multiprocessing as mp
-from importlib import import_module
 from distutils.version import LooseVersion
-from functools import partial, wraps
+from functools import wraps
+from importlib import import_module
+import inspect
+import multiprocessing as mp
+import os
+from pathlib import Path
+import re
+import requests
+import shutil
+import sys
+import tempfile
+from urllib.parse import urlparse
+
 from pyvdm.interface import SRC_API
 from pyvdm.core.utils import (POSIX, WorkSpace, json_load)
 from pyvdm.core.errcode import PluginCode as ERR
@@ -147,7 +151,7 @@ class PluginManager:
         self.temp = Path( tempfile.mkdtemp() )
         pass
 
-    def test_config(self, config):
+    def test_config(self, config) -> ERR:
         # test required config fields
         for key in REQUIRED_FIELDS:
             if key not in config:
@@ -174,7 +178,7 @@ class PluginManager:
             if (ret < 0) or (not Path(PLUGIN_BUILD_LEVEL, config['main']).exists()):
                 return ERR.PLUGIN_BUILD_FAILED
         # all test pass
-        return True
+        return ERR.ALL_CLEAN
 
     def getInstalledPlugin(self, name, required_version=None) -> MetaPlugin:
         _installed = list(sorted(self.root.glob( '%s-*.*'%name ), reverse=True))
@@ -219,9 +223,16 @@ class PluginManager:
                 other_plugins[k] = v
         return (gui_plugins, other_plugins)
 
-    def install(self, url):
-        #TODO: if with online url, download as file in _path
-        _path = Path(url).expanduser().resolve()
+    def install(self, url) -> ERR:
+        # if with online url, download as file in _path
+        if urlparse(url).scheme in ['http', 'https']:
+            with tempfile.NamedTemporaryFile(delete=False) as f:
+                f.write( requests.get(url).content )
+                _path = Path(f.name)
+        elif urlparse(url).scheme in ['file', '']:
+            _path = Path(url).expanduser().resolve()
+        else:
+            return ERR.ARCHIVE_INVALID
         # test whether a file provided or not
         if not _path.is_file():
             return ERR.ARCHIVE_INVALID
@@ -269,9 +280,9 @@ class PluginManager:
         #     if ('scripts' in _config) and ('post-install' in _config['scripts']):
         #         ret = os.system(_config['scripts']['post-install'])
         #     pass
-        return True
+        return ERR.ALL_CLEAN
 
-    def uninstall(self, names):
+    def uninstall(self, names) -> ERR:
         names = names if isinstance(names, list) else [names]
         with WorkSpace(self.root) as ws:
             for name in names:
@@ -283,7 +294,7 @@ class PluginManager:
                     print('Removed plugin: %s'%item.name)
                 pass
             pass
-        return True #always
+        return ERR.ALL_CLEAN #always
 
     def list(self, names=[]) -> dict:
         _regex = re.compile('(?P<name>.+)-(?P<version>\\d\\.\\d.*)')

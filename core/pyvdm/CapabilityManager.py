@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-# fix relative path import
-import sys, inspect
+import argparse
+import json
+import os
 from pathlib import Path
-sys.path.append( Path(__file__).resolve().parent.as_posix() )
-# normal import
-import os, psutil, argparse
-import tempfile, shutil
+import psutil
+import requests
+import shutil
 import subprocess as sp
+import tempfile
+from urllib.parse import urlparse
+
 from pyvdm.daemon.vdm_capability_daemon import CapabilityDaemon
-from pyvdm.core.utils import *
+from pyvdm.core.utils import (POSIX, )
 from pyvdm.core.errcode import CapabilityCode as ERR
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
@@ -33,22 +36,30 @@ class CapabilityManager:
     def install(self, url:str) -> ERR:
         from pyvdm.build import sbs_entry as sbs
 
-        url = Path(url)
-        #
-        if url.is_file():
+        ## check if url is local
+        if urlparse(url).scheme in ['http', 'https']:
+            with tempfile.NamedTemporaryFile(delete=False) as f:
+                f.write( requests.get(url).content )
+                _path = Path(f.name)
+        elif urlparse(url).scheme in ['file', '']:
+            _path = Path(url).expanduser().resolve()
+        else:
+            return ERR.URL_PARSE_FAILURE
+        ## check if url is archive
+        if _path.is_file():
             try:
-                tmp_dir = self.temp / url.name
-                shutil.unpack_archive( url.as_posix(), tmp_dir.as_posix() )
+                tmp_dir = self.temp / _path.name
+                shutil.unpack_archive( _path.as_posix(), tmp_dir.as_posix() )
                 _path = tmp_dir
             except:
                 return ERR.ARCHIVE_UNPACK_FAILED
-        elif url.is_dir():
-            _path = url.expanduser().resolve()
+        elif _path.is_dir():
+            _path = _path.expanduser().resolve()
         else:
             return ERR.URL_PARSE_FAILURE
-        #
-        ret = sbs('install', [_path.as_posix()])[0]
-        if ret==True:
+        ##
+        ret = sbs('install', [_path.as_posix()])
+        if ret and ret[0]==True:
             return ERR.ALL_CLEAN
         else:
             print(ret)
@@ -57,8 +68,8 @@ class CapabilityManager:
     def uninstall(self, name:str) -> ERR:
         from pyvdm.build import sbs_entry as sbs
 
-        ret = sbs('uninstall', [name])[0]
-        if ret==True:
+        ret = sbs('uninstall', [name])
+        if ret and ret[0]==True:
             return ERR.ALL_CLEAN
         else:
             print(ret)
@@ -103,9 +114,9 @@ class CapabilityManager:
     def daemon(self, option) -> ERR:
         name = 'VDM-Capability-Daemon'
         proc_iter = psutil.process_iter(attrs=['cmdline', 'pid'])
-        proc = next( (x for x in proc_iter if name in ' '.join(x.info['cmdline'])), '' )
-        #
-        def _start(force=False):
+        proc = next( (x for x in proc_iter if name in ' '.join(x.info['cmdline'])), '' ) #type: ignore
+        ##
+        def _start(force=False) -> ERR:
             if proc and not force:
                 return ERR.DAEMON_ALREADY_EXISTS
             _file = (self.temp/name).as_posix()
@@ -113,17 +124,20 @@ class CapabilityManager:
                 f.write('import sys; import pyvdm.core.CapabilityManager as C_MAN; C_MAN._start_daemon(sys.argv[1])')
             sp.Popen(['python3', _file, self.root.as_posix()])
             return ERR.ALL_CLEAN
-        def _stop():
+        ##
+        def _stop() -> ERR:
             if proc:
-                psutil.Process( proc.info['pid'] ).terminate()
+                psutil.Process( proc.info['pid'] ).terminate() #type: ignore
             return ERR.ALL_CLEAN
-        def _restart():
+        ##
+        def _restart() -> ERR:
             _stop(); _start(True)
             return ERR.ALL_CLEAN
-        def _status():
+        ##
+        def _status() -> ERR:
             return ERR.DAEMON_IS_RUNNING if proc else ERR.DAEMON_IS_STOPPED
-        #
-        return {'start':_start, 'stop':_stop, 'restart':_restart, 'status':_status}.get(option)()
+        ##
+        return {'start':_start, 'stop':_stop, 'restart':_restart, 'status':_status}[option]()
 
     pass
 

@@ -97,7 +97,7 @@ class DefaultCompatibility:
     pass
 
 class CompatibleInterface:
-    def __init__(self, sess, dbus_name) -> None:
+    def __init__(self, sess, dbus_name):
         self.dbus_name = str( dbus_name )
         self.dbus_iface = dbus.Interface(
             sess.get_object('org.freedesktop.DBus', '/'), 'org.freedesktop.DBus')

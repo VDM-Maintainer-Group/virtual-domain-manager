@@ -63,7 +63,7 @@ class DomainManager():
         return config
 
     #---------- offline domain operations ----------#
-    def create_domain(self, name, config):
+    def create_domain(self, name, config) -> ERR:
         # return if already exist
         if (self.root / name).exists():
             return ERR.DOMAIN_ALREADY_EXIST
@@ -81,9 +81,9 @@ class DomainManager():
         for _name in config['plugins'].keys():
             StatFile(domain_path, _name).touch()
         print('Domain \"%s\" created.'%name)
-        return True
+        return ERR.ALL_CLEAN
 
-    def update_domain(self, name, config):
+    def update_domain(self, name, config) -> ERR:
         # check if domain open
         if self.stat.getStat()['name']==name:
             return ERR.DOMAIN_IS_OPEN
@@ -107,17 +107,17 @@ class DomainManager():
         for _name in config['plugins'].keys():
             StatFile(self.root / name, _name).touch()
         print('Domain \"%s\" updated.'%name)
-        return True
+        return ERR.ALL_CLEAN
 
-    def delete_domain(self, name):
+    def delete_domain(self, name) -> ERR:
         # check if domain open
         if self.stat.getStat()['name']==name:
             return ERR.DOMAIN_IS_OPEN
         #
         shutil.rmtree( POSIX(self.root/name) )
-        return True
+        return ERR.ALL_CLEAN
 
-    def list_domain(self, names=[]):
+    def list_domain(self, names=[]) -> dict:
         result = dict()
         for item in self.root.iterdir():
             _config = item / CONFIG_FILENAME
