@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-from pyvdm.gui.utils import CONFIG
-import sys, time
+import sys
+import time
 from PyQt5.QtCore import (QEasingCurve, QPropertyAnimation, Qt, QSize, QRect, QTimer, QUrl,
                     QThread, pyqtSignal, pyqtSlot)
 from PyQt5.QtGui import (QBrush, QColor, QMovie, QPainter, QPen, QPixmap)
 from PyQt5.QtWidgets import (QApplication, QGraphicsOpacityEffect, QLabel, QProxyStyle, QWidget,
                     QDesktopWidget, QLayout, QGridLayout)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
+
+from pyvdm.gui.utils import CONFIG
 
 SIZE_FULLSCREEN = -1
 SIZE_ORIGINAL   = 0

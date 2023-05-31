@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-from pyvdm.gui.utils import (ASSETS, CONFIG, THEMES, THEMES_FOLDER, POSIX, MFWorker)
-from pathlib import Path
-import json, time, base64
+import base64
 from datetime import datetime
+import json
+from pathlib import Path
+import time
 from urllib import request as url_request
-from pyvdm.core.errcode import (CapabilityCode, )
-from pyvdm.core.manager import CoreManager
+
 from PyQt5.QtCore import (Qt, QTimer, QUrl, QMargins, pyqtSignal, pyqtSlot)
 from PyQt5.QtGui import (QIcon, QDesktopServices)
 from PyQt5.QtWidgets import (QApplication, QTabWidget, QDesktopWidget, QAbstractItemView, QHeaderView,
@@ -14,6 +14,10 @@ from PyQt5.QtWidgets import (QListWidget, QListWidgetItem, QTableWidget, QTableW
 from PyQt5.QtWidgets import (QGridLayout, QFormLayout, QHBoxLayout, QVBoxLayout, QLayout,
             QScrollArea)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
+
+from pyvdm.core.manager import CoreManager
+from pyvdm.core.errcode import (CapabilityCode, )
+from pyvdm.gui.utils import (ASSETS, CONFIG, THEMES, THEMES_FOLDER, POSIX, MFWorker)
 
 def setVerticalScrollLayout(container, layout):
     scroll_area = QScrollArea( container )
@@ -323,7 +327,7 @@ class MainTabWidget(QWidget):
 class InformationArea(QTableWidget):
     send_signal = pyqtSignal(str)
 
-    def __init__(self, parent, loader, header, slots=None, entry=0):
+    def __init__(self, parent, loader, header, slots=[], entry=0):
         super().__init__(parent)
         self.loader = loader
         self.header = header
@@ -1064,7 +1068,7 @@ class ControlPanelWindow(QTabWidget):
             _executor[ self.sender() ]()
         except:
             # manually triggered
-            open_domain = self.core.stat.getStat()['name']
+            open_domain = self.core.dm.open_domain_name
             self.main_tab.refreshOverview(open_domain=open_domain)
             [ _func() for _func in _executor.values() ]
             # refresh DetailsArea in `dm_tab`

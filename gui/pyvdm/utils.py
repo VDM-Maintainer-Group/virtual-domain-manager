@@ -3,14 +3,15 @@ from collections.abc import MutableMapping
 import configparser
 from pathlib import Path
 import pkg_resources
-from pyvdm.core.manager import PARENT_ROOT
 from PyQt5.QtCore import (Qt, QObject, QThread)
 import time
+
+from pyvdm.core.manager import VDM_HOME
 
 POSIX  = lambda x: x.as_posix() if hasattr(x, 'as_posix') else x
 ASSETS = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/'+_)
 THEMES = lambda _: pkg_resources.resource_filename('pyvdm', 'assets/themes/'+_)
-THEMES_FOLDER = PARENT_ROOT / 'themes'
+THEMES_FOLDER = VDM_HOME / 'themes'
 
 THEMES_FOLDER.mkdir(parents=True, exist_ok=True)
 
@@ -207,7 +208,7 @@ class ConfigFile(MutableMapping):
         self.global_config = configparser.ConfigParser(allow_no_value=True, default_section='default')
         self.global_config.read( ASSETS('pyvdm-gui.conf') )
         #
-        self.config_file = POSIX(PARENT_ROOT/'pyvdm-gui.conf')
+        self.config_file = POSIX(VDM_HOME/'pyvdm-gui.conf')
         self.user_config = configparser.ConfigParser(allow_no_value=True, default_section='default')
         try:
             self.user_config.read( self.config_file )
