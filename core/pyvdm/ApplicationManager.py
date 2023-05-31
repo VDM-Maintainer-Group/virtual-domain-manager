@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-import os, json
-import dbus
-import time, psutil
 import argparse
-import subprocess
-from pathlib import Path
 from configparser import RawConfigParser
+import dbus
+import json
+import os
+from pathlib import Path
+import psutil
+import re
+import subprocess
+from termcolor import colored
+
 import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.PluginManager import MetaPlugin
 from pyvdm.core.errcode import ApplicationCode as ERR
@@ -262,12 +266,12 @@ class ApplicationManager:
         applications = dict()
         ##
         try:
-            data_dirs = os.environ['XDG_DATA_DIRS'].split(':')
+            data_dirs = os.environ['XDG_DATA_DIRS'].split(':')[::-1] #reverse for priority
         except:
-            data_dirs = ['/usr/local/share', '/usr/share']
+            data_dirs = ['/usr/local/share', '/usr/share', '~/.local/share']
         ##
         for xdg_path in data_dirs:
-            app_dir = Path(xdg_path) / 'applications'
+            app_dir = Path(xdg_path).expanduser() / 'applications'
             if app_dir.exists():
                 for app_file in app_dir.glob('*.desktop'):
                     app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
@@ -278,6 +282,7 @@ class ApplicationManager:
                                 "name": app_conf['Desktop Entry']['Name'],
                                 "exec": app_conf['Desktop Entry']['Exec'],
                                 "icon": app_conf['Desktop Entry']['Icon'],
+                                "path": app_file.as_posix(),
                                 "compatible": _compatibility_filter(app_conf) 
                             }
                         except Exception as e:
@@ -285,6 +290,32 @@ class ApplicationManager:
                     pass
             pass
         return applications
+
+    @staticmethod
+    def restore_desktop_files():
+        try:
+            data_dirs = os.environ['XDG_DATA_DIRS'].split(':')[::-1] #reverse for priority
+        except:
+            data_dirs = ['/usr/local/share', '/usr/share', '~/.local/share']
+        ##
+        for xdg_path in data_dirs:
+            app_dir = Path(xdg_path).expanduser() / 'applications'
+            if app_dir.exists():
+                for app_file in app_dir.glob('*.desktop'):
+                    app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
+                    app_conf.read( app_file.as_posix() )
+                    try:
+                        cmdline = app_conf['Desktop Entry']['Exec']
+                        orig_cmdline = re.findall('\\/bin\\/sh -c "pyvdm run (.*) \\|\\|.*"', cmdline)[0]
+                        if orig_cmdline:
+                            app_conf['Desktop Entry']['Exec'] = orig_cmdline
+                            with open(app_file.as_posix(), 'w') as f:
+                                app_conf.write(f)
+                            _colored_cmdline = colored(orig_cmdline, 'green')
+                            print( f'"{app_file}" restored to:\t"{_colored_cmdline}".' )
+                    except:
+                        pass
+        pass
 
     def __init__(self, root='', pm=None):
         if root:
@@ -299,7 +330,6 @@ class ApplicationManager:
             self.pm = pm
         ##
         self.applications = dict()
-        self.refresh()
         pass
 
     @staticmethod
@@ -312,6 +342,7 @@ class ApplicationManager:
         return ''
 
     def instantiate_plugin(self, app_name) -> MetaPlugin:
+        if not self.applications: self.refresh()
         app = self.applications[app_name]
         compatibility = app['compatible']
         ##
@@ -323,6 +354,22 @@ class ApplicationManager:
             return MetaPlugin( app_name, DefaultCompatibility(app_name, app) )
         else:
             return self.pm.getInstalledPlugin(compatibility)
+        pass
+
+    def __update_desktop_file(self, app):
+        cmdline = app['exec']
+        if 'pyvdm' not in cmdline:
+            app_file = Path(app['path'])
+            app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
+            app_conf.read( app_file.as_posix() )
+            ##
+            cmdline = f'/bin/sh -c "pyvdm run {cmdline} || {cmdline}"'
+            app['exec'] = cmdline
+            app_conf['Desktop Entry']['Exec'] = cmdline
+            ##
+            alt_app_file = Path.home()/'.local'/'share'/'applications'/app_file.name
+            with open(alt_app_file.as_posix(), 'w') as f:
+                app_conf.write(f)
         pass
 
     def refresh(self):
@@ -339,6 +386,9 @@ class ApplicationManager:
                         app['compatible'] = HINT_GENERATED
                 ##
                 self.applications[app_name] = app
+            ##
+            if app['compatible']!=HINT_GENERATED:
+                self.__update_desktop_file(app)
         ##
         _applications = self.applications
         _applications = dict(sorted( _applications.items(), key=lambda x:x[1]['name'] ))
@@ -347,12 +397,14 @@ class ApplicationManager:
         pass
 
     def show_compatibility(self):
+        if not self.applications: self.refresh()
         ret = { k:v['compatible'] for k,v in self.applications.items() }
         ret = dict(sorted(ret.items(), key=lambda x:x[1], reverse=True))
         print( json.dumps(ret, indent=4) )
         return ret
 
     def overview_compatibility(self):
+        if not self.applications: self.refresh()
         _native, _none = 0, 0
         _total = len(self.applications)
         for k,v in self.applications.items():
@@ -366,6 +418,8 @@ def execute(am, command, args, verbose=False):
     assert( isinstance(am, ApplicationManager) )
     if command=='list':
         am.show_compatibility()
+    elif command=='restore':
+        ApplicationManager.restore_desktop_files()
     elif command==None:
         _total, _native, _plugin = am.overview_compatibility()
         print(f'{_native} native + {_plugin} by-plugin supported, out of {_total} GUI APPs.')
@@ -376,6 +430,8 @@ def execute(am, command, args, verbose=False):
 def init_subparsers(subparsers):
     p_list = subparsers.add_parser('list',
         help='list all supported applications.')
+    p_restore = subparsers.add_parser('restore',
+        help='restore all desktop files to original.')
     pass
 
 if __name__ == "__main__":

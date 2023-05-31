@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-# fix relative path import
-import sys
-from pathlib import Path
-sys.path.append( Path(__file__).resolve().parent.as_posix() )
-# normal import
-import os, argparse, re
-import json
-import traceback
+import argparse
 import concurrent.futures
+import json
+from pathlib import Path
+import traceback
+
 import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
 import pyvdm.core.CapabilityManager as C_MAN
 import pyvdm.core.ApplicationManager as A_MAN
-from pyvdm.core.utils import (POSIX, StatFile)
+from pyvdm.core.utils import (POSIX, SHELL_POPEN, StatFile)
 from pyvdm.core.errcode import (ErrorCode, DomainCode, PluginCode)
 from pyvdm.interface import SRC_API
 
@@ -21,10 +18,10 @@ try:
 except:
     __version__ = '0.0.0'
 
-PARENT_ROOT = Path('~/.vdm').expanduser()
-PLUGIN_DIRECTORY = PARENT_ROOT / 'plugins'
-DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
-CAPABILITY_DIRECTORY = PARENT_ROOT / 'capability'
+VDM_HOME = Path('~/.vdm').expanduser()
+PLUGIN_DIRECTORY = VDM_HOME / 'plugins'
+DOMAIN_DIRECTORY = VDM_HOME / 'domains'
+CAPABILITY_DIRECTORY = VDM_HOME / 'capability'
 
 class CoreMetaPlugin(SRC_API):
     from pyvdm.interface import CapabilityLibrary
@@ -64,13 +61,12 @@ class CoreManager:
         self.root = DOMAIN_DIRECTORY
         self.root.mkdir(exist_ok=True, parents=True)
         #
-        self.stat = StatFile(PARENT_ROOT)
         self.dm = D_MAN.DomainManager( POSIX(DOMAIN_DIRECTORY) )
         self.cm = C_MAN.CapabilityManager( POSIX(CAPABILITY_DIRECTORY) )
         self.pm = P_MAN.PluginManager( POSIX(PLUGIN_DIRECTORY), self.cm )
-        self.am = A_MAN.ApplicationManager( POSIX(PARENT_ROOT), self.pm )
+        self.am = A_MAN.ApplicationManager( POSIX(VDM_HOME), self.pm )
         #
-        _domain = self.stat.getStat()['name']
+        _domain = self.dm.open_domain_name
         if _domain:
             self.open_domain(_domain)
         pass
@@ -105,7 +101,7 @@ class CoreManager:
         global_stat   = StatFile(DOMAIN_DIRECTORY/name, '.global')
         self.plugins.update({ global_plugin : global_stat })
 
-        return True
+        return PluginCode.ALL_CLEAN
 
     #---------- online domain operations -----------#
     def executeBlade(self, executor, worker):
@@ -123,64 +119,74 @@ class CoreManager:
         results = None if len(results)==0 else results
         return results
 
-    def save_domain(self, delayed=False):
-        if not self.stat.getStat()['name']:
+    def save_domain(self, delayed=False) -> tuple:
+        if not self.dm.open_domain_name:
             return (DomainCode.DOMAIN_NOT_OPEN, '')
         # save to current open domain
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            def _worker(plugin, stat):
-                if plugin.onSave( stat.getFile() ) < 0:
-                    return (DomainCode.DOMAIN_SAVE_FAILED, plugin.name)
-                else:
-                    if not delayed: stat.putFile()
-                    return None
-            #
-            results = self.executeBlade(executor, _worker)
-            if results: return results
-            return True
+        try:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                def _worker(plugin, stat):
+                    if plugin.onSave( stat.getFile() ) < 0:
+                        return (DomainCode.DOMAIN_SAVE_FAILED, plugin.name)
+                    else:
+                        if not delayed: stat.putFile()
+                        return None
+                #
+                results = self.executeBlade(executor, _worker)
+                if results: raise Exception( str(results) )
+                return (DomainCode.ALL_CLEAN, '')
+        except:
+            return (DomainCode.DOMAIN_SAVE_FAILED, traceback.format_exc())
 
-    def open_domain(self, name):
-        ## not allow to open domain when one is open
-        if self.stat.getStat()['name']:
-            return (DomainCode.DOMAIN_IS_OPEN, '')
-        ##
+    def open_domain(self, name) -> tuple:
+        ## prepare domain
+        ret_code = self.dm.initialize_domain(name)
+        if ret_code is not DomainCode.ALL_CLEAN:
+            return (DomainCode.DOMAIN_START_FAILED, hex(ret_code)) #type: ignore
+        ## load domain-specific plugins
         ret = self.load(name)
-        if ret is not True:
+        if ret is not PluginCode.ALL_CLEAN:
             return (DomainCode.DOMAIN_LOAD_FAILED, ret)
-        # onStart --> onResume
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            def _worker(plugin, stat):
-                if plugin.onStart() < 0:
-                    return (DomainCode.DOMAIN_START_FAILED, plugin.name)
-                if plugin.onResume( stat.getFile() ) < 0:
-                    return (DomainCode.DOMAIN_RESUME_FAILED, plugin.name)
-                return None
-            #
-            results = self.executeBlade(executor, _worker)
-            if results: return results
-            # put new stat
-            self.stat.putStat(name)
-            return True
+        ## onStart --> onResume
+        try:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                def _worker(plugin, stat):
+                    if plugin.onStart() < 0:
+                        return (DomainCode.DOMAIN_START_FAILED, plugin.name)
+                    if plugin.onResume( stat.getFile() ) < 0:
+                        return (DomainCode.DOMAIN_RESUME_FAILED, plugin.name)
+                    return None
+                #
+                results = self.executeBlade(executor, _worker)
+                if results: raise Exception( str(results) )
+                return (DomainCode.ALL_CLEAN, '')
+        except:
+            self.dm.finalize_domain()
+            return (DomainCode.DOMAIN_START_FAILED, traceback.format_exc())
+        pass
 
     def close_domain(self):
-        if not self.stat.getStat()['name']:
+        if not self.dm.open_domain_name:
             return (DomainCode.DOMAIN_NOT_OPEN, '')
         # onClose --> onStop
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            def _worker(plugin, stat):
-                if plugin.onClose() < 0:
-                    return (DomainCode.DOMAIN_CLOSE_FAILED, plugin.name)
-                if plugin.onStop() < 0:
-                    return (DomainCode.DOMAIN_STOP_FAILED, plugin.name)
-            #
-            results = self.executeBlade(executor, _worker)
-            if results: return results
-            # put empty stat
-            self.stat.putStat('')
-            return True
+        try:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                def _worker(plugin, stat):
+                    if plugin.onClose() < 0:
+                        return (DomainCode.DOMAIN_CLOSE_FAILED, plugin.name)
+                    if plugin.onStop() < 0:
+                        return (DomainCode.DOMAIN_STOP_FAILED, plugin.name)
+                #
+                results = self.executeBlade(executor, _worker)
+                if results: raise Exception( str(results) )
+                self.dm.finalize_domain()
+                return (DomainCode.ALL_CLEAN, '')
+        except:
+            return (DomainCode.DOMAIN_CLOSE_FAILED, traceback.format_exc())
+        pass
 
     def switch_domain(self, name):
-        if not self.stat.getStat()['name']:
+        if not self.dm.open_domain_name:
             ret = self.open_domain(name)
             if ret is not True: return ret
         else:
@@ -199,7 +205,13 @@ class CoreManager:
 
 def execute(command, args):
     if command=='run':
-        pass #TODO: run application
+        _stat = StatFile(VDM_HOME).getStat()
+        if _stat['name']:
+            target_pid = _stat['pid']
+            SHELL_POPEN(f'/usr/bin/nsenter -t {target_pid} -a -- {args.execute_command_line}')
+        else:
+            SHELL_POPEN(args.execute_command_line)
+        return
 
     if command in ['domain', 'dm']:
         dm = D_MAN.DomainManager( POSIX(DOMAIN_DIRECTORY) )
@@ -214,7 +226,7 @@ def execute(command, args):
         return C_MAN.execute(cm, args.capability_command, args)
 
     if command in ['application', 'am']:
-        am = A_MAN.ApplicationManager( POSIX(PARENT_ROOT) )
+        am = A_MAN.ApplicationManager( POSIX(VDM_HOME) )
         return A_MAN.execute(am, args.application_command, args)
 
     cm = CoreManager()

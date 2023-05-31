@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import argparse
+import os
 from pathlib import Path
+import psutil
 import shutil
 import time
 
 import pyvdm.core.PluginManager as P_MAN
-from pyvdm.core.utils import (Tui, POSIX, StatFile, json_load, json_dump)
+from pyvdm.core.utils import (POSIX, SHELL_POPEN, StatFile, Tui, json_load, json_dump)
 from pyvdm.core.errcode import DomainCode as ERR
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
@@ -22,6 +24,10 @@ class DomainManager():
         self.stat = StatFile( POSIX(self.root.parent) )
         self.stat.touch()
         pass
+
+    @property
+    def open_domain_name(self):
+        return self.stat.getStat()['name']
 
     def getDomainConfig(self, name):
         name = str(name)
@@ -62,6 +68,37 @@ class DomainManager():
             config['created_time'] = config['last_update_time']
         return config
 
+    #---------- online domain operations -----------#
+    def initialize_domain(self, name) -> ERR:
+        stat = self.stat.getStat()
+        ## check if domain already open
+        if stat['name'] and psutil.pid_exists(stat['pid']):
+            return ERR.DOMAIN_IS_OPEN
+        ##
+        process = SHELL_POPEN('exec /usr/bin/unshare -rm -- /bin/sh --norc')
+        process.stdin.writelines([ #type: ignore
+            #TODO: mount overlays and ignore: "$HOME/.local/share/Trash", "$HOME/.cache"
+            'mount -t overlay overlay ',
+            'sleep infinity'
+        ])
+        ##
+        _, stderr = process.communicate()
+        if stderr: return ERR.DOMAIN_START_FAILED
+        ##
+        self.stat.putStat(name, pid=process.pid)
+        return ERR.ALL_CLEAN
+
+    def finalize_domain(self):
+        stat = self.stat.getStat()
+        if not stat['name']:
+            return
+        ## kill the daemon process
+        pid = stat['pid']
+        os.system(f'kill -9 {pid}')
+        ##
+        self.stat.putStat('')
+        pass
+
     #---------- offline domain operations ----------#
     def create_domain(self, name, config) -> ERR:
         # return if already exist
@@ -85,7 +122,7 @@ class DomainManager():
 
     def update_domain(self, name, config) -> ERR:
         # check if domain open
-        if self.stat.getStat()['name']==name:
+        if self.open_domain_name==name:
             return ERR.DOMAIN_IS_OPEN
         # check if domain exists
         if not (self.root / name).exists():
@@ -111,7 +148,7 @@ class DomainManager():
 
     def delete_domain(self, name) -> ERR:
         # check if domain open
-        if self.stat.getStat()['name']==name:
+        if self.open_domain_name==name:
             return ERR.DOMAIN_IS_OPEN
         #
         shutil.rmtree( POSIX(self.root/name) )

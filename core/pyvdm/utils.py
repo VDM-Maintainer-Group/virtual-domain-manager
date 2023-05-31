@@ -5,11 +5,14 @@ from pathlib import Path
 import random
 import shutil
 import string
+import subprocess as sp
 import sys
 import tempfile
 
 STAT_FILENAME = 'stat'
 POSIX  = lambda x: x.as_posix() if hasattr(x, 'as_posix') else x
+SHELL_RUN = lambda x: sp.run(x, capture_output=True, check=True, shell=True)
+SHELL_POPEN = lambda x: sp.Popen(x, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE, shell=True, text=True)
 
 class KeyringEnDec:
     import crypt
@@ -180,7 +183,7 @@ class StatFile:
             _stat['name'] = _name
         return _stat
 
-    def putStat(self, name:str, stat:dict={}) -> bool:
+    def putStat(self, name:str, **stat) -> bool:
         try:
             with open(POSIX(self.stat_file), 'w') as fd:
                 _stat = [ f'{k}={v}' for k,v in stat.items() ]
