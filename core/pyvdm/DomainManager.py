@@ -3,7 +3,7 @@ import argparse
 import os
 from pathlib import Path
 import psutil
-import shutil
+import tempfile
 import time
 
 import pyvdm.core.PluginManager as P_MAN
@@ -42,13 +42,13 @@ class DomainManager():
         json_dump(_filename, config)
         pass
 
-    def configTui(self, name, config=None):
+    def configTui(self, name, config={}) -> dict:
         if not isinstance(config, dict):
             config = dict()
         # create/update domain name
         if 'name' not in config:
             if not Tui.confirm('Create new domain \"%s\"?'%name):
-                return None #error
+                return {} #error
             config['name'] = name
         else:
             config['name'] = Tui.ask('Domain Name', default=name)
@@ -69,21 +69,35 @@ class DomainManager():
         return config
 
     #---------- online domain operations -----------#
-    def initialize_domain(self, name) -> ERR:
+    def initialize_domain(self, name:str) -> ERR:
         stat = self.stat.getStat()
         ## check if domain already open
         if stat['name'] and psutil.pid_exists(stat['pid']):
             return ERR.DOMAIN_IS_OPEN
+        ## setup lowerdir, upperdir, workdir
+        lower_dirs = [ p for p in Path.home().glob('*') if p.is_dir() and not p.name.startswith('.') ]
+        lowerdir = ':'.join( [str(p) for p in lower_dirs] )
+        overlay = self.root / name / 'overlay'
+        upperdir = Path(tempfile.gettempdir()) / f'vdm-{name}-upperdir'
+        workdir = tempfile.mkdtemp()
+        ## prepare overlay
+        upperdir.mkdir(parents=True, exist_ok=True)
+        if overlay.exists():
+            overlay.unlink() if overlay.is_symlink() else overlay.replace(upperdir)
+        overlay.symlink_to(upperdir)
         ##
         process = SHELL_POPEN('exec /usr/bin/unshare -rm -- /bin/sh --norc')
-        process.stdin.writelines([ #type: ignore
-            #TODO: mount overlays and ignore: "$HOME/.local/share/Trash", "$HOME/.cache"
-            'mount -t overlay overlay ',
-            'sleep infinity'
+        assert( process.stdin is not None )
+        process.stdin.writelines([
+            #FIXME: correctly mount the overlay
+            f'mount -t overlay overlay -o lowerdir={lowerdir},upperdir={upperdir},workdir={workdir} $HOME\n',
+            'exec /usr/bin/unshare --map-group=$USER --map-user=$USER -- /bin/sh --norc\n',
+            'sleep infinity\n'
         ])
         ##
-        _, stderr = process.communicate()
-        if stderr: return ERR.DOMAIN_START_FAILED
+        if process.poll():
+            _, stderr = process.communicate()
+            if stderr: return ERR.DOMAIN_START_FAILED
         ##
         self.stat.putStat(name, pid=process.pid)
         return ERR.ALL_CLEAN
@@ -95,12 +109,17 @@ class DomainManager():
         ## kill the daemon process
         pid = stat['pid']
         os.system(f'kill -9 {pid}')
-        ##
+        ## move the upperdir back to overlay
+        name = str(stat['name'])
+        overlay = self.root / name / 'overlay'
+        upperdir = Path(tempfile.gettempdir()) / f'vdm-{name}-upperdir'
+        overlay.unlink(missing_ok=True)
+        upperdir.replace(overlay)
         self.stat.putStat('')
         pass
 
     #---------- offline domain operations ----------#
-    def create_domain(self, name, config) -> ERR:
+    def create_domain(self, name:str, config:dict) -> ERR:
         # return if already exist
         if (self.root / name).exists():
             return ERR.DOMAIN_ALREADY_EXIST
@@ -120,7 +139,7 @@ class DomainManager():
         print('Domain \"%s\" created.'%name)
         return ERR.ALL_CLEAN
 
-    def update_domain(self, name, config) -> ERR:
+    def update_domain(self, name:str, config:dict) -> ERR:
         # check if domain open
         if self.open_domain_name==name:
             return ERR.DOMAIN_IS_OPEN
@@ -135,7 +154,7 @@ class DomainManager():
             return ERR.DOMAIN_CONFIG_FAILED
         # rename the domain if necessary
         if config['name']!=name:
-            shutil.move( POSIX(self.root/name), POSIX(self.root/config['name']) )
+            ( self.root / name ).replace( self.root / config['name'] )
             name = config['name']
             pass
         # save the config file
@@ -146,12 +165,12 @@ class DomainManager():
         print('Domain \"%s\" updated.'%name)
         return ERR.ALL_CLEAN
 
-    def delete_domain(self, name) -> ERR:
+    def delete_domain(self, name:str) -> ERR:
         # check if domain open
         if self.open_domain_name==name:
             return ERR.DOMAIN_IS_OPEN
         #
-        shutil.rmtree( POSIX(self.root/name) )
+        (self.root / name).unlink(missing_ok=True)
         return ERR.ALL_CLEAN
 
     def list_domain(self, names=[]) -> dict:

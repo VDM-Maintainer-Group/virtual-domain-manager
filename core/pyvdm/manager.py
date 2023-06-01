@@ -2,6 +2,7 @@
 import argparse
 import concurrent.futures
 import json
+import os
 from pathlib import Path
 import traceback
 
@@ -9,7 +10,7 @@ import pyvdm.core.PluginManager as P_MAN
 import pyvdm.core.DomainManager as D_MAN
 import pyvdm.core.CapabilityManager as C_MAN
 import pyvdm.core.ApplicationManager as A_MAN
-from pyvdm.core.utils import (POSIX, SHELL_POPEN, StatFile)
+from pyvdm.core.utils import (POSIX, StatFile)
 from pyvdm.core.errcode import (ErrorCode, DomainCode, PluginCode)
 from pyvdm.interface import SRC_API
 
@@ -207,11 +208,11 @@ def execute(command, args):
     if command=='run':
         _stat = StatFile(VDM_HOME).getStat()
         if _stat['name']:
-            target_pid = _stat['pid']
-            SHELL_POPEN(f'/usr/bin/nsenter -t {target_pid} -a -- {args.execute_command_line}')
+            target_pid = str(_stat['pid'])
+            os.execl('/usr/bin/nsenter', '--preserve-credentials', '-U', '-m', '-t', target_pid, '--', *args.execute_command_line)
         else:
-            SHELL_POPEN(args.execute_command_line)
-        return
+            os.execl( *args.execute_command_line )
+        pass
 
     if command in ['domain', 'dm']:
         dm = D_MAN.DomainManager( POSIX(DOMAIN_DIRECTORY) )
