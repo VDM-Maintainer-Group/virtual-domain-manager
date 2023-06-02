@@ -306,7 +306,7 @@ class ApplicationManager:
                     app_conf.read( app_file.as_posix() )
                     try:
                         cmdline = app_conf['Desktop Entry']['Exec']
-                        orig_cmdline = re.findall('\\/bin\\/sh -c "pyvdm run (.*) \\|\\|.*"', cmdline)[0]
+                        orig_cmdline = re.findall('\\/bin\\/sh -c "\\(which pyvdm \\&\\& exec pyvdm run (.*)\\) \\|\\|.*"', cmdline)[0]
                         if orig_cmdline:
                             app_conf['Desktop Entry']['Exec'] = orig_cmdline
                             with open(app_file.as_posix(), 'w') as f:
@@ -363,7 +363,7 @@ class ApplicationManager:
             app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
             app_conf.read( app_file.as_posix() )
             ##
-            cmdline = f'/bin/sh -c "pyvdm run {cmdline} || {cmdline}"'
+            cmdline = f'/bin/sh -c "(which pyvdm && exec pyvdm run {cmdline}) || (exec {cmdline})"'
             app['exec'] = cmdline
             app_conf['Desktop Entry']['Exec'] = cmdline
             ##

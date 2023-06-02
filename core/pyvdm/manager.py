@@ -25,8 +25,9 @@ DOMAIN_DIRECTORY = VDM_HOME / 'domains'
 CAPABILITY_DIRECTORY = VDM_HOME / 'capability'
 
 class CoreMetaPlugin(SRC_API):
-    from pyvdm.interface import CapabilityLibrary
-    xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
+    def __init__(self):
+        from pyvdm.interface import CapabilityLibrary
+        self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
 
     def onStart(self): pass
     def onStop(self): pass
@@ -209,9 +210,10 @@ def execute(command, args):
         _stat = StatFile(VDM_HOME).getStat()
         if _stat['name']:
             target_pid = str(_stat['pid'])
-            os.execl('/usr/bin/nsenter', '--preserve-credentials', '-U', '-m', '-t', target_pid, '--', *args.execute_command_line)
+            os.execl('/usr/bin/nsenter',
+                     '/usr/bin/nsenter', '--preserve-credentials', '-U', '-m', '-t', target_pid, '--', *args.execute_command_line)
         else:
-            os.execl( *args.execute_command_line )
+            os.execl( args.execute_command_line[0], *args.execute_command_line )
         pass
 
     if command in ['domain', 'dm']:
