@@ -75,8 +75,9 @@ class DomainManager():
         if stat['name'] and psutil.pid_exists(stat['pid']):
             return ERR.DOMAIN_IS_OPEN
         ## setup lowerdir, upperdir, workdir
-        lower_dirs = [ p for p in Path.home().glob('*') if p.is_dir() and not p.name.startswith('.') ]
-        lowerdir = ':'.join( [str(p) for p in lower_dirs] )
+        # lower_dirs = [ p for p in Path.home().glob('*') if p.is_dir() and not p.name.startswith('.') ]
+        # lowerdir = ':'.join( [str(p) for p in lower_dirs] )
+        lowerdir = Path.home()
         overlay = self.root / name / 'overlay'
         upperdir = Path(tempfile.gettempdir()) / f'vdm-{name}-upperdir'
         workdir = tempfile.mkdtemp()
@@ -86,12 +87,10 @@ class DomainManager():
             overlay.unlink() if overlay.is_symlink() else overlay.replace(upperdir)
         overlay.symlink_to(upperdir)
         ##
-        process = SHELL_POPEN('exec /usr/bin/unshare -rm -- /bin/sh --norc')
+        process = SHELL_POPEN('exec /usr/bin/unshare -rmC -- /bin/sh --norc')
         assert( process.stdin is not None )
         process.stdin.writelines([
-            #FIXME: correctly mount the overlay
             f'mount -t overlay overlay -o lowerdir={lowerdir},upperdir={upperdir},workdir={workdir} $HOME\n',
-            'exec /usr/bin/unshare --map-group=$USER --map-user=$USER -- /bin/sh --norc\n',
             'sleep infinity\n'
         ])
         ##

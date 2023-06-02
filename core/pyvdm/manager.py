@@ -211,7 +211,9 @@ def execute(command, args):
         if _stat['name']:
             target_pid = str(_stat['pid'])
             os.execl('/usr/bin/nsenter',
-                     '/usr/bin/nsenter', '--preserve-credentials', '-U', '-m', '-t', target_pid, '--', *args.execute_command_line)
+                     '/usr/bin/nsenter', '--preserve-credentials', '-U', '-m', '-C', '-t', target_pid, '--',
+                     '/usr/bin/unshare', '--map-group=$USER', '--map-user=$USER', '--'
+                     *args.execute_command_line)
         else:
             os.execl( args.execute_command_line[0], *args.execute_command_line )
         pass
