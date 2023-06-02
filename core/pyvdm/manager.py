@@ -209,10 +209,12 @@ def execute(command, args):
     if command=='run':
         _stat = StatFile(VDM_HOME).getStat()
         if _stat['name']:
+            uid, gid = os.getuid(), os.getgid()
             target_pid = str(_stat['pid'])
+            execute_command_line = ' '.join(args.execute_command_line)
             os.execl('/usr/bin/nsenter',
-                     '/usr/bin/nsenter', '--preserve-credentials', '-U', '-m', '-C', '-t', target_pid, '--',
-                     '/usr/bin/unshare', '--map-group=$USER', '--map-user=$USER', '--'
+                     '/usr/bin/nsenter', '--preserve-credentials', '-U','-m','-C','-p', '-t', target_pid, '--',
+                     '/usr/bin/unshare', f'--map-group={uid}', f'--map-user={gid}', '--',
                      *args.execute_command_line)
         else:
             os.execl( args.execute_command_line[0], *args.execute_command_line )

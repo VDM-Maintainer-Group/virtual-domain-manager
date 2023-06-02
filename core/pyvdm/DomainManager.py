@@ -78,16 +78,16 @@ class DomainManager():
         # lower_dirs = [ p for p in Path.home().glob('*') if p.is_dir() and not p.name.startswith('.') ]
         # lowerdir = ':'.join( [str(p) for p in lower_dirs] )
         lowerdir = Path.home()
-        overlay = self.root / name / 'overlay'
+        overlay  = self.root / name / 'overlay'
         upperdir = Path(tempfile.gettempdir()) / f'vdm-{name}-upperdir'
-        workdir = tempfile.mkdtemp()
+        workdir  = tempfile.mkdtemp()
         ## prepare overlay
         upperdir.mkdir(parents=True, exist_ok=True)
         if overlay.exists():
             overlay.unlink() if overlay.is_symlink() else overlay.replace(upperdir)
         overlay.symlink_to(upperdir)
         ##
-        process = SHELL_POPEN('exec /usr/bin/unshare -rmC -- /bin/sh --norc')
+        process = SHELL_POPEN('exec /usr/bin/unshare -rmCp --fork --kill-child --mount-proc -- /bin/sh --norc')
         assert( process.stdin is not None )
         process.stdin.writelines([
             f'mount -t overlay overlay -o lowerdir={lowerdir},upperdir={upperdir},workdir={workdir} $HOME\n',
@@ -98,7 +98,7 @@ class DomainManager():
             _, stderr = process.communicate()
             if stderr: return ERR.DOMAIN_START_FAILED
         ##
-        self.stat.putStat(name, pid=process.pid)
+        self.stat.putStat(name, ppid=process.pid, pid=process.pid+1)
         return ERR.ALL_CLEAN
 
     def finalize_domain(self):
@@ -106,8 +106,8 @@ class DomainManager():
         if not stat['name']:
             return
         ## kill the daemon process
-        pid = stat['pid']
-        os.system(f'kill -9 {pid}')
+        ppid = stat['ppid']
+        os.system(f'kill -9 {ppid}')
         ## move the upperdir back to overlay
         name = str(stat['name'])
         overlay = self.root / name / 'overlay'
