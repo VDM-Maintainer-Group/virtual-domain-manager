@@ -93,12 +93,17 @@ class DomainManager():
             f'mount -t overlay overlay -o lowerdir={lowerdir},upperdir={upperdir},workdir={workdir} $HOME\n',
             'sleep infinity\n'
         ])
-        ##
+        ## check if process failed
         if process.poll():
             _, stderr = process.communicate()
             if stderr: return ERR.DOMAIN_START_FAILED
+        ## wait for the child process to start
+        while not psutil.Process(process.pid).children():
+            time.sleep(0.001)
+        ppid = process.pid
+        pid  = psutil.Process(ppid).children()[0].pid
         ##
-        self.stat.putStat(name, ppid=process.pid, pid=process.pid+1)
+        self.stat.putStat(name, ppid=ppid, pid=pid)
         return ERR.ALL_CLEAN
 
     def finalize_domain(self):
