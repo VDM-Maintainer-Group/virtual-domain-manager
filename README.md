@@ -14,6 +14,14 @@ https://user-images.githubusercontent.com/9068301/203792081-b69e406d-8283-4e0f-b
   <img src="./previews/structure.png" width="650px" />
 </p>
 
+- VDM is "container": it starts GUI applications in isolated namespace;
+
+- VDM is "snapshot": it keeps the status of last exit when starts up;
+
+- VDM is "tree-like": it can traverse each divergence, like time machine;
+
+- VDM is NOT "virtual machine": it cares only GUI applications status, not memory.
+
 ## Dependencies
 
 - System-related dependencies
