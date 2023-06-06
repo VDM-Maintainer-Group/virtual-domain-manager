@@ -33,6 +33,7 @@ class DomainCode(ErrorCode):
     DOMAIN_RESUME_FAILED    = 0x1090
     DOMAIN_CLOSE_FAILED     = 0x10A0
     DOMAIN_STOP_FAILED      = 0x10B0
+    DOMAIN_NAME_INVALID     = 0x10C0
     pass
 
 class CapabilityCode(ErrorCode):
@@ -75,6 +76,7 @@ DOMAIN_START_FAILED             = 0x1080
 DOMAIN_RESUME_FAILED            = 0x1090
 DOMAIN_CLOSE_FAILED             = 0x10A0
 DOMAIN_STOP_FAILED              = 0x10B0
+DOMAIN_NAME_INVALID             = 0x10C0
 # for capability use
 VCD_INTERNAL_ERROR              = 0x1100
 ARCHIVE_UNPACK_FAILED           = 0x1200
