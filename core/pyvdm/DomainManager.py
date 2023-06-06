@@ -3,16 +3,20 @@ import argparse
 import os
 from pathlib import Path
 import psutil
+import re
 import tempfile
 import time
 
 import pyvdm.core.PluginManager as P_MAN
-from pyvdm.core.utils import (POSIX, SHELL_POPEN, StatFile, Tui, json_load, json_dump)
+from pyvdm.core.utils import (POSIX, SHELL_POPEN, STAT_FILENAME, StatFile, Tui, json_load, json_dump)
 from pyvdm.core.errcode import DomainCode as ERR
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
 CONFIG_FILENAME = 'config.json'
+OVERLAY_DIRECTORY = '.overlay'
+
+DOMAIN_NAME_BLACKLIST = [CONFIG_FILENAME, STAT_FILENAME, ]
 
 class DomainManager():
     def __init__(self, root=''):
@@ -37,7 +41,6 @@ class DomainManager():
         return json_load(_filename)
 
     def setDomainConfig(self, name, config):
-        name = str(name)
         _filename = POSIX(self.root / name / CONFIG_FILENAME)
         json_dump(_filename, config)
         pass
@@ -60,7 +63,7 @@ class DomainManager():
         config['plugins'] = dict()
         for idx in _selected:
             _name = all_plugin_names[idx]
-            _version = _plugins[_name][0]['version']
+            _version = _plugins[_name]['version']
             config['plugins'].update( {_name:_version} )
         # update timestamp
         config['last_update_time'] = int( time.time() )
@@ -78,7 +81,7 @@ class DomainManager():
         # lower_dirs = [ p for p in Path.home().glob('*') if p.is_dir() and not p.name.startswith('.') ]
         # lowerdir = ':'.join( [str(p) for p in lower_dirs] )
         lowerdir = Path.home()
-        overlay  = self.root / name / 'overlay'
+        overlay  = self.root / name / OVERLAY_DIRECTORY
         upperdir = Path(tempfile.gettempdir()) / f'vdm-{name}-upperdir'
         tempdir  = tempfile.mkdtemp()
         ## prepare overlay
@@ -116,7 +119,7 @@ class DomainManager():
         os.system(f'kill -9 {ppid}')
         ## move the upperdir back to overlay
         name = str(stat['name'])
-        overlay = self.root / name / 'overlay'
+        overlay = self.root / name / OVERLAY_DIRECTORY
         upperdir = Path(tempfile.gettempdir()) / f'vdm-{name}-upperdir'
         overlay.unlink(missing_ok=True)
         upperdir.replace(overlay)
@@ -170,6 +173,37 @@ class DomainManager():
         print('Domain \"%s\" updated.'%name)
         return ERR.ALL_CLEAN
 
+    def fork_domain(self, name:str, copy:bool) -> ERR:
+        ## check if path exists
+        parent_path = self.root / Path(name)
+        if not parent_path.exists():
+            return ERR.DOMAIN_NOT_EXIST
+        ## check base name: Copy/Derive
+        if copy:    # A --> A*1
+            _parent = re.sub(r'\*\d+$', '', parent_path.stem)
+            _name = '{parent}*'.format(_parent)
+            _path = parent_path.parent
+        else:       # A --> A+1
+            _parent = re.sub(r'\+\d+$', '', parent_path.stem)
+            _name = '{parent}+'.format(_parent)
+            _path = parent_path
+        ## check if name already exists
+        cnt = 1; child_name = '{_name}{cnt}'
+        while (self.root / child_name).exists():
+            cnt += 1; child_name = f'{_name}{cnt}'
+        ## fork the parent domain
+        child_path = _path / child_name
+        child_path.mkdir(exist_ok=True, parents=True)
+        ( parent_path/CONFIG_FILENAME ).copy( child_path/CONFIG_FILENAME )
+        parent_path.glob('*.stat').copy( child_path )
+        #FIXME: copy overlay in correct way
+        # if copy:
+        #     parent_path.glob('overlay/*').copy( child_path/'overlay' )
+        ## if parent is open, update the open domain name
+        # if self.open_domain_name==name:
+        #     self.stat.putStat( child_name )
+        return ERR.ALL_CLEAN
+
     def delete_domain(self, name:str) -> ERR:
         # check if domain open
         if self.open_domain_name==name:
@@ -191,10 +225,12 @@ class DomainManager():
 
 def execute(dm, command, args, verbose=False):
     assert( isinstance(dm, DomainManager) )
-    if command=='add':
+    if command=='create':
         return dm.create_domain(args.name, args.config)
     elif command=='update':
         return dm.update_domain(args.name, args.config)
+    elif command=='fork':
+        return dm.fork_domain(args.name, args.copy)
     elif command=='rm' or command=='remove':
         return dm.delete_domain(args.name)
     elif command=='ls' or command=='list':
@@ -209,11 +245,11 @@ def execute(dm, command, args, verbose=False):
 
 def init_subparsers(subparsers):
     #
-    p_add = subparsers.add_parser('add',
+    p_create = subparsers.add_parser('create',
         help='create a new domain.')
-    p_add.add_argument('name', metavar='domain_name',
+    p_create.add_argument('name', metavar='domain_name',
         help='the domain name.')
-    p_add.add_argument('config', metavar='config_file', nargs='?',
+    p_create.add_argument('config', metavar='config_file', nargs='?',
         help='(Optional) the path to the configuration file.')
     #
     p_update = subparsers.add_parser('update',
@@ -222,6 +258,13 @@ def init_subparsers(subparsers):
         help='the domain name.')
     p_update.add_argument('config', metavar='config_file', nargs='?',
         help='(Optional) the path to the configuration file.')
+    #
+    p_fork = subparsers.add_parser('fork',
+        help='fork an existing domain.')
+    p_fork.add_argument('name', metavar='domain_name',
+        help='the domain name.')
+    p_fork.add_argument('-c', '--copy', action='store_true', default=False,
+        help='copy the domain instead of derive.')
     #
     p_remove = subparsers.add_parser('remove',
         help='remove and existing domain.')
