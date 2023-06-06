@@ -80,7 +80,7 @@ class DomainManager():
         lowerdir = Path.home()
         overlay  = self.root / name / 'overlay'
         upperdir = Path(tempfile.gettempdir()) / f'vdm-{name}-upperdir'
-        workdir  = tempfile.mkdtemp()
+        tempdir  = tempfile.mkdtemp()
         ## prepare overlay
         upperdir.mkdir(parents=True, exist_ok=True)
         if overlay.exists():
@@ -90,7 +90,8 @@ class DomainManager():
         process = SHELL_POPEN('exec /usr/bin/unshare -rmCp --fork --kill-child --mount-proc -- /bin/sh --norc')
         assert( process.stdin is not None )
         process.stdin.writelines([
-            f'mount -t overlay overlay -o lowerdir={lowerdir},upperdir={upperdir},workdir={workdir} $HOME\n',
+            f'mount -o bind,noexec,nosuid,nodev {tempdir} /tmp\n',
+            f'mount -t overlay overlay -o lowerdir={lowerdir},upperdir={upperdir},workdir={tempdir} $HOME\n',
             'sleep infinity\n'
         ])
         ## check if process failed
