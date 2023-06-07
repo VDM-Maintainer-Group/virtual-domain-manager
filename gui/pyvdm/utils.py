@@ -3,7 +3,7 @@ from collections.abc import MutableMapping
 import configparser
 from pathlib import Path
 import pkg_resources
-from PyQt5.QtCore import (Qt, QObject, QThread)
+from PyQt5.QtCore import (Qt, QObject, QThread, QTimer)
 import time
 
 from pyvdm.core.manager import VDM_HOME
@@ -45,22 +45,9 @@ def smooth_until(view, avg_cond=None, min_cond=None, max_cond=None,
     pass
 
 class KeysReactor:
-
-    keySpecs = {
-        Qt.Key_Control: 0x01, # type: ignore
-        Qt.Key_Alt:     0x02, # type: ignore
-        Qt.Key_Shift:   0x04, # type: ignore
-    }
-    keySpecsKeys = keySpecs.keys()
-
-    def __init__(self, parent, name='Default'):
-        self.name = name
-        self.key_list = [0x00]
+    def __init__(self, parent=None):
+        self.key_list = list()
         self.reactor  = dict()
-        self.press_hook_pre    = None
-        self.press_hook_post   = None
-        self.release_hook_pre  = None
-        self.release_hook_post = None
 
         if parent:
             self.parent = parent
@@ -70,106 +57,47 @@ class KeysReactor:
         pass
     
     def __str__(self):
-        ret = []
-        ret.append('Ctrl')  if self.key_list[0]&0x01 else None
-        ret.append('Alt')   if self.key_list[0]&0x02 else None
-        ret.append('Shift') if self.key_list[0]&0x04 else None
-        ret += [str(x) for x in self.key_list[1:]]
-        return '[%s] %s'%(self.name, '+'.join(ret))
-    
-    @staticmethod
-    def parse_keys(keys):
-        ret = list()
-        try:
-            for _key in keys:
-                _key = _key.strip().upper()
-                if _key=='CTRL':    _key = 'Control'
-                elif _key=='ALT':   _key = 'Alt'
-                elif _key=='SHIFT': _key = 'Shift'
-                elif _key=='ENTER': _key = 'Enter'
-                elif _key=='RETURN':_key = 'Return'
-                elif _key in ['ESC','ESCAPE']:
-                    _key = 'Escape'
-                if hasattr(Qt, 'Key_'+_key):
-                    ret.append( getattr(Qt, 'Key_'+_key) )
-        finally:
-            return ret
+        return self.keys_hash
 
-    def register(self, keys, hookfn):
-        key_hash = [0x00]
-        keys = self.parse_keys(keys)
-        ##
-        for tmp_key in keys:
-            if tmp_key in self.keySpecsKeys: # for specific keys
-                key_hash[0] = key_hash[0] | self.keySpecs[tmp_key]
-            else:                            # for general keys
-                key_hash.append(tmp_key)
-            pass
-        key_hash = '_'.join([str(x) for x in key_hash])
-        self.reactor[key_hash] = hookfn
+    @staticmethod
+    def parse_keys(keys_str:list) -> list:
+        shorthands = {
+            'Ctrl':'Control', 'Super':'Meta', 'Win':'Meta',
+            'Esc':'Escape', 'Del':'Delete',
+        }
+        keys = [ x.strip().capitalize() for x in keys_str ]
+        keys = [ shorthands.get(x,x) for x in keys ]
+        keys = [ getattr(Qt.Key, f'Key_{x}') for x in keys ]
+        return keys
+
+    @staticmethod
+    def keys_to_hash(keys:list) -> str:
+        return '_'.join([ str(x) for x in sorted(keys) ])
+
+    @property
+    def key_list_hash(self):
+        self.key_list.sort()
+        return self.keys_to_hash(self.key_list)
+
+    def register(self, keys_str:list, callback):
+        key_hash = self.keys_to_hash( self.parse_keys(keys_str) )
+        self.reactor[key_hash] = callback
         pass
     
     def pressed(self, key, e=None):
-        #NOTE: pre hook
-        if self.press_hook_pre:
-            self.press_hook_pre(e)
-
-        #NOTE: press keys
-        if key in self.keySpecsKeys:
-            self.key_list[0] = self.key_list[0] | self.keySpecs[key] #append specific keys
-        else:
-            self.key_list.append(key)
-        key_hash = '_'.join([str(x) for x in self.key_list])
-        if key_hash in self.reactor:
-            ret = self.reactor[key_hash]() #unused ret code
+        self.key_list.append(key)
+        if self.key_list_hash in self.reactor:
+            ret = self.reactor[self.key_list_hash]()
         else:
             self.super.keyPressEvent(e)
-        
-        #NOTE: post hook
-        if self.press_hook_post:
-            self.press_hook_post(e)
         pass
     
     def released(self, key, e=None):
-        #NOTE: pre hook
-        if self.release_hook_pre:
-            self.release_hook_pre(e)
-        
-        #NOTE: remove keys
-        if key in self.keySpecsKeys:                # remove a special key
-            self.key_list[0] = self.key_list[0] & (~self.keySpecs[key]) #remove specific keys
-        elif key in self.key_list:                  # remove a common key
-            self.key_list.remove(key)
-        elif key in [Qt.Key_Return, Qt.Key_Enter]:  # reset the list # type: ignore
-            self.key_list = [0x00]
+        if key in [Qt.Key.Key_Meta, Qt.Key.Key_Control]:
+            self.key_list.clear()
+        ##
+        QTimer.singleShot(150, lambda: self.key_list.remove(key)) # remove only once
         self.super.keyReleaseEvent(e)
-        if self.key_list[0]==0x00: #reset, if no specific keys presented
-            self.key_list = [0x00]
-
-        #NOTE: post hook
-        if self.release_hook_post:
-            self.release_hook_post(e)
-        pass
-
-    def hasSpecsKeys(self):
-        return self.key_list[0] != 0x00
-
-    def clear(self):
-        self.key_list = [0x00]
-        pass
-
-    def setKeyPressHook(self, press_hook, post=True):
-        if post:
-            self.press_hook_post = press_hook
-        else:
-            self.press_hook_pre  = press_hook
-        pass
-
-    def setKeyReleaseHook(self, release_hook, post=True):
-        if post:
-            self.release_hook_post = release_hook
-        else:
-            self.release_hook_pre  = release_hook
         pass
 
     pass
@@ -218,7 +146,7 @@ class ConfigFile(MutableMapping):
         pass
 
     def __getitem__(self, key):
-        sec, key = self._getsection(key)
+        sec, key = self._get_section(key)
         value = self.global_config[sec][key]
         #
         if sec=='theme':
@@ -234,7 +162,7 @@ class ConfigFile(MutableMapping):
         return self.global_config[sec][key]
 
     def __setitem__(self, key, value):
-        sec, key = self._getsection(key)
+        sec, key = self._get_section(key)
         self.global_config[sec][key] = value
         #
         if sec not in self.user_config:
@@ -245,7 +173,7 @@ class ConfigFile(MutableMapping):
         pass
 
     def __delitem__(self, key):
-        sec, key = self._getsection(key)
+        sec, key = self._get_section(key)
         try:
             del self.global_config[sec][key]
             del self.user_config[sec][key]
@@ -258,7 +186,7 @@ class ConfigFile(MutableMapping):
     def __len__(self):
         return len(self.global_config)
 
-    def _getsection(self, key:str):
+    def _get_section(self, key:str):
         if key.startswith('THEME_'):
             return ( 'theme', key.split('_',1)[1] )
         elif key.startswith('ASSETS_'):
@@ -267,7 +195,6 @@ class ConfigFile(MutableMapping):
             return ( 'default', key.split('_',1)[1] )
         else:
             return ( 'default', key )
-
     pass
 
 CONFIG = ConfigFile()
