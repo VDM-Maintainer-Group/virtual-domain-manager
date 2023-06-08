@@ -4,11 +4,12 @@ import os
 from pathlib import Path
 import psutil
 import re
+import shutil
 import tempfile
 import time
 
 import pyvdm.core.PluginManager as P_MAN
-from pyvdm.core.utils import (POSIX, SHELL_POPEN, STAT_FILENAME, StatFile, Tui, json_load, json_dump)
+from pyvdm.core.utils import (POSIX, SHELL_POPEN, STAT_POSTFIX, StatFile, Tui, json_load, json_dump)
 from pyvdm.core.errcode import DomainCode as ERR
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
@@ -16,7 +17,7 @@ DOMAIN_DIRECTORY = PARENT_ROOT / 'domains'
 CONFIG_FILENAME = 'config.json'
 OVERLAY_DIRECTORY = '.overlay'
 
-DOMAIN_NAME_BLACKLIST = [CONFIG_FILENAME, STAT_FILENAME, OVERLAY_DIRECTORY]
+DOMAIN_NAME_BLACKLIST = [CONFIG_FILENAME, STAT_POSTFIX, OVERLAY_DIRECTORY]
 
 def __run_process(cmd:str, stdin:list):
     process = SHELL_POPEN(cmd)
@@ -196,13 +197,18 @@ class DomainManager():
         return ERR.ALL_CLEAN
 
     def update_domain(self, name:str, config:dict) -> ERR:
-        # check if domain open
-        if self.open_domain_name==name:
+        ## check if domain open
+        if Path(self.open_domain_name).is_relative_to(name):
             return ERR.DOMAIN_IS_OPEN
-        # check if domain exists
-        if not (self.root / name).exists():
+        ## check if nested domain exists
+        domain_folder = self.root / name
+        child_domains = list( domain_folder.glob(f'[!.]*/{CONFIG_FILENAME}') )
+        if len(child_domains)>0:
+            return ERR.DOMAIN_NESTED_DOMAIN
+        ## check if domain exists
+        if not domain_folder.exists():
             return ERR.DOMAIN_NOT_EXIST
-        #
+        ## reconfigure the domain
         ori_config = self.getDomainConfig(name)
         if type(ori_config)==ERR:
             return ori_config
@@ -210,16 +216,17 @@ class DomainManager():
             config = self.configTui(name, ori_config)
         if not config:
             return ERR.DOMAIN_CONFIG_FAILED
-        # rename the domain if necessary
+        ## rename the domain folder if needed
+        assert( Path(config['name']).parent == Path(name).parent )
         if config['name']!=name:
-            ( self.root / name ).replace( self.root / config['name'] )
+            domain_folder.replace( self.root / config['name'] )
             name = config['name']
             pass
-        # save the config file
+        ## save the config file
         ret = self.setDomainConfig(name, config)
         if ret!=ERR.ALL_CLEAN:
             return ret
-        # update enabled plugins folder (and touch the stat file)
+        ## update enabled plugins folder (and touch the stat file)
         for _name in config['plugins'].keys():
             StatFile(self.root / name, _name).touch()
         print('Domain \"%s\" updated.'%name)
@@ -244,12 +251,12 @@ class DomainManager():
         cnt = 1; _name = f'{_name}{cnt}'
         while (_path / _name).exists():
             cnt += 1; _name = f'{_name}{cnt}'
-        ## fork the parent domain: config file, plugin stat files;
         child_path = _path / _name
         child_name = parent_name / _name
         child_path.mkdir(exist_ok=True, parents=True)
+        ## fork the parent domain: hidden files/folders
         ( parent_path/CONFIG_FILENAME ).copy( child_path/CONFIG_FILENAME )
-        parent_path.glob(f'*{STAT_FILENAME}').copy( child_path )
+        parent_path.glob(f'.*{STAT_POSTFIX}').copy( child_path )
         ## switch to child domain
         stat = self.stat.getStat()
         if stat['name']==parent_name:
@@ -274,12 +281,17 @@ class DomainManager():
             parent_upperdir.copy(child_overlay)
         return ERR.ALL_CLEAN
 
-    def delete_domain(self, name:str) -> ERR:
-        # check if domain open
-        if self.open_domain_name==name:
+    def delete_domain(self, name:str, allow_recursive:bool=False) -> ERR:
+        ## check if domain open
+        if Path(self.open_domain_name).is_relative_to(name):
             return ERR.DOMAIN_IS_OPEN
-        #
-        (self.root / name).unlink(missing_ok=True)
+        ## check if nested domain exists
+        domain_folder = self.root / name
+        child_domains = list( domain_folder.glob(f'[!.]*/{CONFIG_FILENAME}') )
+        if len(child_domains)>0 and not allow_recursive:
+            return ERR.DOMAIN_NESTED_DOMAIN
+        ## delete the content recursively
+        shutil.rmtree(domain_folder, ignore_errors=True)
         return ERR.ALL_CLEAN
 
     def list_domain(self, names=[]) -> dict:
