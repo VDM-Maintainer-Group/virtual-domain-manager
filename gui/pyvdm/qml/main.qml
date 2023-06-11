@@ -1,7 +1,8 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Window 2.15
-// import QtQuick.Shapes 1.15
+import QtQuick 2.0
+import QtQuick.Controls 2.0
+import QtQuick.Window 2.0
+import QtQuick.Layouts 1.3
+// import QtQuick.Shapes 2.0
 
 ApplicationWindow {
     id: root
@@ -29,15 +30,28 @@ ApplicationWindow {
     }
 
     // Compnent Area
-    Item {
+    RowLayout {
         focus: true
-        anchors.fill: parent
+        anchors.centerIn: parent
+        spacing: 10
+
         Keys.onEscapePressed: { root.close() }
+
+        Rectangle {
+            color: "transparent"
+            border.color: "black"
+            border.width: 2
+        }
 
         PredElem {
             name: root.pred_name
-            highlight: root.open_name==root.pred_name
-            anchors.centerIn: parent
+            highlight: root.open_name === root.pred_name
+        }
+
+        ChildList {
+            open_name: root.open_name
+            domain_list: root.domain_list
+            visible: root.domain_list.length > 0
         }
     }
 }

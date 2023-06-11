@@ -13,13 +13,13 @@ class TraversalController(QObject):
 
     @pyqtSlot()
     def refresh(self):
-        print('refresh')
         open_name = self.dm.open_domain_name
         pred_name = self.root.property('pred_name')
         domain_list = self.dm.list_child_domain(pred_name)
         domain_list = [(name, len(self.dm.list_child_domain(pred_name))==0)
                        for name in domain_list]
         ##
+        if pred_name=='' and len(domain_list)==0: pred_name = '+'
         self.root.setProperty('open_name', open_name)
         self.root.setProperty('pred_name', pred_name)
         self.root.setProperty('domain_list', domain_list)

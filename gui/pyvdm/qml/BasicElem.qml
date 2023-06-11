@@ -1,4 +1,4 @@
-import QtQuick 2.15
+import QtQuick 2.0
 
 Rectangle {
     property string text: ""
@@ -16,8 +16,9 @@ Rectangle {
 
     Text {
         anchors.centerIn: parent
-        text: parent.text
         color: "white"
+        text: parent.text
+        font.pixelSize: Math.min(parent.width/parent.text.length, 30)
     }
 
     MouseArea {
