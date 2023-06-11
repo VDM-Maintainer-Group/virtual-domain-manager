@@ -199,6 +199,7 @@ def json_load(filename):
     return _dict
 
 def json_dump(filename, config):
+    Path(filename).touch(exist_ok=True)
     fd = open(filename, 'w+')
     json.dump(config, fd)
     fd.close()

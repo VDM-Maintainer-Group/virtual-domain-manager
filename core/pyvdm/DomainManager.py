@@ -241,23 +241,28 @@ class DomainManager():
         ## check base name: Copy/Derive
         if copy:    # A --> A*1
             _parent = re.sub(r'\*\d+$', '', parent_path.stem)
-            _name = '{parent}*'.format(_parent)
+            _name = f'{_parent}*'
             _path = parent_path.parent
         else:       # A --> A+1
             _parent = re.sub(r'\+\d+$', '', parent_path.stem)
-            _name = '{parent}+'.format(_parent)
+            _name = f'{_parent}+'
             _path = parent_path
         ## check existing name collision
-        cnt = 1; _name = f'{_name}{cnt}'
-        while (_path / _name).exists():
-            cnt += 1; _name = f'{_name}{cnt}'
-        child_path = _path / _name
-        child_name = parent_name / _name
+        cnt = 1; t_name = f'{_name}{cnt}'
+        while (_path / t_name).exists():
+            cnt += 1; t_name = f'{_name}{cnt}'
+        child_name = _path.relative_to(self.root) / t_name
+        child_path = _path / t_name
         child_path.mkdir(exist_ok=True, parents=True)
-        ## fork the parent domain: hidden files/folders
-        ( parent_path/CONFIG_FILENAME ).copy( child_path/CONFIG_FILENAME )
-        parent_path.glob(f'.*{STAT_POSTFIX}').copy( child_path )
-        ## switch to child domain
+        ## fork the parent domain: config file
+        _conf = json_load( parent_path/CONFIG_FILENAME )
+        _conf['name'] = POSIX(child_name); _conf['created_time'] = int(time.time())
+        _conf['last_update_time'] = int(time.time())
+        json_dump( child_path/CONFIG_FILENAME, _conf )
+        ## fork the parent domain: stat files
+        for stat_file in parent_path.glob(f'.*{STAT_POSTFIX}'):
+            shutil.copyfile( stat_file, child_path/stat_file.name )
+        ## if parent domain is open, switch to child domain
         stat = self.stat.getStat()
         if stat['name']==parent_name:
             ppid, pid = stat['ppid'], stat['pid']
@@ -277,8 +282,11 @@ class DomainManager():
             parent_upperdir = Path(tempfile.gettempdir()) / f'vdm-{parent_name.stem}-upperdir'
             ##
             parent_overlay.unlink(missing_ok=True)
-            parent_overlay.replace(parent_overlay)
-            parent_upperdir.copy(child_overlay)
+            try:
+                parent_upperdir.replace(parent_overlay)
+                shutil.copyfile(parent_overlay, child_overlay)
+            except:
+                pass
         return ERR.ALL_CLEAN
 
     def delete_domain(self, name:str, allow_recursive:bool=False) -> ERR:
