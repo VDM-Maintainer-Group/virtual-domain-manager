@@ -290,6 +290,7 @@ class DomainManager():
         child_domains = list( domain_folder.glob(f'[!.]*/{CONFIG_FILENAME}') )
         if len(child_domains)>0 and not allow_recursive:
             return ERR.DOMAIN_NESTED_DOMAIN
+        ## TODO: merge overlay before delete
         ## delete the content recursively
         shutil.rmtree(domain_folder, ignore_errors=True)
         return ERR.ALL_CLEAN

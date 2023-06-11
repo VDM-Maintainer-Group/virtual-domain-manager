@@ -44,64 +44,6 @@ def smooth_until(view, avg_cond=None, min_cond=None, max_cond=None,
         time.sleep( interval )
     pass
 
-class KeysReactor:
-    def __init__(self, parent=None):
-        self.key_list = list()
-        self.reactor  = dict()
-
-        if parent:
-            self.parent = parent
-            self.super  = super(type(parent), parent)
-            parent.keyPressEvent   = lambda e: self.pressed(e.key(), e)
-            parent.keyReleaseEvent = lambda e: self.released(e.key(), e)
-        pass
-    
-    def __str__(self):
-        return self.keys_hash
-
-    @staticmethod
-    def parse_keys(keys_str:list) -> list:
-        shorthands = {
-            'Ctrl':'Control', 'Super':'Meta', 'Win':'Meta',
-            'Esc':'Escape', 'Del':'Delete',
-        }
-        keys = [ x.strip().capitalize() for x in keys_str ]
-        keys = [ shorthands.get(x,x) for x in keys ]
-        keys = [ getattr(Qt.Key, f'Key_{x}') for x in keys ]
-        return keys
-
-    @staticmethod
-    def keys_to_hash(keys:list) -> str:
-        return '_'.join([ str(x) for x in sorted(keys) ])
-
-    @property
-    def key_list_hash(self):
-        self.key_list.sort()
-        return self.keys_to_hash(self.key_list)
-
-    def register(self, keys_str:list, callback):
-        key_hash = self.keys_to_hash( self.parse_keys(keys_str) )
-        self.reactor[key_hash] = callback
-        pass
-    
-    def pressed(self, key, e=None):
-        self.key_list.append(key)
-        if self.key_list_hash in self.reactor:
-            ret = self.reactor[self.key_list_hash]()
-        else:
-            self.super.keyPressEvent(e)
-        pass
-    
-    def released(self, key, e=None):
-        if key in [Qt.Key.Key_Meta, Qt.Key.Key_Control]:
-            self.key_list.clear()
-        ##
-        QTimer.singleShot(150, lambda: self.key_list.remove(key)) # remove only once
-        self.super.keyReleaseEvent(e)
-        pass
-
-    pass
-
 class MFWorker(QObject):
     def __init__(self, func, args=()):
         super().__init__(None)

@@ -2,20 +2,23 @@
 import os
 from pathlib import Path
 import psutil
+from pynput import keyboard
 import signal
 import socket
 import subprocess as sp
 import sys
 
-from pyvdm.gui.utils import (CONFIG, MFWorker, KeysReactor, smooth_until)
-from ControlPanel import ControlPanelWindow
-from TransitionSceneWidget import TransitionSceneWidget
-from pyvdm.core.manager import CoreManager
 from PyQt5.QtCore import (Qt, QSize, QUrl,
                 QTimer, pyqtSignal, pyqtSlot)
 from PyQt5.QtGui import (QIcon, )
 from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu, QAction)
 from PyQt5.QtMultimedia import (QAudioDeviceInfo, QSoundEffect)
+
+from pyvdm.core.manager import CoreManager
+from pyvdm.gui.utils import (CONFIG, MFWorker, smooth_until)
+from pyvdm.gui.ControlPanel import ControlPanelWindow
+from pyvdm.gui.TransitionSceneWidget import TransitionSceneWidget
+from pyvdm.gui.TraversalWidget import TraversalWidget
 
 global app
 NONE_DOMAIN = '<None>'
@@ -79,13 +82,11 @@ class TrayIcon(QSystemTrayIcon):
         self.stop_signal.connect( self.w_ts.stop ) #type: ignore
         self.play_signal.connect(self.playSoundEffect) #type: ignore
         #
+        self.w_tr = TraversalWidget()
+        #
         self.setContextMenu( self.getDefaultMenu() )
         self.updateTitleBar()
         self.setIcon( QIcon( CONFIG['ASSETS_ICON'] ) )
-        # init key shortcuts
-        self.keysFn = KeysReactor(self)
-        self.keysFn.register(['Ctrl','Alt','Shift','S'], self.save_domain)
-        self.keysFn.register(['Ctrl','Alt','Shift','C'], self.close_domain)
         #
         self.activated.connect( self.onActivation ) #type: ignore
         self.show()
@@ -124,7 +125,7 @@ class TrayIcon(QSystemTrayIcon):
         self.act_autostart.setCheckable(True)
         self.act_autostart.setChecked( is_autostart() )
         menu.addAction( self.act_autostart )
-        self.act_autostart.triggered.connect( self.onActAutostart ) #type: ignore
+        self.act_autostart.triggered.connect( self.onActAutostart )
         # add 'quit' act
         act_open_panel = menu.addAction('Open Control Panel')
         act_open_panel.triggered.connect( lambda: self.control_panel.show() )
@@ -169,10 +170,8 @@ class TrayIcon(QSystemTrayIcon):
                 act_name.setEnabled(False)
         pass
 
-    @pyqtSlot(QAction)
-    def onActAutostart(self):
-        _checked = self.act_autostart.isChecked()
-        if _checked:
+    def onActAutostart(self, checked:bool):
+        if checked:
             enable_autostart()
         else:
             disable_auto_start()
@@ -260,10 +259,18 @@ def main():
         exit()
     # ignore interrupt signal
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    QApplication.setAttribute( Qt.AA_EnableHighDpiScaling ) #type: ignore
+    QApplication.setAttribute( Qt.AA_EnableHighDpiScaling )
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
-    tray = TrayIcon()
+    tray = TrayIcon(app)
+    ## init key shortcuts
+    hotkeys = {
+        '<ctrl>+<alt>+<shift>+s': tray.save_domain,
+        '<ctrl>+<alt>+<shift>+c': tray.close_domain,
+        '<cmd>+<shift>+s': tray.w_tr.show,
+    }
+    keyboard.GlobalHotKeys(hotkeys).start()
+    ##
     sys.exit(app.exec_())
     pass
 

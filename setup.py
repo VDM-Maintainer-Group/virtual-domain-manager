@@ -35,12 +35,12 @@ if __name__ == '__main__':
         #
         install_requires = ['PyQt5', 'posix-ipc', 'psutil', 'requests',
                             'dbus-python', 'halo', 'termcolor', 'pyyaml',
-                            'keyring', 'cryptography'],
+                            'keyring', 'cryptography', 'pynput'],
         package_dir = {'': 'build'},
         packages = find_packages(where='build'),
         package_data = {
             "" : ["daemon/*.so"],
-            "pyvdm": ["assets/*", "assets/*/*"],
+            "pyvdm": ["assets/*", "assets/*/*", "gui/qml/*.qml"],
         },
         include_package_data=True,
         entry_points = {
