@@ -73,7 +73,7 @@ class DomainManager():
         # ask for plugins selection
         _, _plugins = P_MAN.PluginManager().getPluginsWithTarget()
         all_plugin_names = list( _plugins.keys() )
-        _plugin_names = list( config['plugins'].keys() ) if 'plugins' in config else None
+        _plugin_names = list( config['plugins'].keys() ) if 'plugins' in config else []
         _selected = Tui.select('Plugins', all_plugin_names, _plugin_names)
         config['plugins'] = dict()
         for idx in _selected:
@@ -294,6 +294,11 @@ class DomainManager():
         ## delete the content recursively
         shutil.rmtree(domain_folder, ignore_errors=True)
         return ERR.ALL_CLEAN
+
+    def list_child_domain(self, name:str='') -> list:
+        domain_folder = self.root / name
+        child_domains = list( domain_folder.glob(f'[!.]*/{CONFIG_FILENAME}') )
+        return [item.parent.stem for item in child_domains]
 
     def list_domain(self, names=[]) -> dict:
         result = dict()

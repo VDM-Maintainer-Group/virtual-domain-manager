@@ -16,9 +16,9 @@ ApplicationWindow {
     y: (Screen.height - height) / 2
 
     // Property Variable Area
-    property string pred_name: "X1"
+    property string open_name: ""
+    property string pred_name: ""
     property var domain_list: []
-    property bool has_next_layer: false
 
     Rectangle {
         id: bg
@@ -36,6 +36,7 @@ ApplicationWindow {
 
         PredElem {
             name: root.pred_name
+            highlight: root.open_name==root.pred_name
             anchors.centerIn: parent
         }
     }

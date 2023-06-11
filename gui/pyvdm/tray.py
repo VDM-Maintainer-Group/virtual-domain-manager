@@ -82,7 +82,7 @@ class TrayIcon(QSystemTrayIcon):
         self.stop_signal.connect( self.w_ts.stop ) #type: ignore
         self.play_signal.connect(self.playSoundEffect) #type: ignore
         #
-        self.w_tr = TraversalWidget()
+        self.w_tr = TraversalWidget(self, self.dm)
         #
         self.setContextMenu( self.getDefaultMenu() )
         self.updateTitleBar()
@@ -236,8 +236,8 @@ class TrayIcon(QSystemTrayIcon):
                          avg_cond=lambda x:x<0.1 )
             self.stop_signal.emit()
             pass
-        
-        _name = e.text() if hasattr(e, 'text') else e
+        ##
+        _name = e.text() if hasattr(e, 'text') else str(e)
         self.worker = MFWorker( _switch_domain, args=(_name,) )
         self.worker.start()
         pass

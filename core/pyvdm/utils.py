@@ -96,6 +96,8 @@ class Tui:
     @staticmethod
     def select(message, candidates, defaults=None, multi=True, retry=False):
         assert( isinstance(candidates, list) )
+        if not candidates:
+            return defaults
         if not retry:
             _title = '======== %s ========'%message
             _opt = [ '[%d] %s'%(idx+1,name) for idx,name in enumerate(candidates) ]
