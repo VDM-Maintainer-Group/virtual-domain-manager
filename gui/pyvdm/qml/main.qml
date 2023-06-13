@@ -19,8 +19,8 @@ ApplicationWindow {
     // Property Variable Area
     property string open_name: ""
     property string pred_name: ""
-    property var domain_list: []
 
+    // Background Area
     Rectangle {
         id: bg
         anchors.fill: parent
@@ -29,29 +29,39 @@ ApplicationWindow {
         radius: 15
     }
 
+    // Function Area
+    function setDomainList(list) {
+        domain_model.clear()
+        for (var i = 0; i < list.length; i++) {
+            domain_model.append({"name":list[i][0], "selected":list[i][1]})
+        }
+    }
+
     // Compnent Area
+    ListModel { id: domain_model }
+
     RowLayout {
         focus: true
+        anchors.fill: parent
         anchors.centerIn: parent
-        spacing: 10
+        width: parent.width
+        height: parent.height
 
         Keys.onEscapePressed: { root.close() }
-
-        Rectangle {
-            color: "transparent"
-            border.color: "black"
-            border.width: 2
-        }
 
         PredElem {
             name: root.pred_name
             highlight: root.open_name === root.pred_name
+            //
+            Layout.alignment: Qt.AlignCenter
         }
 
         ChildList {
             open_name: root.open_name
-            domain_list: root.domain_list
-            visible: root.domain_list.length > 0
+            domain_model: domain_model
+            visible: (domain_model.count>0)
+            //
+            Layout.alignment: Qt.AlignCenter
         }
     }
 }

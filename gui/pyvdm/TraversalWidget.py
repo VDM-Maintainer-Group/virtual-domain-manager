@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-from PyQt5.QtCore import (QObject, pyqtSlot)
+from PyQt5.QtCore import (QObject, QMetaObject, Q_ARG, pyqtSlot)
 from PyQt5.QtQml import QQmlApplicationEngine
 
 
@@ -22,7 +22,9 @@ class TraversalController(QObject):
         if pred_name=='' and len(domain_list)==0: pred_name = '+'
         self.root.setProperty('open_name', open_name)
         self.root.setProperty('pred_name', pred_name)
-        self.root.setProperty('domain_list', domain_list)
+        ##
+        domain_list = [ ['AAA',False], ['BBB',True], ['CCC',False] ]
+        QMetaObject.invokeMethod(self.root, 'setDomainList', Q_ARG("QVariant", domain_list))
         pass
 
     pass
