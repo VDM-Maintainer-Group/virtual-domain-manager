@@ -145,26 +145,33 @@ class CoreManager:
         ret_code = self.dm.initialize_domain(name)
         if ret_code is not DomainCode.ALL_CLEAN:
             return (DomainCode.DOMAIN_START_FAILED, hex(ret_code)) #type: ignore
-        ## load domain-specific plugins
-        ret = self.load(name)
-        if ret is not PluginCode.ALL_CLEAN:
-            return (DomainCode.DOMAIN_LOAD_FAILED, ret)
-        ## onStart --> onResume
+        ## open domain procedure
         try:
+            ret_code = DomainCode.ALL_CLEAN
+            ## load domain-specific plugins
+            ret = self.load(name)
+            if ret is not PluginCode.ALL_CLEAN:
+                ret_code = DomainCode.DOMAIN_LOAD_FAILED
+                raise Exception( str(ret) )
+            ## onStart --> onResume
             with concurrent.futures.ThreadPoolExecutor() as executor:
+                ## internal worker
                 def _worker(plugin, stat):
                     if plugin.onStart() < 0:
                         return (DomainCode.DOMAIN_START_FAILED, plugin.name)
                     if plugin.onResume( stat.getFile() ) < 0:
                         return (DomainCode.DOMAIN_RESUME_FAILED, plugin.name)
                     return None
-                #
+                ##
                 results = self.executeBlade(executor, _worker)
-                if results: raise Exception( str(results) )
-                return (DomainCode.ALL_CLEAN, '')
+                if results:
+                    ret_code = results[0][0]
+                    raise Exception( str(results) )
         except:
             self.dm.finalize_domain()
-            return (DomainCode.DOMAIN_START_FAILED, traceback.format_exc())
+            return (ret_code, traceback.format_exc())
+        else:
+            return (DomainCode.ALL_CLEAN, '')
         pass
 
     def close_domain(self):
