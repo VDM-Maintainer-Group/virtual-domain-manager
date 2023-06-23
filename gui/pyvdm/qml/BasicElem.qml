@@ -24,7 +24,7 @@ Rectangle {
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         //
         onEntered: {
             parent.color = parent.highlight ? parent.highlightHoveredColor : parent.defaultHoveredColor

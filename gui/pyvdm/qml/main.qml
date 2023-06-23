@@ -39,29 +39,38 @@ ApplicationWindow {
 
     // Compnent Area
     ListModel { id: domain_model }
-
     RowLayout {
         focus: true
-        anchors.fill: parent
-        anchors.centerIn: parent
         width: parent.width
         height: parent.height
 
         Keys.onEscapePressed: { root.close() }
 
-        PredElem {
-            name: root.pred_name
-            highlight: root.open_name === root.pred_name
-            //
+        Rectangle {
+            color: "transparent"
             Layout.alignment: Qt.AlignCenter
+            Layout.preferredWidth: parent.width * 2/5
+            Layout.preferredHeight: parent.height
+            //
+            PredElem {
+                anchors.centerIn: parent
+                name: root.pred_name
+                highlight: root.open_name === root.pred_name
+            }
         }
 
-        ChildList {
-            open_name: root.open_name
-            domain_model: domain_model
+        Rectangle {
+            color: "transparent"
+            Layout.alignment: Qt.AlignCenter
+            Layout.preferredWidth: parent.width * 3/5
+            Layout.preferredHeight: parent.height
             visible: (domain_model.count>0)
             //
-            Layout.alignment: Qt.AlignCenter
+            ChildList {
+                anchors.centerIn: parent
+                open_name: root.open_name
+                domain_model: domain_model
+            }
         }
     }
 }
