@@ -1,8 +1,8 @@
-import QtQuick 2.0
-import QtQuick.Controls 2.0
-import QtQuick.Window 2.0
-import QtQuick.Layouts 1.3
-// import QtQuick.Shapes 2.0
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
+import QtQuick.Layouts 1.10
+// import QtQuick.Shapes 1.10
 
 ApplicationWindow {
     id: root
@@ -19,6 +19,7 @@ ApplicationWindow {
     // Property Variable Area
     property string open_name: ""
     property string pred_name: ""
+    ListModel { id: domain_model }
 
     // Background Area
     Rectangle {
@@ -33,17 +34,18 @@ ApplicationWindow {
     function setDomainList(list) {
         domain_model.clear()
         for (var i = 0; i < list.length; i++) {
-            domain_model.append({"name":list[i][0], "selected":list[i][1]})
+            domain_model.append({
+                "name":list[i][0],
+                "selected":list[i][1],
+                "shortcut":list[i][2]
+            })
         }
     }
 
     // Compnent Area
-    ListModel { id: domain_model }
     RowLayout {
         focus: true
-        width: parent.width
-        height: parent.height
-
+        anchors.fill: parent
         Keys.onEscapePressed: { root.close() }
 
         Rectangle {
@@ -68,7 +70,6 @@ ApplicationWindow {
             //
             ChildList {
                 anchors.centerIn: parent
-                open_name: root.open_name
                 domain_model: domain_model
             }
         }

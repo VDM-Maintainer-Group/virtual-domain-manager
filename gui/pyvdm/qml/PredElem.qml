@@ -1,4 +1,4 @@
-import QtQuick 2.0
+import QtQuick 2.15
 
 BasicElem {
     id: pred_elem
