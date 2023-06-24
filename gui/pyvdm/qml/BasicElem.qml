@@ -6,6 +6,15 @@ Rectangle {
     readonly property string symPLUS: '＋'
     readonly property string symDEL: '×'
     //
+    readonly property color defaultColor:          "#5BA4FC"
+    readonly property color defaultHoveredColor:   "#5897EE"
+    readonly property color defaultPressedColor:   "#4F8AE2"
+    readonly property color highlightColor:        "#FC3D39"
+    readonly property color highlightHoveredColor: "#E33437"
+    readonly property color highlightPressedColor: "#D42F32"
+    readonly property color defaultTextColor:      "#FCFCF4"
+    readonly property color contrastTextColor:     "#BDC0BA"
+    //
     property string text: ""
     property bool readOnly: true
     property bool highlight: false
@@ -16,15 +25,7 @@ Rectangle {
     property var shortcut_radius: radius
     property var shortcut_width: 10
     property var shortcut_opacity : 0.40
-    property color shortcut_color: "#FCFCF4"
-    //
-    property color defaultColor:          "#5BA4FC"
-    property color defaultHoveredColor:   "#5897EE"
-    property color defaultPressedColor:   "#4F8AE2"
-    //
-    property color highlightColor:        "#FC3D39"
-    property color highlightHoveredColor: "#E33437"
-    property color highlightPressedColor: "#D42F32"
+    property color shortcut_color: defaultTextColor
     //
     color: highlight ? highlightColor : defaultColor
 
@@ -50,7 +51,7 @@ Rectangle {
         verticalAlignment: Text.AlignVCenter
         //
         color: "white"
-        selectionColor: "#BDC0BA"
+        selectionColor: contrastTextColor
         text: parent.text.split('/').pop()
         font.pixelSize: Math.min(parent.width/text.length, 30)
         //
@@ -119,7 +120,7 @@ Rectangle {
             //
             Text {
                 anchors.centerIn: parent
-                color: shortcut_opacity<0.75? "#FCFCF4" : "#BDC0BA"
+                color: shortcut_opacity<0.75? defaultTextColor : contrastTextColor
                 text: shortcut_text
                 font.pixelSize: 25
                 font.bold: true

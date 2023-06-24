@@ -19,10 +19,10 @@ class TraversalController(QObject):
         openName = self.dm.open_domain_name
         predName = self.root.property('predName')
         ##
-        domain_list = self.dm.list_child_domain(predName)
+        domain_list = sorted( self.dm.list_child_domain(predName) )
         for i,name in enumerate(domain_list):
             num = len(self.dm.list_child_domain(name))
-            domain_list[i] = {'name':k, 'selected':k==openName, 'shortcut':SYM_NEXT if v else SYM_PLUS}
+            domain_list[i] = {'name':name, 'selected':name==openName, 'shortcut':SYM_NEXT if num else SYM_PLUS}
         ##
         if predName=='' and len(domain_list)==0:
             predName = SYM_PLUS

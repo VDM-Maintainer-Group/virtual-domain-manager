@@ -16,7 +16,7 @@ Rectangle {
             always_show_shortcut: true
             shortcut_text: shortcut
             shortcut_width: parent? parent.width * 0.12 : 0
-            shortcut_color: open_name.startsWith(name+'/')? "#FC3D39" : "#FCFCF4"
+            shortcut_color: open_name.startsWith(name+'/')? highlightColor : defaultTextColor
             //
             width: parent? parent.width * 0.80 : 0
             height: 50
@@ -46,7 +46,7 @@ Rectangle {
             // function onShortcutLongPress(button) {
             //     if (shortcut_text===symDEL) {
             //         shortcut_text = shortcut
-            //         shortcut_color = open_name.startsWith(name+'/')? "#FC3D39" : "#FCFCF4"
+            //         shortcut_color = open_name.startsWith(name+'/')? highlightColor : defaultTextColor
             //         shortcut_opacity = 0.40
             //     }
             //     else {
