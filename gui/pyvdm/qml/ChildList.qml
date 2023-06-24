@@ -1,6 +1,8 @@
 import QtQuick 2.15
 
 Rectangle {
+    property string open_name: ""
+    property string pred_name: ""
     property var domain_model: null
     anchors.fill: parent
     color: "transparent"
@@ -8,60 +10,56 @@ Rectangle {
     Component {
         id: listDelegate
         BasicElem {
+            property var rect: parent? root_layout.mapFromItem(this, parent.x, parent.y, parent.width, parent.height) : Qt.rect(0,0,0,0)
             text: name
             highlight: selected
-            has_shortcut: true
-            anchors.horizontalCenter: parent.horizontalCenter
-
-            width: parent.width * 0.80
+            always_show_shortcut: true
+            shortcut_text: shortcut
+            shortcut_width: parent? parent.width * 0.12 : 0
+            shortcut_color: open_name.startsWith(name+'/')? "#FC3D39" : "#FCFCF4"
+            //
+            width: parent? parent.width * 0.80 : 0
             height: 50
             radius: 10
-
-            function onDoubleClicked() { readOnly = false }
-
-            Rectangle {
-                property var bg_opacity: 0.50
-                anchors.right: parent.right
-                radius: parent.radius
-                height: parent.height
-                width: parent.width * 0.12
-                //
-                visible: show_shortcut
-                color: "transparent"
-                Rectangle {
-                    anchors.fill: parent
-                    color: "#FCFCF4"
-                    opacity: parent.bg_opacity
-                    radius: parent.radius
+            anchors.horizontalCenter: listDelegate.horizontalCenter
+            //
+            function onClicked(button) {
+                text===symPLUS? controller.fork_domain(predName, true) : null
+            }
+            function onDoubleClicked(button) {
+                if (button===Qt.RightButton) {
+                    if (text) { readOnly = false }
                 }
-                //
-                Text {
-                    anchors.centerIn: parent
-                    color: "#FCFCF4"
-                    text: shortcut
-                    font.pixelSize: 25
-                    font.bold: true
-                }
-                //
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    preventStealing: true
-                    propagateComposedEvents: true
-                    //
-                    onEntered: { parent.bg_opacity = 0.70; parent.parent.propEnterEvent=true }
-                    onExited:  { parent.bg_opacity = 0.50; parent.parent.propEnterEvent=false }
-                    onPressed: { parent.bg_opacity = 0.80 }
-                    onReleased: { parent.bg_opacity = 0.70 }
-                    onClicked: {
-                        console.log("clicked")
-                    }
+                else {
+                    text!==symPLUS? controller.open_domain(text) : null
                 }
             }
+            function onShortcutClicked(button) {
+                switch (shortcut_text) {
+                    case symPLUS: controller.fork_domain(name, false); break;
+                    case symNEXT: controller.set_pred_name(name); break;
+                    case symDEL:  controller.delete_domain(name); break;
+                    default: break;
+                }
+            }
+            //FIXME: logic not correct
+            // function onShortcutLongPress(button) {
+            //     if (shortcut_text===symDEL) {
+            //         shortcut_text = shortcut
+            //         shortcut_color = open_name.startsWith(name+'/')? "#FC3D39" : "#FCFCF4"
+            //         shortcut_opacity = 0.40
+            //     }
+            //     else {
+            //         shortcut_text = symDEL
+            //         shortcut_color = "red"
+            //         shortcut_opacity = 0.80
+            //     }
+            // }
         }
     }
 
     ListView {
+        id: listView
         anchors.centerIn: parent
 
         spacing: 20

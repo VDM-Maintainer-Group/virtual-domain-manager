@@ -3,6 +3,10 @@ from pathlib import Path
 from PyQt5.QtCore import (QObject, QMetaObject, Q_ARG, pyqtSlot)
 from PyQt5.QtQml import QQmlApplicationEngine
 
+SYM_NEXT = '→'
+SYM_BACK = '←'
+SYM_PLUS = '＋'
+
 class TraversalController(QObject):
     def __init__(self, root, domain_manager):
         super().__init__(None)
@@ -12,18 +16,59 @@ class TraversalController(QObject):
 
     @pyqtSlot()
     def refresh(self):
-        open_name = self.dm.open_domain_name
-        pred_name = self.root.property('pred_name')
-        domain_list = self.dm.list_child_domain(pred_name)
-        domain_list = [(name, len(self.dm.list_child_domain(pred_name))==0)
-                       for name in domain_list]
+        openName = self.dm.open_domain_name
+        predName = self.root.property('predName')
         ##
-        if pred_name=='' and len(domain_list)==0: pred_name = '+'
-        self.root.setProperty('open_name', open_name)
-        self.root.setProperty('pred_name', pred_name)
+        domain_list = self.dm.list_child_domain(predName)
+        for i,name in enumerate(domain_list):
+            num = len(self.dm.list_child_domain(name))
+            domain_list[i] = {'name':k, 'selected':k==openName, 'shortcut':SYM_NEXT if v else SYM_PLUS}
         ##
-        domain_list = [ ['AAA',False,"＋"], ['BBB',True,"→"], ['CCC',False,"＋"] ]
+        if predName=='' and len(domain_list)==0:
+            predName = SYM_PLUS
+        else:
+            domain_list.append({'name':SYM_PLUS, 'selected':False, 'shortcut':''})
+        ##
+        self.root.setProperty('openName', openName)
+        self.root.setProperty('predName', predName)
         QMetaObject.invokeMethod(self.root, 'setDomainList', Q_ARG("QVariant", domain_list))
+        pass
+
+    @pyqtSlot(str)
+    def open_domain(self, openName):
+        #TODO: self.dm.open_domain(name)
+        self.root.setProperty('openName', openName)
+        self.refresh()
+        pass
+
+    @pyqtSlot()
+    def create_domain(self):
+        #TODO: self.dm.create_domain()
+        print('create_domain')
+        pass
+
+    @pyqtSlot(str)
+    def delete_domain(self, name):
+        #TODO: self.dm.delete_domain(name)
+        print('delete_domain', name)
+        pass
+
+    @pyqtSlot(str, bool)
+    def fork_domain(self, name, copy):
+        #TODO: self.dm.fork_domain()
+        print('fork_domain', name, copy)
+        pass
+
+    @pyqtSlot(str)
+    def set_pred_name(self, predName):
+        self.root.setProperty('predName', predName)
+        self.refresh()
+        pass
+
+    @pyqtSlot(str,str)
+    def update_name(self, old_name, new_name):
+        #TODO: self.dm.update_domain_name(old_name, new_name)
+        print('update_name', old_name, new_name)
         pass
 
     pass
