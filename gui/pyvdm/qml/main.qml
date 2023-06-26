@@ -31,9 +31,11 @@ ApplicationWindow {
 
     // Function Area
     function setDomainList(list) {
-        var length = Math.max(list.length, domain_model.count)
-        for (var i = 0; i < length; i++) {
-            list[i]? domain_model.set(i, list[i]) : domain_model.remove(i)
+        for (var i = 0; i < list.length; i++) {
+            domain_model.set(i, list[i])
+        }
+        if (domain_model.count > list.length) {
+            domain_model.remove(list.length, domain_model.count - list.length)
         }
     }
 

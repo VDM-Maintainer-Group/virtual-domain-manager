@@ -10,13 +10,22 @@ Rectangle {
     Component {
         id: listDelegate
         BasicElem {
+            property var back_sc: null
             property var rect: parent? root_layout.mapFromItem(this, parent.x, parent.y, parent.width, parent.height) : Qt.rect(0,0,0,0)
             text: name
             highlight: selected
             always_show_shortcut: true
             shortcut_text: shortcut
             shortcut_width: parent? parent.width * 0.12 : 0
-            shortcut_color: open_name.startsWith(name+'/')? highlightColor : defaultTextColor
+            shortcut_color: {
+                if (shortcut===symDEL) {
+                    return "red"
+                }
+                else {
+                    return open_name.startsWith(name+'/')? highlightColor : defaultTextColor
+                }
+            }
+            shortcut_opacity: shortcut===symDEL? 0.80 : 0.40
             //
             width: parent? parent.width * 0.80 : 0
             height: 50
@@ -45,18 +54,15 @@ Rectangle {
                 }
             }
             //FIXME: logic not correct
-            // function onShortcutLongPress(button) {
-            //     if (shortcut_text===symDEL) {
-            //         shortcut_text = shortcut
-            //         shortcut_color = open_name.startsWith(name+'/')? highlightColor : defaultTextColor
-            //         shortcut_opacity = 0.40
-            //     }
-            //     else {
-            //         shortcut_text = symDEL
-            //         shortcut_color = "red"
-            //         shortcut_opacity = 0.80
-            //     }
-            // }
+            function onShortcutLongPress(button) {
+                if (shortcut===symDEL) {
+                    shortcut = back_sc.text
+                }
+                else if (shortcut===symPLUS) {
+                    back_sc = {"text":shortcut}
+                    shortcut = symDEL
+                }
+            }
         }
     }
 
