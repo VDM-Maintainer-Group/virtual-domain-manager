@@ -37,7 +37,7 @@ Rectangle {
                     if (text && shortcut==symPLUS) { readOnly = false }
                 }
                 else {
-                    text===symPLUS? controller.fork_domain(predName, true) : controller.open_domain(text)
+                    text===symPLUS? controller.fork_domain(predName, false) : controller.open_domain(text)
                 }
             }
             function onShortcutClicked(button) {
@@ -53,7 +53,6 @@ Rectangle {
                     default: break;
                 }
             }
-            //FIXME: logic not correct
             function onShortcutLongPress(button) {
                 if (shortcut===symDEL) {
                     shortcut = back_sc.text
