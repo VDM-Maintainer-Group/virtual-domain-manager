@@ -63,10 +63,10 @@ class CoreManager:
         self.root = DOMAIN_DIRECTORY
         self.root.mkdir(exist_ok=True, parents=True)
         #
-        self.dm = D_MAN.DomainManager( POSIX(DOMAIN_DIRECTORY) )
         self.cm = C_MAN.CapabilityManager( POSIX(CAPABILITY_DIRECTORY) )
         self.pm = P_MAN.PluginManager( POSIX(PLUGIN_DIRECTORY), self.cm )
         self.am = A_MAN.ApplicationManager( POSIX(VDM_HOME), self.pm )
+        self.dm = D_MAN.DomainManager( POSIX(DOMAIN_DIRECTORY), self.am )
         #
         _domain = self.dm.open_domain_name
         if _domain:

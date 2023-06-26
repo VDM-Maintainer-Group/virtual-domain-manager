@@ -259,15 +259,15 @@ def main():
         exit()
     # ignore interrupt signal
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    QApplication.setAttribute( Qt.AA_EnableHighDpiScaling )
+    QApplication.setAttribute( Qt.ApplicationAttribute.AA_EnableHighDpiScaling )
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     tray = TrayIcon(app)
     ## init key shortcuts
     hotkeys = {
-        '<ctrl>+<alt>+<shift>+s': tray.save_domain,
-        '<ctrl>+<alt>+<shift>+c': tray.close_domain,
-        '<cmd>+<shift>+s': tray.w_tr.show,
+        CONFIG['KEYS_SAVE_DOMAIN']: tray.save_domain,
+        CONFIG['KEYS_CLOSE_DOMAIN']: tray.close_domain,
+        CONFIG['KEYS_SHOW_TRAVERSAL']: tray.w_tr.show,
     }
     keyboard.GlobalHotKeys(hotkeys).start()
     ##

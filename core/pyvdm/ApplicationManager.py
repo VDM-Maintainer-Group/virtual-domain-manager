@@ -370,6 +370,7 @@ class ApplicationManager:
             alt_app_file = Path.home()/'.local'/'share'/'applications'/app_file.name
             with open(alt_app_file.as_posix(), 'w') as f:
                 app_conf.write(f)
+            os.chmod(alt_app_file.as_posix(), 0o755)
         pass
 
     def refresh(self):
@@ -394,7 +395,7 @@ class ApplicationManager:
         _applications = dict(sorted( _applications.items(), key=lambda x:x[1]['name'] ))
         _applications = dict(sorted( _applications.items(), key=lambda x:x[1]['compatible'], reverse=True ))
         self.applications = _applications
-        pass
+        return _applications
 
     def show_compatibility(self):
         if not self.applications: self.refresh()

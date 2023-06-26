@@ -3,15 +3,24 @@ from pathlib import Path
 from PyQt5.QtCore import (QObject, QMetaObject, Q_ARG, pyqtSlot)
 from PyQt5.QtQml import QQmlApplicationEngine
 
+import pyvdm.core.errcode as errcode
+
 SYM_NEXT = '→'
 SYM_BACK = '←'
 SYM_PLUS = '＋'
 
 class TraversalController(QObject):
-    def __init__(self, root, domain_manager):
+    def __init__(self, parent, root_view, domain_manager):
         super().__init__(None)
-        self.root = root
+        self.parent = parent
+        self.root = root_view
         self.dm = domain_manager
+        pass
+
+    @pyqtSlot(str)
+    def set_pred_name(self, predName):
+        self.root.setProperty('predName', predName)
+        self.refresh() #type: ignore
         pass
 
     @pyqtSlot()
@@ -19,6 +28,7 @@ class TraversalController(QObject):
         openName = self.dm.open_domain_name
         predName = self.root.property('predName')
         ##
+        predName = '' if predName==SYM_PLUS else predName
         domain_list = sorted( self.dm.list_child_domain(predName) )
         for i,name in enumerate(domain_list):
             num = len(self.dm.list_child_domain(name))
@@ -36,41 +46,43 @@ class TraversalController(QObject):
 
     @pyqtSlot(str)
     def open_domain(self, openName):
-        #TODO: self.dm.open_domain(name)
+        self.parent.switch_domain(openName)
         self.root.setProperty('openName', openName)
-        self.refresh()
+        self.root.close()
         pass
 
     @pyqtSlot()
     def create_domain(self):
-        #TODO: self.dm.create_domain()
-        print('create_domain')
+        cnt = 0
+        ret = self.dm.create_domain('Default', None, tui=False)
+        while ret!=errcode.DomainCode.ALL_CLEAN:
+            cnt += 1
+            ret = self.dm.create_domain(f'Default-{cnt}', None, tui=False)
+        self.refresh() #type: ignore
         pass
 
     @pyqtSlot(str)
     def delete_domain(self, name):
-        #TODO: self.dm.delete_domain(name)
-        print('delete_domain', name)
+        self.dm.delete_domain(name, allow_recursive=False)
+        self.refresh() #type: ignore
         pass
 
     @pyqtSlot(str, bool)
     def fork_domain(self, name, copy):
-        #TODO: self.dm.fork_domain()
-        print('fork_domain', name, copy)
+        if name:
+            ret = self.dm.fork_domain(name, copy)
+            if not copy and ret==errcode.DomainCode.ALL_CLEAN:
+                self.root.setProperty('predName', name)
+        else:
+            ret = self.create_domain() #type: ignore
+        self.refresh() #type: ignore
         pass
 
-    @pyqtSlot(str)
-    def set_pred_name(self, predName):
-        self.root.setProperty('predName', predName)
-        self.refresh()
-        pass
-
-    @pyqtSlot(str,str)
+    @pyqtSlot(str,str,result=bool) #type: ignore
     def update_name(self, old_name, new_name):
-        #TODO: self.dm.update_domain_name(old_name, new_name)
-        print('update_name', old_name, new_name)
-        pass
-
+        ret = self.dm.update_domain(old_name, None, False, new_name)
+        self.refresh() #type: ignore
+        return ret==errcode.DomainCode.ALL_CLEAN
     pass
     
 
@@ -85,13 +97,14 @@ class TraversalWidget():
         self.engine.load(source)
         self.root = self.engine.rootObjects()[0]
         ##
-        self.controller = TraversalController(self.root, self.dm)
+        self.controller = TraversalController(parent, self.root, self.dm)
         self.engine.rootContext().setContextProperty('controller', self.controller)
-        self.controller.refresh()
+        self.controller.refresh() #type: ignore
         pass
 
     def show(self):
-        self.root.show()
+        self.controller.refresh() #type: ignore
+        self.root.show() #type: ignore
     pass
 
 if __name__ == '__main__':

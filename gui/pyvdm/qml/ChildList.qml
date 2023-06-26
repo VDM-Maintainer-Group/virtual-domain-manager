@@ -23,22 +23,24 @@ Rectangle {
             radius: 10
             anchors.horizontalCenter: listDelegate.horizontalCenter
             //
-            function onClicked(button) {
-                text===symPLUS? controller.fork_domain(predName, true) : null
-            }
             function onDoubleClicked(button) {
                 if (button===Qt.RightButton) {
-                    if (text) { readOnly = false }
+                    if (text && shortcut==symPLUS) { readOnly = false }
                 }
                 else {
-                    text!==symPLUS? controller.open_domain(text) : null
+                    text===symPLUS? controller.fork_domain(predName, true) : controller.open_domain(text)
                 }
             }
             function onShortcutClicked(button) {
                 switch (shortcut_text) {
-                    case symPLUS: controller.fork_domain(name, false); break;
                     case symNEXT: controller.set_pred_name(name); break;
                     case symDEL:  controller.delete_domain(name); break;
+                    default: break;
+                }
+            }
+            function onShortcutDoubleClicked(button) {
+                switch (shortcut_text) {
+                    case symPLUS: controller.fork_domain(name, false); break;
                     default: break;
                 }
             }

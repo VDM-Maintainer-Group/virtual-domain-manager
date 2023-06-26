@@ -56,13 +56,26 @@ Rectangle {
         font.pixelSize: Math.min(parent.width/text.length, 30)
         //
         onEditingFinished: {
-            controller.update_name(parent.text, text_edit.text)
+            if (text_edit.text===""
+                || text_edit.text.includes('/') 
+                || text_edit.text===parent.text
+            ) { text_edit.text = parent.text }
+            else {
+                var _arr = parent.text.split('/')
+                var _tmp = _arr.pop()
+                var old_name = _arr.concat(_tmp).join('/')
+                var new_name = _arr.concat(text_edit.text).join('/')
+                controller.update_name(old_name, new_name)? null : text_edit.text = parent.text
+            }
             parent.readOnly = true
             deselect()
         }
         Keys.onPressed: (event) => {
             if (!parent.readOnly) {
                 if (event.key===Qt.Key_Return || event.key===Qt.Key_Enter || event.key===Qt.Key_Escape) {
+                    if (event.key===Qt.Key_Escape) {
+                        text_edit.text = parent.text
+                    }
                     event.accepted = true
                     editingFinished()
                 }

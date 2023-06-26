@@ -18,10 +18,7 @@ ApplicationWindow {
     // Property Variable Area
     property string openName: ""
     property string predName: ""
-    ListModel {
-        id: domain_model
-        onDataChanged: canvas.requestPaint()
-    }
+    ListModel { id: domain_model }
 
     // Background Area
     Rectangle {
@@ -105,7 +102,8 @@ ApplicationWindow {
         }
         //
         Timer {
-            interval: 50
+            interval: 16
+            repeat: true
             running: true
             onTriggered: canvas.requestPaint()
         }

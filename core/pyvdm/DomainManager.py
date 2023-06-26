@@ -8,7 +8,9 @@ import shutil
 import tempfile
 import time
 
-import pyvdm.core.PluginManager as P_MAN
+import pyvdm.core.ApplicationManager as A_MAN
+from pyvdm.core.ApplicationManager import HINT_GENERATED
+
 from pyvdm.core.utils import (POSIX, SHELL_POPEN, STAT_POSTFIX, StatFile, Tui, json_load, json_dump)
 from pyvdm.core.errcode import DomainCode as ERR
 
@@ -32,11 +34,17 @@ def __run_process(cmd:str, stdin:list):
     pass
 
 class DomainManager():
-    def __init__(self, root=''):
+    def __init__(self, root='', am=None):
         if root:
             self.root = Path(root).resolve()
         else:
             self.root = DOMAIN_DIRECTORY
+        ##
+        if not am:
+            self.am = A_MAN.ApplicationManager(root)
+        else:
+            self.am = am
+        ##
         self.root.mkdir(exist_ok=True, parents=True)
         self.stat = StatFile( POSIX(self.root.parent) )
         self.stat.touch()
@@ -45,6 +53,27 @@ class DomainManager():
     @property
     def open_domain_name(self):
         return self.stat.getStat()['name']
+
+    def defaultConfig(self, name, full_feature=True):
+        config = self.getDomainConfig(name)
+        if type(config)==dict:
+            return config
+        ##
+        if full_feature:
+            _,_plugins = self.am.pm.getPluginsWithTarget()
+            plugins = { name:plugin['version'] for name,plugin in _plugins.items() }
+            _applications = self.am.refresh()
+            applications = [k for k,v in _applications.items() if v['compatible']!=HINT_GENERATED]
+        else:
+            plugins = dict()
+            applications = list()
+        return {
+            'name':name,
+            'plugins':plugins,
+            'applications': applications,
+            'created_time':int(time.time()),
+            'last_update_time':int(time.time())
+        }
 
     def getDomainConfig(self, name):
         name = str(name)
@@ -63,32 +92,38 @@ class DomainManager():
     def configTui(self, name, config={}) -> dict:
         if not isinstance(config, dict):
             config = dict()
-        # create/update domain name
+        ## create/update domain name
         if 'name' not in config:
             if not Tui.confirm('Create new domain \"%s\"?'%name):
                 return {} #error
             config['name'] = name
         else:
             config['name'] = Tui.ask('Domain Name', default=name)
-        # ask for plugins selection
-        _, _plugins = P_MAN.PluginManager().getPluginsWithTarget()
+        ## ask for application selection
+        _apps = self.am.refresh()
+        _all_apps   = list( _apps.keys() )
+        _compatible = [ k for k,v in _apps if v['compatible']!=HINT_GENERATED ]
+        _selected = Tui.select('Applications', _all_apps, _compatible)
+        config['applications'] = [ _all_apps[idx] for idx in _selected ] #type: ignore
+        ## ask for plugins selection
+        _, _plugins = self.am.pm.getPluginsWithTarget()
         all_plugin_names = list( _plugins.keys() )
         _plugin_names = list( config['plugins'].keys() ) if 'plugins' in config else []
         _selected = Tui.select('Plugins', all_plugin_names, _plugin_names)
         config['plugins'] = dict()
-        for idx in _selected:
+        for idx in _selected: #type: ignore
             _name = all_plugin_names[idx]
             _version = _plugins[_name]['version']
             config['plugins'].update( {_name:_version} )
-        # update timestamp
+        ## update timestamp
         config['last_update_time'] = int( time.time() )
         if 'created_time' not in config:
             config['created_time'] = config['last_update_time']
         return config
 
     #---------- online domain operations -----------#
-    def __init_overlay(self, child_name:str):
-        child_name   = Path(child_name)
+    def __init_overlay(self, _child_name:str):
+        child_name   = Path(_child_name)
         parent_names = list( Path(child_name).parents )[:-1]
         tmpdir = Path( tempfile.gettempdir() )
         ## prepare lower_dirs
@@ -115,10 +150,10 @@ class DomainManager():
         overlay.symlink_to(upperdir)
         ## prepare tempdir
         tempdir = tempfile.mkdtemp()
-        return (lowerdir, upperdir)
+        return (lowerdir, upperdir, tempdir)
 
-    def __fini_overlay(self, child_name:str):
-        child_name = Path(child_name)
+    def __fini_overlay(self, _child_name:str):
+        child_name = Path(_child_name)
         tmpdir = Path( tempfile.gettempdir() )
         ## move back upperdir
         overlay = self.root / child_name / OVERLAY_DIRECTORY
@@ -174,13 +209,13 @@ class DomainManager():
         pass
 
     #---------- offline domain operations ----------#
-    def create_domain(self, name:str, config:dict) -> ERR:
+    def create_domain(self, name:str, config:dict, tui:bool=True) -> ERR:
         # return if already exist
         if (self.root / name).exists():
             return ERR.DOMAIN_ALREADY_EXIST
         # 
         if not config:
-            config = self.configTui(name)
+            config = self.configTui(name) if tui else self.defaultConfig(name)
         if not config:
             return ERR.DOMAIN_CONFIG_FAILED
         # fix path existence when create
@@ -196,7 +231,7 @@ class DomainManager():
         print('Domain \"%s\" created.'%name)
         return ERR.ALL_CLEAN
 
-    def update_domain(self, name:str, config:dict) -> ERR:
+    def update_domain(self, name:str, config:dict, tui:bool=True, new_name='') -> ERR:
         ## check if domain open
         if Path(self.open_domain_name).is_relative_to(name):
             return ERR.DOMAIN_IS_OPEN
@@ -213,13 +248,17 @@ class DomainManager():
         if type(ori_config)==ERR:
             return ori_config
         if not config:
-            config = self.configTui(name, ori_config)
+            config = self.configTui(name, ori_config) if tui else self.defaultConfig(name)
+            if new_name: config['name'] = new_name
         if not config:
             return ERR.DOMAIN_CONFIG_FAILED
         ## rename the domain folder if needed
         assert( Path(config['name']).parent == Path(name).parent )
         if config['name']!=name:
-            domain_folder.replace( self.root / config['name'] )
+            try:
+                domain_folder.replace( self.root / config['name'] )
+            except:
+                return ERR.DOMAIN_NAME_INVALID
             name = config['name']
             pass
         ## save the config file
@@ -232,19 +271,19 @@ class DomainManager():
         print('Domain \"%s\" updated.'%name)
         return ERR.ALL_CLEAN
 
-    def fork_domain(self, parent_name:str, copy:bool) -> ERR:
+    def fork_domain(self, _parent_name:str, copy:bool) -> ERR:
         ## check if parent domain exists
-        parent_name = Path(parent_name)
+        parent_name = Path(_parent_name)
         parent_path = self.root / parent_name
         if not parent_path.exists():
             return ERR.DOMAIN_NOT_EXIST
         ## check base name: Copy/Derive
         if copy:    # A --> A*1
-            _parent = re.sub(r'\*\d+$', '', parent_path.stem)
+            _parent = parent_path.stem#re.sub(r'\*\d+$', '', parent_path.stem)
             _name = f'{_parent}*'
             _path = parent_path.parent
         else:       # A --> A+1
-            _parent = re.sub(r'\+\d+$', '', parent_path.stem)
+            _parent = parent_path.stem#re.sub(r'\+\d+$', '', parent_path.stem)
             _name = f'{_parent}+'
             _path = parent_path
         ## check existing name collision
@@ -266,7 +305,7 @@ class DomainManager():
         stat = self.stat.getStat()
         if stat['name']==parent_name:
             ppid, pid = stat['ppid'], stat['pid']
-            (lowerdir, upperdir, workdir) = self.__init_overlay(child_name)
+            (lowerdir, upperdir, workdir) = self.__init_overlay( POSIX(child_name) )
             process, stderr = __run_process(
                 f'/usr/bin/nsenter --preserve-credentials -U -m -p -t {pid}',
                 [
@@ -274,7 +313,7 @@ class DomainManager():
                     f'mount -t overlay overlay -o lowerdir={lowerdir},upperdir={upperdir},workdir={workdir} $HOME\n',
                 ]
             )
-            self.stat.putStat(child_name, ppid=ppid, pid=pid)
+            self.stat.putStat(POSIX(child_name), ppid=ppid, pid=pid)
         ## fork the parent domain: overlay folder
         if copy:
             child_overlay   = child_path / OVERLAY_DIRECTORY
@@ -306,7 +345,7 @@ class DomainManager():
     def list_child_domain(self, name:str='') -> list:
         domain_folder = self.root / name
         child_domains = list( domain_folder.glob(f'[!.]*/{CONFIG_FILENAME}') )
-        return [item.parent.stem for item in child_domains]
+        return [POSIX(item.parent.relative_to(self.root)) for item in child_domains]
 
     def list_domain(self, names=[]) -> dict:
         result = dict()

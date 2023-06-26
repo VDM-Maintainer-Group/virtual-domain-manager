@@ -135,6 +135,8 @@ class ConfigFile(MutableMapping):
             return ( 'assets', key.split('_',1)[1] )
         elif key.startswith('DEFAULT_'):
             return ( 'default', key.split('_',1)[1] )
+        elif key.startswith('KEYS_'):
+            return ( 'shortcuts', key.split('_',1)[1] )
         else:
             return ( 'default', key )
     pass
