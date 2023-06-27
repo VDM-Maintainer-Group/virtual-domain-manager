@@ -82,6 +82,24 @@ The overview of command-line usage is listed below.
 - **Sync Management** `pyvdm sync`
   > (Not implemented) Manage synchronization of domain status files and data files.
 
+## Compatibility
+
+### Native
+- Firefox ESR (via [browser-bridge](https://github.com/VDM-Maintainer-Group/vdm-capability-library/tree/main/browser-bridge))
+- Google Chrome (via [browser-bridge](https://github.com/VDM-Maintainer-Group/vdm-capability-library/tree/main/browser-bridge))
+- Microsoft Edge (via [browser-bridge](https://github.com/VDM-Maintainer-Group/vdm-capability-library/tree/main/browser-bridge))
+- Deepin Browser (via [browser-bridge](https://github.com/VDM-Maintainer-Group/vdm-capability-library/tree/main/browser-bridge))
+
+### Plugins
+|                            Plugin                            |          Target           |
+| :----------------------------------------------------------: | :-----------------------: |
+| [vdm-vscode-plugin](https://github.com/VDM-Maintainer-Group/vdm-vscode-plugin/releases/latest) |      "code.desktop"       |
+| [vdm-vlc-plugin](https://github.com/VDM-Maintainer-Group/vdm-vlc-plugin/releases/latest) |       "vlc.desktop"       |
+| [vdm-typora-plugin](https://github.com/VDM-Maintainer-Group/vdm-typora-plugin/releases/latest) |    "io.typora.desktop"    |
+| [vdm-okular-plugin](https://github.com/VDM-Maintainer-Group/vdm-okular-plugin/releases/latest) | "org.kde.okular.desktop"  |
+| [desktop-settings-plugin](https://github.com/VDM-Maintainer-Group/desktop-settings-plugin/releases/latest) | Wallpaper, Network, Audio |
+
+
 ## Capability Development
 
 > The `VDM Capability Library` is developed to be invoked by `VDM Plugin` for alleviation of complicated development.
