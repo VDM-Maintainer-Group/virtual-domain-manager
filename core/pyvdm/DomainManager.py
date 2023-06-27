@@ -70,7 +70,7 @@ class DomainManager():
         return {
             'name':name,
             'plugins':plugins,
-            'applications': applications,
+            'applications':applications,
             'created_time':int(time.time()),
             'last_update_time':int(time.time())
         }
@@ -90,31 +90,21 @@ class DomainManager():
         return ERR.ALL_CLEAN
 
     def configTui(self, name, config={}) -> dict:
+        full_config = self.defaultConfig(name, full_feature=True)
         if not isinstance(config, dict):
-            config = dict()
+            config = full_config
         ## create/update domain name
-        if 'name' not in config:
-            if not Tui.confirm('Create new domain \"%s\"?'%name):
-                return {} #error
-            config['name'] = name
-        else:
-            config['name'] = Tui.ask('Domain Name', default=name)
+        config['name'] = Tui.ask('Domain Name', default=name)
         ## ask for application selection
-        _apps = self.am.refresh()
-        _all_apps   = list( _apps.keys() )
-        _compatible = [ k for k,v in _apps if v['compatible']!=HINT_GENERATED ]
-        _selected = Tui.select('Applications', _all_apps, _compatible)
+        _all_apps = list( self.am.refresh() )
+        _candidates = config.get('applications', [])
+        _selected = Tui.select('Applications', _all_apps, _candidates)
         config['applications'] = [ _all_apps[idx] for idx in _selected ] #type: ignore
         ## ask for plugins selection
-        _, _plugins = self.am.pm.getPluginsWithTarget()
-        all_plugin_names = list( _plugins.keys() )
-        _plugin_names = list( config['plugins'].keys() ) if 'plugins' in config else []
-        _selected = Tui.select('Plugins', all_plugin_names, _plugin_names)
-        config['plugins'] = dict()
-        for idx in _selected: #type: ignore
-            _name = all_plugin_names[idx]
-            _version = _plugins[_name]['version']
-            config['plugins'].update( {_name:_version} )
+        _all_plugins = list( full_config['plugin'].keys() )
+        _candidates = config.get('plugins', {})
+        _selected = Tui.select('Plugins', _all_plugins, list(_candidates))
+        config['plugins'] = { full_config[ _all_plugins[idx] ] for idx in _selected } #type: ignore
         ## update timestamp
         config['last_update_time'] = int( time.time() )
         if 'created_time' not in config:
@@ -295,7 +285,8 @@ class DomainManager():
         child_path.mkdir(exist_ok=True, parents=True)
         ## fork the parent domain: config file
         _conf = json_load( parent_path/CONFIG_FILENAME )
-        _conf['name'] = POSIX(child_name); _conf['created_time'] = int(time.time())
+        _conf['name'] = POSIX(child_name)
+        _conf['created_time'] = int(time.time())
         _conf['last_update_time'] = int(time.time())
         json_dump( child_path/CONFIG_FILENAME, _conf )
         ## fork the parent domain: stat files
