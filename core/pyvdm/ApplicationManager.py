@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-from configparser import RawConfigParser
 import dbus
 import json
 import os
@@ -14,7 +13,7 @@ import pyvdm.core.PluginManager as P_MAN
 from pyvdm.core.PluginManager import MetaPlugin
 from pyvdm.core.errcode import ApplicationCode as ERR
 from pyvdm.interface import CapabilityLibrary
-from pyvdm.core.utils import (POSIX, KeyringEnDec, retry_with_timeout)
+from pyvdm.core.utils import (POSIX, KeyringEnDec, ConfigFile, retry_with_timeout)
 
 PARENT_ROOT = Path('~/.vdm').expanduser()
 HINT_GENERATED = '(auto-generated)'
@@ -247,7 +246,7 @@ class ApplicationManager:
         for xdg_path in data_dirs:
             app_file = Path(xdg_path) / 'applications' / f'{name}.desktop'
             if app_file.exists():
-                app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
+                app_conf = ConfigFile(allow_no_value=True, default_section='Desktop Entry', strict=False)
                 app_conf.read( app_file.as_posix() )
                 try:
                     return {
@@ -274,7 +273,7 @@ class ApplicationManager:
             app_dir = Path(xdg_path).expanduser() / 'applications'
             if app_dir.exists():
                 for app_file in app_dir.glob('*.desktop'):
-                    app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
+                    app_conf = ConfigFile(allow_no_value=True, default_section='Desktop Entry', strict=False)
                     app_conf.read( app_file.as_posix() )
                     if not _non_gui_filter(app_conf):
                         try:
@@ -302,7 +301,7 @@ class ApplicationManager:
             app_dir = Path(xdg_path).expanduser() / 'applications'
             if app_dir.exists():
                 for app_file in app_dir.glob('*.desktop'):
-                    app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
+                    app_conf = ConfigFile(allow_no_value=True, default_section='Desktop Entry', strict=False)
                     app_conf.read( app_file.as_posix() )
                     try:
                         cmdline = app_conf['Desktop Entry']['Exec']
@@ -360,7 +359,7 @@ class ApplicationManager:
         cmdline = app['exec']
         if 'pyvdm' not in cmdline:
             app_file = Path(app['path'])
-            app_conf = RawConfigParser(allow_no_value=True, default_section='Desktop Entry', strict=False)
+            app_conf = ConfigFile(allow_no_value=True, default_section='Desktop Entry', strict=False)
             app_conf.read( app_file.as_posix() )
             ##
             cmdline = f'/bin/sh -c "(which pyvdm && exec pyvdm run {cmdline}) || (exec {cmdline})"'

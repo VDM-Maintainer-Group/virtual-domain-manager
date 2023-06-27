@@ -21,7 +21,7 @@ OVERLAY_DIRECTORY = '.overlay'
 
 DOMAIN_NAME_BLACKLIST = [CONFIG_FILENAME, STAT_POSTFIX, OVERLAY_DIRECTORY]
 
-def __run_process(cmd:str, stdin:list):
+def _run_process(cmd:str, stdin:list):
     process = SHELL_POPEN(cmd)
     assert( process.stdin is not None )
     process.stdin.writelines(stdin)
@@ -172,11 +172,11 @@ class DomainManager():
     def initialize_domain(self, name:str) -> ERR:
         stat = self.stat.getStat()
         ## check if domain already open
-        if stat['name'] and psutil.pid_exists(stat['pid']):
+        if stat['name'] and psutil.pid_exists( int(stat['pid']) ):
             return ERR.DOMAIN_IS_OPEN
         ## setup lowerdir, upperdir, workdir
         (lowerdir, upperdir, workdir) = self.__init_overlay(name)
-        (process, stderr) = __run_process(
+        (process, stderr) = _run_process(
             'exec /usr/bin/unshare -rmCp --fork --kill-child --mount-proc -- /bin/sh --norc',
             [
                 f'mount -o bind,noexec,nosuid,nodev {workdir} /tmp\n',
@@ -306,7 +306,7 @@ class DomainManager():
         if stat['name']==parent_name:
             ppid, pid = stat['ppid'], stat['pid']
             (lowerdir, upperdir, workdir) = self.__init_overlay( POSIX(child_name) )
-            process, stderr = __run_process(
+            process, stderr = _run_process(
                 f'/usr/bin/nsenter --preserve-credentials -U -m -p -t {pid}',
                 [
                     f'umount $HOME\n',

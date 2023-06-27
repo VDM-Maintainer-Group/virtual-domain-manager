@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from configparser import RawConfigParser
 import json
 from os import chdir
 from pathlib import Path
@@ -185,11 +186,20 @@ class StatFile:
     def putStat(self, name:str, **stat) -> bool:
         try:
             with open(POSIX(self.stat_file), 'w') as fd:
-                _stat = [ f'{k}={v}' for k,v in stat.items() ]
-                fd.writelines([name, *_stat])
+                _stat = [ f'{k}={v}'.strip() for k,v in stat.items() ]
+                fd.writelines([x+'\n' for x in (name, *_stat)])
             return True
         except Exception as e:
             return False
+    pass
+
+class ConfigFile(RawConfigParser):
+    def __init__(self, *args, **kwargs):
+        super(ConfigFile, self).__init__(*args, **kwargs)
+        self.optionxform = str #type: ignore
+
+    def write(self, fp):
+        return super().write(fp, space_around_delimiters=True)
     pass
 
 def json_load(filename):

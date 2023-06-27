@@ -29,9 +29,9 @@ class CoreMetaPlugin(SRC_API):
         from pyvdm.interface import CapabilityLibrary
         self.xm = CapabilityLibrary.CapabilityHandleLocal('x11-manager')
 
-    def onStart(self): pass
-    def onStop(self): pass
-    def onClose(self): pass
+    def onStart(self): return 0
+    def onStop(self):  return 0
+    def onClose(self): return 0
 
     def onSave(self, stat_file):
         record = {
@@ -144,7 +144,7 @@ class CoreManager:
         ## prepare domain
         ret_code = self.dm.initialize_domain(name)
         if ret_code is not DomainCode.ALL_CLEAN:
-            return (DomainCode.DOMAIN_START_FAILED, hex(ret_code)) #type: ignore
+            return (DomainCode.DOMAIN_START_FAILED, hex(ret_code.value)) #type: ignore
         ## open domain procedure
         try:
             ret_code = DomainCode.ALL_CLEAN
