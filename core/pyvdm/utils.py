@@ -10,7 +10,7 @@ import subprocess as sp
 import sys
 import tempfile
 
-STAT_POSTFIX = '.stat'
+STAT_POSTFIX = 'stat'
 POSIX  = lambda x: x.as_posix() if hasattr(x, 'as_posix') else x
 SHELL_RUN = lambda x: sp.run(x, capture_output=True, check=True, shell=True)
 SHELL_POPEN = lambda x: sp.Popen(x, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE, shell=True, text=True)
@@ -155,7 +155,7 @@ class WorkSpace:
 class StatFile:
     def __init__(self, root, prefix='', touch=True):
         self.root = root
-        _stat_file = f'.{prefix}{STAT_POSTFIX}' if prefix else STAT_POSTFIX
+        _stat_file = f'{prefix}.{STAT_POSTFIX}'
         self.stat_file = Path(root, _stat_file).resolve()
         self.stat_file.touch(exist_ok=True)
         _,self.temp_file = tempfile.mkstemp()

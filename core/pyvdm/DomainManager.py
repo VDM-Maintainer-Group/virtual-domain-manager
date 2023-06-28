@@ -136,7 +136,7 @@ class DomainManager():
         upperdir = tmpdir / f'vdm-{child_name.stem}-upperdir'
         upperdir.mkdir(parents=True, exist_ok=True)
         if overlay.exists():
-            overlay.unlink() if overlay.is_symlink() else overlay.replace(upperdir)
+            overlay.unlink() if overlay.is_symlink() else shutil.move(overlay, upperdir)
         overlay.symlink_to(upperdir)
         ## prepare tempdir
         tempdir = tempfile.mkdtemp()
@@ -149,7 +149,7 @@ class DomainManager():
         overlay = self.root / child_name / OVERLAY_DIRECTORY
         upperdir = tmpdir / f'vdm-{child_name.stem}-upperdir'
         overlay.unlink(missing_ok=True)
-        upperdir.replace(overlay)
+        shutil.move(upperdir, overlay)
         ## move back lowerdir
         parent_names = list( child_name.parents )[:-1]
         for name in parent_names:

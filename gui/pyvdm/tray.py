@@ -233,7 +233,7 @@ class TrayIcon(QSystemTrayIcon):
                 print(ret)
             
             smooth_until(view=psutil.cpu_percent,
-                         avg_cond=lambda x:x<0.1 )
+                         max_cond=lambda x:x<10.0 )
             self.stop_signal.emit()
             pass
         ##

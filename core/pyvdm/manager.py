@@ -100,7 +100,7 @@ class CoreManager:
             self.plugins.update( {_plugin: _stat} )
         ## load global CoreMetaPlugin
         global_plugin = CoreMetaPlugin()
-        global_stat   = StatFile(DOMAIN_DIRECTORY/name, '.global')
+        global_stat   = StatFile(DOMAIN_DIRECTORY/name, 'global')
         self.plugins.update({ global_plugin : global_stat })
 
         return PluginCode.ALL_CLEAN
@@ -144,7 +144,7 @@ class CoreManager:
         ## prepare domain
         ret_code = self.dm.initialize_domain(name)
         if ret_code is not DomainCode.ALL_CLEAN:
-            return (DomainCode.DOMAIN_START_FAILED, hex(ret_code.value)) #type: ignore
+            return (DomainCode.DOMAIN_START_FAILED, hex(ret_code.value))
         ## open domain procedure
         try:
             ret_code = DomainCode.ALL_CLEAN
@@ -187,8 +187,8 @@ class CoreManager:
                         return (DomainCode.DOMAIN_STOP_FAILED, plugin.name)
                 #
                 results = self.executeBlade(executor, _worker)
-                if results: raise Exception( str(results) )
                 self.dm.finalize_domain()
+                if results: raise Exception( str(results) )
                 return (DomainCode.ALL_CLEAN, '')
         except:
             return (DomainCode.DOMAIN_CLOSE_FAILED, traceback.format_exc())
