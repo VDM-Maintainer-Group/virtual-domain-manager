@@ -48,7 +48,7 @@ class TraversalController(QObject):
     def open_domain(self, openName):
         self.parent.switch_domain(openName)
         self.root.setProperty('openName', openName)
-        self.root.close()
+        self.root.setProperty('visible', False)
         pass
 
     @pyqtSlot()
@@ -104,7 +104,7 @@ class TraversalWidget():
 
     def show(self):
         self.controller.refresh() #type: ignore
-        self.root.show() #type: ignore
+        self.root.setProperty('visible', True)
     pass
 
 if __name__ == '__main__':

@@ -27,7 +27,7 @@ class CapabilityManager:
         else:
             self.root = CAPABILITY_DIRECTORY
         self.root.mkdir(exist_ok=True, parents=True) #ensure root existing
-        self.temp = Path( tempfile.mkdtemp() )
+        self.temp = Path( tempfile.gettempdir() ) / 'vdm-capability-build'
 
         os.environ['VDM_CAPABILITY_OUTPUT_DIRECTORY'] = self.temp.as_posix()
         os.environ['VDM_CAPABILITY_INSTALL_DIRECTORY'] = self.root.as_posix()

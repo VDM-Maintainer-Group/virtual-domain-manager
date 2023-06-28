@@ -44,7 +44,7 @@ ApplicationWindow {
         id: root_layout
         focus: true
         anchors.fill: parent
-        Keys.onEscapePressed: { root.close() }
+        Keys.onEscapePressed: { root.visible = false }
 
         Rectangle {
             color: "transparent"

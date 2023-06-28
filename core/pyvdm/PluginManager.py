@@ -148,7 +148,6 @@ class PluginManager:
         else:
             self.cm = CapabilityManager()
         self.root.mkdir(exist_ok=True, parents=True) #ensure root existing
-        self.temp = Path( tempfile.mkdtemp() )
         pass
 
     def test_config(self, config) -> ERR:
@@ -237,49 +236,50 @@ class PluginManager:
         if not _path.is_file():
             return ERR.ARCHIVE_INVALID
         # try to unpack the file to tmp_dir
-        try:
-            tmp_dir = self.temp / _path.name
-            shutil.unpack_archive( POSIX(_path), POSIX(tmp_dir) )
-        except:
-            return ERR.ARCHIVE_UNPACK_FAILED
-        # try to test plugin integrity
-        with WorkSpace(tmp_dir) as ws:
+        with tempfile.TemporaryDirectory() as _tmp_dir:
             try:
-                _config = json_load(CONFIG_FILENAME)
-                ret = self.test_config(_config)
-                if ret!=True:
-                    return ret
-            except Exception as e:
-                return ERR.CONFIG_FILE_MISSING
-            pass
-        # try to load plugin
-        with WorkSpace(tmp_dir, PLUGIN_BUILD_LEVEL) as ws:
-            try:
-                _plugin = PluginWrapper(_config['main'])
-            except Exception as e:
-                # raise e
-                return ERR.PLUGIN_WRAPPER_FAILED
-            pass
-        # move to root dir with new name
-        _regex = re.compile( '%s-(\\d\\.\\d.*)'%_config['name'] )
-        _installed = sorted(self.root.glob( '%s-*.*'%_config['name'] ))
-        for item in _installed:
-            _version = _regex.findall(item.name)[0]
-            if LooseVersion(_version) < LooseVersion(_config['version']):
-                shutil.rmtree(item)
-                print('Remove elder version: %s'%item.name)
-            else:
-                print('Higher version already installed: %s'%item.name)
-                return ERR.PLUGIN_HIGHER_VERSION_EXISTS
-            pass
-        _new_name = _config['name']+'-'+_config['version']
-        shutil.move( POSIX(tmp_dir), POSIX(self.root / _new_name) )
-        print('Plugin installed: %s'%_new_name)
-        #NOTE: disable 'post-install' for safety issue
-        # with WorkSpace(self.root) as ws:
-        #     if ('scripts' in _config) and ('post-install' in _config['scripts']):
-        #         ret = os.system(_config['scripts']['post-install'])
-        #     pass
+                tmp_dir = Path(_tmp_dir) / _path.name
+                shutil.unpack_archive( POSIX(_path), POSIX(tmp_dir) )
+            except:
+                return ERR.ARCHIVE_UNPACK_FAILED
+            # try to test plugin integrity
+            with WorkSpace(tmp_dir) as ws:
+                try:
+                    _config = json_load(CONFIG_FILENAME)
+                    ret = self.test_config(_config)
+                    if ret!=True:
+                        return ret
+                except Exception as e:
+                    return ERR.CONFIG_FILE_MISSING
+                pass
+            # try to load plugin
+            with WorkSpace(tmp_dir, PLUGIN_BUILD_LEVEL) as ws:
+                try:
+                    _plugin = PluginWrapper(_config['main'])
+                except Exception as e:
+                    # raise e
+                    return ERR.PLUGIN_WRAPPER_FAILED
+                pass
+            # move to root dir with new name
+            _regex = re.compile( '%s-(\\d\\.\\d.*)'%_config['name'] )
+            _installed = sorted(self.root.glob( '%s-*.*'%_config['name'] ))
+            for item in _installed:
+                _version = _regex.findall(item.name)[0]
+                if LooseVersion(_version) < LooseVersion(_config['version']):
+                    shutil.rmtree(item)
+                    print('Remove elder version: %s'%item.name)
+                else:
+                    print('Higher version already installed: %s'%item.name)
+                    return ERR.PLUGIN_HIGHER_VERSION_EXISTS
+                pass
+            _new_name = _config['name']+'-'+_config['version']
+            shutil.move( POSIX(tmp_dir), POSIX(self.root / _new_name) )
+            print('Plugin installed: %s'%_new_name)
+            #NOTE: disable 'post-install' for safety issue
+            # with WorkSpace(self.root) as ws:
+            #     if ('scripts' in _config) and ('post-install' in _config['scripts']):
+            #         ret = os.system(_config['scripts']['post-install'])
+            #     pass
         return ERR.ALL_CLEAN
 
     def uninstall(self, names) -> ERR:

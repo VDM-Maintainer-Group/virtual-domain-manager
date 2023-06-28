@@ -125,7 +125,7 @@ class DomainManager():
                 if parent_overlay.is_symlink():
                     parent_overlay.unlink()
                 else:
-                    parent_overlay.replace(tmp_lowerdir)
+                    shutil.move(parent_overlay, tmp_lowerdir)
                     lower_dirs.append( tmp_lowerdir.as_posix() )
                 parent_overlay.symlink_to(tmp_lowerdir)
         ## prepare lowerdir
@@ -138,9 +138,10 @@ class DomainManager():
         if overlay.exists():
             overlay.unlink() if overlay.is_symlink() else shutil.move(overlay, upperdir)
         overlay.symlink_to(upperdir)
-        ## prepare tempdir
-        tempdir = tempfile.mkdtemp()
-        return (lowerdir, upperdir, tempdir)
+        ## prepare workdir
+        workdir = tmpdir / f'vdm-{child_name.stem}-workdir'
+        workdir.unlink(missing_ok=True)
+        return (lowerdir, upperdir, workdir)
 
     def __fini_overlay(self, _child_name:str):
         child_name = Path(_child_name)
@@ -155,8 +156,9 @@ class DomainManager():
         for name in parent_names:
             parent_overlay = self.root / name / OVERLAY_DIRECTORY
             tmp_lowerdir = tmpdir / f'vdm-{name.stem}-lowerdir'
-            parent_overlay.unlink(missing_ok=True)
-            tmp_lowerdir.replace(parent_overlay)
+            if tmp_lowerdir.exists():
+                parent_overlay.unlink(missing_ok=True)
+                shutil.move(tmp_lowerdir, parent_overlay)
         pass
 
     def initialize_domain(self, name:str) -> ERR:
@@ -193,9 +195,9 @@ class DomainManager():
         ## kill the daemon process
         ppid = stat['ppid']
         os.system(f'kill -9 {ppid}')
+        self.stat.putStat('')
         ## move back lowerdir and upperdir
         self.__fini_overlay( stat['name'] )
-        self.stat.putStat('')
         pass
 
     #---------- offline domain operations ----------#

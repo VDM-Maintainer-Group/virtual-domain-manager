@@ -158,14 +158,19 @@ class StatFile:
         _stat_file = f'{prefix}.{STAT_POSTFIX}'
         self.stat_file = Path(root, _stat_file).resolve()
         self.stat_file.touch(exist_ok=True)
-        _,self.temp_file = tempfile.mkstemp()
+        self.temp_file = ''
         pass
+
+    def __del__(self):
+        if self.temp_file:
+            Path(self.temp_file).unlink(missing_ok=True)
 
     def touch(self):
         self.stat_file.touch(exist_ok=True)
         pass
 
     def getFile(self):
+        _,self.temp_file = tempfile.mkstemp()
         shutil.copy( POSIX(self.stat_file), self.temp_file )
         return self.temp_file
 
