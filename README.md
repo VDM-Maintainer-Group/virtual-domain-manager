@@ -4,23 +4,18 @@
 
 https://user-images.githubusercontent.com/9068301/203792081-b69e406d-8283-4e0f-bc97-fa009d8b2674.mp4
 
-
+[Project Progress](https://github.com/VDM-Maintainer-Group/virtual-domain-manager/issues/3)
 
 ## Introduction
 
-[Project Progress](https://github.com/VDM-Maintainer-Group/virtual-domain-manager/issues/3)
+**VDM is a workspace manager for GUI applications.**
 
-<p align="center">
-  <img src="./previews/structure.png" width="650px" />
-</p>
+- When workspace is open, VDM will record the status of all *managed GUI applications*.
 
-- VDM is "container": it starts GUI applications in isolated namespace;
+- When workspace is closing, VDM will close all *managed GUI applications* and restore them when workspace is re-open.
 
-- VDM is "snapshot": it keeps the status of last exit when starts up;
+- The *managed GUI applications* are introspected by VDM via [SRC interface](./interface/org.vdm-compatible.src.xml) definition.
 
-- VDM is "tree-like": it can traverse each divergence, like time machine;
-
-- VDM is NOT "virtual machine": it cares only GUI applications status, not memory.
 
 ## Dependencies
 
@@ -63,34 +58,29 @@ https://user-images.githubusercontent.com/9068301/203792081-b69e406d-8283-4e0f-b
     cd capability; sbs build; sbs install
     ```
 
-## Usage
+5. **run pyvdm**
 
-Currently, the VDM command-line entry is `pyvdm`, and the GUI entry is `pyvdm-tray`.
+    ```bash
+    pyvdm-tray
+    ```
+    > or `pyvdm` for command-line interface.
 
-The overview of command-line usage is listed below.
-
-- **Domain Switch** `pyvdm [--open] [--save] [--close]`
-
-- **Domain Management** `pyvdm domain`
-
-- **Plugin Management** `pyvdm plugin`
-
-- **Capability Management** `pyvdm capability`
-
-- **Compatibility Report** `pyvdm application`
-
-- **Sync Management** `pyvdm sync`
-  > (Not implemented) Manage synchronization of domain status files and data files.
 
 ## Compatibility
 
-### Native
-- Firefox ESR (via [browser-bridge](https://github.com/VDM-Maintainer-Group/vdm-capability-library/tree/main/browser-bridge))
-- Google Chrome (via [browser-bridge](https://github.com/VDM-Maintainer-Group/vdm-capability-library/tree/main/browser-bridge))
-- Microsoft Edge (via [browser-bridge](https://github.com/VDM-Maintainer-Group/vdm-capability-library/tree/main/browser-bridge))
-- Deepin Browser (via [browser-bridge](https://github.com/VDM-Maintainer-Group/vdm-capability-library/tree/main/browser-bridge))
+VDM now detects *managed GUI applications* using the following framework:
 
-### Plugins
+<p align="center">
+  <img src="./previews/structure.png" width="650px" />
+</p>
+
+### DBus-probed (Native)
+- Firefox ESR    (via [browser-bridge](./capability/browser-bridge))
+- Google Chrome  (via [browser-bridge](./capability/browser-bridge))
+- Microsoft Edge (via [browser-bridge](./capability/browser-bridge))
+- Deepin Browser (via [browser-bridge](./capability/browser-bridge))
+
+### Plugin-based
 |                            Plugin                            |          Target           |
 | :----------------------------------------------------------: | :-----------------------: |
 | [vdm-vscode-plugin](https://github.com/VDM-Maintainer-Group/vdm-vscode-plugin/releases/latest) |      "code.desktop"       |
