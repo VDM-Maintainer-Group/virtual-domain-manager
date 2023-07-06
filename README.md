@@ -10,9 +10,9 @@ https://user-images.githubusercontent.com/9068301/203792081-b69e406d-8283-4e0f-b
 
 **VDM is a workspace manager for GUI applications.**
 
-- When workspace is open, VDM will record the status of all *managed GUI applications*.
+- When workspace is opening, VDM will record the status of all *managed GUI applications*.
 
-- When workspace is closing, VDM will close all *managed GUI applications* and restore them when workspace is re-open.
+- When workspace is closing, VDM will close all *managed GUI applications* and restore them when re-open.
 
 - The *managed GUI applications* are introspected by VDM via [SRC interface](./interface/org.vdm-compatible.src.xml) definition.
 
