@@ -10,11 +10,7 @@ https://user-images.githubusercontent.com/9068301/203792081-b69e406d-8283-4e0f-b
 
 **VDM is a workspace manager for GUI applications.**
 
-- When workspace is opening, VDM will record the status of all *managed GUI applications*.
-
-- When workspace is closing, VDM will close all *managed GUI applications* and restore them when re-open.
-
-- The *managed GUI applications* are introspected by VDM via [SRC interface](./interface/org.vdm-compatible.src.xml) definition.
+When workspace is closing, VDM will save the status of all [*compatible applications*](#compatibility) and restore them when re-open.
 
 
 ## Dependencies
@@ -68,19 +64,19 @@ https://user-images.githubusercontent.com/9068301/203792081-b69e406d-8283-4e0f-b
 
 ## Compatibility
 
-VDM now detects *managed GUI applications* using the following framework:
+Currently, VDM detects the compatibility of applications in the following two ways:
 
-<p align="center">
-  <img src="./previews/structure.png" width="650px" />
-</p>
+### Native Compatibility
+> The compatibility is claimed over [D-Bus](./interface/org.vdm-compatible.src.xml).
 
-### DBus-probed (Native)
 - Firefox ESR    (via [browser-bridge](./capability/browser-bridge))
 - Google Chrome  (via [browser-bridge](./capability/browser-bridge))
 - Microsoft Edge (via [browser-bridge](./capability/browser-bridge))
 - Deepin Browser (via [browser-bridge](./capability/browser-bridge))
 
-### Plugin-based
+### Plugin-based Compatibility
+> The compatibility is claimed by installed plugins.
+
 |                            Plugin                            |          Target           |
 | :----------------------------------------------------------: | :-----------------------: |
 | [vdm-vscode-plugin](https://github.com/VDM-Maintainer-Group/vdm-vscode-plugin/releases/latest) |      "code.desktop"       |
@@ -89,20 +85,27 @@ VDM now detects *managed GUI applications* using the following framework:
 | [vdm-okular-plugin](https://github.com/VDM-Maintainer-Group/vdm-okular-plugin/releases/latest) | "org.kde.okular.desktop"  |
 | [desktop-settings-plugin](https://github.com/VDM-Maintainer-Group/desktop-settings-plugin/releases/latest) | Wallpaper, Network, Audio |
 
+## Development
 
-## Capability Development
+The architecture of VDM is split into three parts: `VDM Core` `VDM Capability Library`, and `VDM Plugin`.
+
+<p align="center">
+  <img src="./previews/structure.png" width="650px" />
+</p>
+
+### Capability Development
 
 > The `VDM Capability Library` is developed to be invoked by `VDM Plugin` for alleviation of complicated development.
 > The library should provide a entry with functions exported with specific type of signature.
 
 Please refer to the contribution guidance [here](https://github.com/VDM-Maintainer-Group/vdm-capability-library/blob/main/CONTRIBUTING.md).
 
-## Plugin Development
+### Plugin Development
 
 > The `VDM Plugin` implements `SRC interface` and is invoked by `VDM Core`.
 > The plugin is developed to support GUI application compatibility, or define the actions to be taken when switch the domain.
 
-Please refer to the development guidance [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
+Please refer to the contribution guidance [here](https://github.com/VDM-Maintainer-Group/vdm-plugin-template/blob/master/CONTRIBUTING.md).
 
 
 ## License
