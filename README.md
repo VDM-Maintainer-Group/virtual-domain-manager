@@ -66,24 +66,25 @@ When workspace is closing, VDM will save the status of all [*compatible applicat
 
 Currently, VDM detects the compatibility of applications in the following two ways:
 
-### Native Compatibility
-> The compatibility is claimed over [D-Bus](./interface/org.vdm-compatible.src.xml).
+- **Native Compatibility**: The compatibility is claimed over [D-Bus](./interface/org.vdm-compatible.src.xml).
 
-- Firefox ESR    (via [browser-bridge](./capability/browser-bridge))
-- Google Chrome  (via [browser-bridge](./capability/browser-bridge))
-- Microsoft Edge (via [browser-bridge](./capability/browser-bridge))
-- Deepin Browser (via [browser-bridge](./capability/browser-bridge))
+  - Firefox ESR    (via [browser-bridge](./capability/browser-bridge))
 
-### Plugin-based Compatibility
-> The compatibility is claimed by installed plugins.
+  - Google Chrome  (via [browser-bridge](./capability/browser-bridge))
 
-|                            Plugin                            |          Target           |
-| :----------------------------------------------------------: | :-----------------------: |
-| [vdm-vscode-plugin](https://github.com/VDM-Maintainer-Group/vdm-vscode-plugin/releases/latest) |      "code.desktop"       |
-| [vdm-vlc-plugin](https://github.com/VDM-Maintainer-Group/vdm-vlc-plugin/releases/latest) |       "vlc.desktop"       |
-| [vdm-typora-plugin](https://github.com/VDM-Maintainer-Group/vdm-typora-plugin/releases/latest) |    "io.typora.desktop"    |
-| [vdm-okular-plugin](https://github.com/VDM-Maintainer-Group/vdm-okular-plugin/releases/latest) | "org.kde.okular.desktop"  |
-| [desktop-settings-plugin](https://github.com/VDM-Maintainer-Group/desktop-settings-plugin/releases/latest) | Wallpaper, Network, Audio |
+  - Microsoft Edge (via [browser-bridge](./capability/browser-bridge))
+
+  - Deepin Browser (via [browser-bridge](./capability/browser-bridge))
+
+- **Plugin-based Compatibility**: The compatibility is claimed by installed plugins.
+  
+  |         Application         |          Target          |                            Plugin                            |
+  | :-------------------------: | :----------------------: | :----------------------------------------------------------: |
+  |     Visual Studio Code      |      "code.desktop"      | [vdm-vscode-plugin](https://github.com/VDM-Maintainer-Group/vdm-vscode-plugin/releases/latest) |
+  |             VLC             |      "vlc.desktop"       | [vdm-vlc-plugin](https://github.com/VDM-Maintainer-Group/vdm-vlc-plugin/releases/latest) |
+  |           Typora            |   "io.typora.desktop"    | [vdm-typora-plugin](https://github.com/VDM-Maintainer-Group/vdm-typora-plugin/releases/latest) |
+  |           Okular            | "org.kde.okular.desktop" | [vdm-okular-plugin](https://github.com/VDM-Maintainer-Group/vdm-okular-plugin/releases/latest) |
+  | "Wallpaper, Network, Audio" |     gnome, kde, dde      | [desktop-settings-plugin](https://github.com/VDM-Maintainer-Group/desktop-settings-plugin/releases/latest) |
 
 ## Development
 
